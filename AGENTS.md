@@ -8,6 +8,15 @@ Guidance for any AI assistant (Claude, Gemini, DeepSeek, Copilot…) working in 
 - The academic documents under `docs/` (concept document and prompt log) stay in **Spanish**.
 - Talk to the author in Spanish.
 
+## Session routine
+
+The author works from several computers, and documents edited outside the repo have drifted before. The repo is the single source of truth.
+
+1. **Start:** `git pull`. Read `knowledge/index.md` and the current week in the activity log ("Planificado para el resto de la semana") to see where things stand.
+2. **During:** when a session produces a decision or finding worth recording, offer a prompt log entry with two sources (see below).
+3. **End:** add the session's activities to the activity log; record knowledge changes in `knowledge/log.md`; update `scripts/osf_index.json` if documents or pending assignments changed. Then ask the author before committing, pushing and publishing to OSF.
+4. **Pace:** the author spreads work across days so the weekly activity log reflects real progress. Propose what to do next day by day instead of chaining many phases in one session.
+
 ## Current phase
 
 - The project is in **design phase**: no code yet.
@@ -35,7 +44,8 @@ Use of generative AI in the project is documented in `docs/memoria-prompts/`. It
   2. A `tcolorbox` *Prompt Introducido* (`colback=promptcolor`).
   3. One *Insights de <asistente>* box per AI consulted (`colback=responsecolor`): an own summary, not a verbatim copy.
   4. A **Decisión de Ingeniería / Aplicación al Proyecto** paragraph.
-- "Señal de Tiempo" numbering continues across months.
+- "Señal de Tiempo" numbering continues across months. Check the last number in the latest month file before adding one.
+- **Two sources per entry.** Write a self-contained prompt (the second AI has no session context) and send the same prompt to Gemini through Antigravity CLI, run from an empty temporary folder so it cannot touch the repo: `agy -p "<prompt>" --model gemini-3.8-flash-high --disable-slash-commands`. On the author's main Windows machine the binary is `%LOCALAPPDATA%\agy\bin\agy.exe`; `agy models` lists the models. Save the raw answer with the prompt in `docs/memoria-prompts/fuentes/YYYY-MM-DD-stN-gemini.md` and summarize it in its own *Insights de Gemini* box. State in the entry that the agent in the session answered with project context and Gemini without it.
 - When a working session with an agent produces a relevant decision or finding, offer the author to draft the matching entry.
 - If an AI answer already recorded contains an incorrect or unverified claim, point it out instead of taking it for granted.
 
@@ -58,5 +68,5 @@ The author's OSF project (`ysmkz`, private, shared with the professor) receives 
 
 ## Git
 
-- Do not commit or push unless the author asks.
+- Do not commit or push unless the author asks. Pushing matters: other computers only see what is on GitHub.
 - Short, imperative commit messages in English ("Add…", "Fix…").
