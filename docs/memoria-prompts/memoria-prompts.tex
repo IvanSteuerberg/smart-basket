@@ -1,0 +1,36 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable} % Habilita que las cajas salten de página
+
+% Definición de colores para las cajas
+\definecolor{promptcolor}{RGB}{240, 248, 255} 
+\definecolor{responsecolor}{RGB}{245, 245, 245} 
+
+\title{Memoria de Prompts: Inteligencia Artificial Generativa \\ \large Sistemas de Información de Gestión y Business Intelligence}
+\author{Iván Rodríguez Steuerberg}
+\date{Curso 2026-2027}
+
+\begin{document}
+	\maketitle
+	
+	% Salto de página para que la portada quede sola
+	\newpage
+	
+	% Generación automática del índice
+	\tableofcontents
+	
+	% Salto de página para que el contenido empiece en una página nueva
+	\newpage
+	
+	% Inclusión de los archivos por meses
+	\input{entradas/septiembre.tex}
+	% \input{entradas/octubre.tex}
+	% \input{entradas/noviembre.tex}
+	
+\end{document}

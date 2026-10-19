@@ -1,0 +1,35 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\title{\textbf{Documento de Concepto} \\ \Large Motor de Inteligencia de Negocio y Recomendación Semántica para Retail}
+\author{Iván Rodríguez Steuerberg \\ Grado en Ingeniería Informática \\ Universidad de León}
+\date{Curso Académico 2026-2027}
+
+\begin{document}
+	\maketitle
+	
+	\section{Naturaleza del Proyecto}
+	Desarrollo de un Sistema de Información de Gestión (SIG) centrado en Business Intelligence, diseñado para optimizar el proceso de compra de bienes de consumo diario. El sistema emplea técnicas de recomendación semántica y análisis de datos georreferenciados para ofrecer decisiones de compra óptimas.
+	
+	\section{Problema de Negocio}
+	La continua fluctuación de los precios y la fragmentación del mercado minorista dificultan enormemente que los consumidores puedan optimizar su cesta de la compra. Comparar precios entre diferentes cadenas y buscar alternativas más económicas implica un esfuerzo de búsqueda manual inasumible en el día a día. Además, la opacidad del mercado impide a los usuarios identificar de forma rápida y automatizada las equivalencias directas entre marcas comerciales y marcas blancas, limitando su capacidad para tomar decisiones informadas que supongan un ahorro real tanto económico como de tiempo en sus desplazamientos.
+	
+	\section{Propuesta de Valor}
+	Un agente recomendador inteligente que, dado un listado de necesidades genéricas o específicas, procesa el catálogo del mercado para devolver la combinación de productos que minimice el coste total de la cesta y el tiempo de desplazamiento, garantizando en todo momento la equivalencia funcional de los artículos recomendados.
+	
+	\section{Arquitectura General del Sistema}
+	El ecosistema se estructura en módulos funcionales independientes que cubren el ciclo de vida completo de la información:
+	\begin{itemize}[noitemsep]
+		\item \textbf{Módulo de Ingesta de Datos (Scraping):} Encargado de la extracción automatizada y actualización recurrente de los catálogos y precios desde las plataformas de las distintas cadenas de supermercados.
+		\item \textbf{Capa de Persistencia:} Almacenamiento estructurado para gestionar el histórico de precios, la información relacional de los usuarios y las representaciones vectoriales del catálogo.
+		\item \textbf{Modelo Recomendador:} Motor inteligente que implementa algoritmos de emparejamiento semántico para encontrar artículos equivalentes y lógicas de optimización espacial para el cálculo de rutas de compra.
+		\item \textbf{Interfaz de Usuario (Aplicación Web y Móvil):} Puntos de interacción multiplataforma donde el consumidor gestiona sus listas de la compra, visualiza el histórico de ahorro y recibe las rutas optimizadas.
+	\end{itemize}
+	
+\end{document}

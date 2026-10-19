@@ -1,0 +1,113 @@
+\section{Registro Mensual: Septiembre 2026}
+
+% ------------------- ENTRADA 1 -------------------
+\subsection{Señal de Tiempo 1: Exploración del Estado del Arte en Persistencia}
+\textbf{Fecha:} 18 de septiembre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Gemini Notebook / DeepSeek \\
+\textbf{Objetivo:} Mapear las opciones tecnológicas actuales para resolver el almacenamiento transaccional, espacial y semántico.
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Software y Especialista en Datos. Estoy iniciando el diseño de la capa de persistencia para un Sistema de Información de optimización de compras de supermercado (tal y como se describe en el documento de concepto proporcionado, si tienes acceso a él).
+	
+	Esta capa de persistencia debe dar soporte a tres grandes retos funcionales:
+	\begin{itemize}
+		\item \textbf{Almacenamiento transaccional de alto volumen:} Gestión de usuarios, listas de la compra e históricos masivos de precios con actualizaciones diarias.
+		\item \textbf{Búsqueda semántica (Modelo Recomendador):} Capacidad para almacenar y consultar embeddings vectoriales que permitan emparejar productos nutricionalmente equivalentes (marcas blancas vs. marcas comerciales).
+		\item \textbf{Consultas espaciales (Routing):} Cálculos georreferenciados para encontrar sucursales cercanas y optimizar las rutas de compra.
+	\end{itemize}
+	
+	En esta fase inicial de investigación, quiero mapear el estado del arte tecnológico. ¿Qué opciones de bases de datos o combinaciones arquitectónicas existen actualmente para dar soporte a estas tres necesidades?
+	
+	Por favor, enumera las distintas alternativas tecnológicas (como modelos relacionales extendidos, ecosistemas políglotas con bases vectoriales nativas, bases de datos de grafos u otras arquitecturas relevantes). Clasifícalas y explica brevemente la filosofía de cada opción sin entrar todavía en una comparativa detallada.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Gemini, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Enfoque Relacional Extendido:} 
+		\begin{itemize}
+			\item PostgreSQL con extensiones (pgvector, PostGIS y TimescaleDB): 
+			Permite gestionar usuarios y transacciones, indexar embeddings (HNSW/IVFFlat) para sustitución semántica de productos, calcular rutas y áreas de cobertura de sucursales con PostGIS, y particionar tablas temporales (hypertables) para la ingesta recurrente de precios provenientes del scraping.
+		\end{itemize}
+		
+		\item \textbf{Persistencia Políglota Especializada:} 
+		\begin{itemize}
+			\item \textit{Almacén transaccional y de series temporales (PostgreSQL, ClickHouse o MongoDB):} 
+			Dedicado en exclusiva a persistir la ingesta recurrente del catálogo, el histórico masivo de precios y la gestión de usuarios.
+			\item \textit{Bases de datos vectoriales nativas (Qdrant, Milvus o Pinecone):} 
+			Maximizan el rendimiento en consultas de alta dimensión mediante cuantización e indexación HNSW/DiskANN, incorporando filtrado estricto por metadatos (marca blanca, alérgenos, tabla nutricional) para el recomendador.
+			\item \textit{Motores de ruteo dedicados (OSRM, GraphHopper o Valhalla):} 
+			Servicios especializados en grafos de transporte sobre OpenStreetMap que resuelven distancias y tiempos de desplazamiento de forma más eficiente que una base de datos convencional.
+		\end{itemize}
+		
+		\item \textbf{Motores de Búsqueda Distribuida Híbrida:} 
+		\begin{itemize}
+			\item \textit{ Elasticsearch / OpenSearch:}
+			Soportan tipos \texttt{geo\_point} y \texttt{geo\_shape}, búsqueda semántica vía k-NN (Lucene/NMSLIB) y agregaciones en tiempo real para analítica de precios, actuando como capa de lectura sincronizada con una base relacional primaria.
+		\end{itemize}
+		
+		\item \textbf{Grafos de Conocimiento Nativos:} 
+		\begin{itemize}
+			\item \textit{ Neo4j / Memgraph con soporte vectorial:}
+			Permiten ejecutar recorridos de grafos para relacionar ingredientes y sustituciones de marcas, combinando distancias geográficas e índices vectoriales para descubrir cestas de compra óptimas.
+		\end{itemize}
+		
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Modelos Relacionales Extendidos (El enfoque "Todo en Uno"):} 
+		Busca consolidar las tres necesidades en un único motor de base de datos para evitar la complejidad de gestionar múltiples sistemas.
+		\begin{itemize}
+			\item \textit{Soporte transaccional:} Nativo. PostgreSQL es un RDBMS maduro con garantías ACID, ideal para usuarios, listas de compra e históricos de precios.
+			\item \textit{Búsqueda semántica:} A través de pgvector, permitiendo almacenar embeddings y realizar búsquedas de similitud (vecinos más cercanos) mediante operadores SQL, con opciones como pgvectorscale para grandes volúmenes.
+			\item \textit{Consultas espaciales:} La extensión PostGIS es el estándar de facto ofreciendo índices espaciales y funciones de distancia y rutas.
+			\item \textit{Filosofía:} Simplicidad operativa y consistencia fuerte, facilitando consultas híbridas en una sola sentencia SQL.
+		\end{itemize}
+		
+		\item \textbf{Ecosistemas Políglotas con Bases Vectoriales Nativas:} 
+		Combina bases de datos especializadas, asumiendo que ningún motor es óptimo para todo.
+		\begin{itemize}
+			\item \textit{Soporte transaccional:} Un RDBMS tradicional (PostgreSQL, MySQL) gestiona usuarios y pedidos.
+			\item \textit{Búsqueda semántica:} Base vectorial nativa (Weaviate, Milvus, Qdrant o Pinecone) optimizada para similitud a gran escala (HNSW) y búsqueda híbrida.
+			\item \textit{Consultas espaciales:} Se delegan a PostGIS o a una base de datos de grafos.
+			\item \textit{Filosofía:} ``Best-of-breed''. Cada componente destaca en su tarea específica; el reto es la consistencia eventual y la orquestación.
+		\end{itemize}
+		
+		\item \textbf{Bases de Datos de Grafos:} 
+		Modela las relaciones entre entidades (productos, usuarios, sucursales) como nodos y aristas.
+		\begin{itemize}
+			\item \textit{Soporte transaccional:} Depende del motor (Neo4j ofrece transacciones ACID).
+			\item \textit{Búsqueda semántica:} Modela relaciones de equivalencia explícitamente como aristas o integra índices vectoriales.
+			\item \textit{Consultas espaciales:} Su punto fuerte, resolviendo rutas como problemas de camino mínimo sobre grafos de transporte integrando OpenStreetMap.
+			\item \textit{Filosofía:} Centrada en las relaciones y la conectividad, ideal para recomendaciones basadas en similitud y optimización de rutas.
+		\end{itemize}
+		
+		\item \textbf{Bases de Datos NewSQL Distribuidas:} 
+		Motores SQL diseñados para escalar horizontalmente manteniendo garantías ACID.
+		\begin{itemize}
+			\item \textit{Soporte transaccional:} Altamente escalable con consistencia fuerte (CockroachDB, TiDB).
+			\item \textit{Búsqueda semántica:} Incipiente. CockroachDB soporta tipos vectoriales expuestos vía SQL.
+			\item \textit{Consultas espaciales:} Soporte incluido para datos geoespaciales en su modelo multi-modelo.
+			\item \textit{Filosofía:} Unificar escalabilidad NoSQL con comodidad SQL, ideal para crecimiento masivo minimizando el número de tecnologías.
+		\end{itemize}
+		
+		\item \textbf{Plataformas de Búsqueda Unificadas:} 
+		Motores de búsqueda empresarial (Elasticsearch, OpenSearch) evolucionados a plataformas multi-propósito.
+		\begin{itemize}
+			\item \textit{Soporte transaccional:} Limitado; no son ideales para sistemas OLTP de alto volumen.
+			\item \textit{Búsqueda semántica:} Sólida. Incorporan índices vectoriales y soportan búsqueda híbrida con fusión de rankings (RRF).
+			\item \textit{Consultas espaciales:} Avanzadas. Ofrecen índices espaciales, ordenación por distancia y filtros por área.
+			\item \textit{Filosofía:} La búsqueda como plataforma. Opción natural si la relevancia y recuperación de información es el corazón del sistema.
+		\end{itemize}
+		
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+En esta fase exploratoria, la arquitectura de persistencia se mantiene abierta. Se descartan temporalmente las \textit{Plataformas de Búsqueda Unificadas (Elasticsearch)} y \textit{NewSQL}, ya que la complejidad de mantener clústeres distribuidos sobrepasa las necesidades del Producto Mínimo Viable (MVP). 
+
+El estado del arte revela que el debate técnico debe centrarse en tres enfoques viables: un modelo \textbf{Relacional Extendido} (PostgreSQL + extensiones) para minimizar la fricción operativa, un ecosistema \textbf{Políglota Vectorial} (integrando motores como Qdrant para maximizar el rendimiento semántico), y las \textbf{Bases de Datos de Grafos (Neo4j)}. Esta última se mantiene explícitamente en evaluación por su capacidad nativa para resolver la optimización de rutas y su alto potencial para la extracción de Business Intelligence. 
+El siguiente hito consistirá en analizar en profundidad los \textit{trade-offs} de estas tres arquitecturas para definir la pila tecnológica definitiva del MVP.
+
+\vspace{0.5cm}

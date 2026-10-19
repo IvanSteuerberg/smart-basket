@@ -1,0 +1,35 @@
+# LaTeX: archivos auxiliares de compilación
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.bbl
+*.blg
+*.nav
+*.snm
+*.pdf
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+__pycache__/
+
+# Datos descargados por el scraping (no versionar volcados)
+data/raw/
+
+# Configuración local de herramientas
+.claude/settings.local.json
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
