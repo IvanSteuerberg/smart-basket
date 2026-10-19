@@ -25,11 +25,12 @@ A recommender agent that, from a generic or specific shopping list:
 | Recommender | Semantic product matching and shopping-route optimization. |
 | Interface | Web and mobile app: shopping lists, savings history and routes. |
 
-The persistence stack is still under evaluation (PostgreSQL with extensions, a polyglot setup with a vector database, or a graph database). See the prompt log.
+Architecture decisions so far (single PostgreSQL database, routing in three layers, agent as orchestrator) are recorded in the [knowledge base](knowledge/index.md).
 
 ## Repository layout
 
 ```
+knowledge/            Engineering knowledge base (OKF v0.2): vision, architecture, decisions
 docs/
   idea-base/          Concept document (LaTeX, Spanish)
   memoria-prompts/    Generative AI prompt log (LaTeX, Spanish)

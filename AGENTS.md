@@ -10,9 +10,20 @@ Guidance for any AI assistant (Claude, Gemini, DeepSeek, Copilot…) working in 
 
 ## Current phase
 
-- The project is in **concept phase**: no tech stack has been chosen.
-- Do not assume a technology (database, framework, language) is chosen unless it is recorded in a "Decisión de Ingeniería" in the prompt log.
+- The project is in **design phase**: no code yet.
+- Do not assume a technology (database, framework, language) is chosen unless it is recorded as a decision in `knowledge/decisions/`.
 - Always favor a scoped **MVP** that can be justified in the academic context.
+
+## Knowledge base (`knowledge/`)
+
+Engineering knowledge (vision, requirements, architecture, decisions, glossary) lives in `knowledge/`, an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle. Read `knowledge/index.md` first.
+
+- One concept per file, with YAML frontmatter. `type` is required; also set `title`, `description`, `tags`, `status` (`draft` | `stable` | `deprecated`) and `generated: { by, at }` (ISO 8601 with UTC offset).
+- Actors: agents as `<producer>/<version>` (e.g. `claude-code/claude-opus-5-5`); the author as `human:IvanSteuerberg`. Only the author adds `verified` entries.
+- Decisions go in `knowledge/decisions/NNNN-short-title.md` (`type: Architecture Decision`) with Context, Decision, Consequences and, when relevant, Revisit when. Cite the prompt log entry they come from in `sources`.
+- Links are bundle-root-relative (`/decisions/0001-...md`).
+- Every change gets a bullet in `knowledge/log.md` under a `YYYY-MM-DD` heading (newest first), and new concepts are listed in `knowledge/index.md`.
+- The bundle is in English. The academic documents in `docs/` stay in Spanish and narrate how decisions were reached; the bundle states what was decided.
 
 ## Prompt log (memoria de prompts)
 
