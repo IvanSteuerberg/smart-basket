@@ -9,7 +9,7 @@
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \title{\textbf{Documento de Concepto} \\ \Large Motor de Inteligencia de Negocio y Recomendación Semántica para Retail}
 \author{Iván Rodríguez Steuerberg \\ Grado en Ingeniería Informática \\ Universidad de León}
-\date{Curso Académico 2026-2027}
+\date{Curso Académico 2026-2027 \\ Versión 1.1 -- 19 de octubre de 2026}
 
 \begin{document}
 	\maketitle
@@ -22,14 +22,24 @@
 	
 	\section{Propuesta de Valor}
 	Un agente recomendador inteligente que, dado un listado de necesidades genéricas o específicas, procesa el catálogo del mercado para devolver la combinación de productos que minimice el coste total de la cesta y el tiempo de desplazamiento, garantizando en todo momento la equivalencia funcional de los artículos recomendados.
+
+	El agente actúa como orquestador: interpreta en lenguaje natural la lista y las preferencias del usuario, invoca componentes especializados (búsqueda de equivalencias, cálculo de tiempos de desplazamiento y optimización de la cesta) y explica la recomendación resultante. Los cálculos de coste y tiempo los realizan algoritmos deterministas, de modo que las cifras recomendadas son verificables y reproducibles.
 	
 	\section{Arquitectura General del Sistema}
 	El ecosistema se estructura en módulos funcionales independientes que cubren el ciclo de vida completo de la información:
 	\begin{itemize}[noitemsep]
 		\item \textbf{Módulo de Ingesta de Datos (Scraping):} Encargado de la extracción automatizada y actualización recurrente de los catálogos y precios desde las plataformas de las distintas cadenas de supermercados.
-		\item \textbf{Capa de Persistencia:} Almacenamiento estructurado para gestionar el histórico de precios, la información relacional de los usuarios y las representaciones vectoriales del catálogo.
-		\item \textbf{Modelo Recomendador:} Motor inteligente que implementa algoritmos de emparejamiento semántico para encontrar artículos equivalentes y lógicas de optimización espacial para el cálculo de rutas de compra.
+		\item \textbf{Capa de Persistencia:} Almacenamiento estructurado para gestionar el histórico de precios, la información relacional de los usuarios, la ubicación de las sucursales y las representaciones vectoriales del catálogo.
+		\item \textbf{Modelo Recomendador:} Agente orquestador que coordina tres componentes: el emparejamiento semántico, que asigna cada artículo a un producto canónico para encontrar sus equivalentes entre cadenas; el cálculo de tiempos de desplazamiento, delegado en un motor de rutas sobre cartografía abierta; y el optimizador de la cesta, que decide qué comprar y en qué sucursales.
+		\item \textbf{Capa Analítica (Business Intelligence):} Modelo de datos orientado al análisis, separado del transaccional, que explota el histórico de precios y la actividad de los usuarios para generar indicadores sobre la evolución del mercado y el ahorro conseguido.
 		\item \textbf{Interfaz de Usuario (Aplicación Web y Móvil):} Puntos de interacción multiplataforma donde el consumidor gestiona sus listas de la compra, visualiza el histórico de ahorro y recibe las rutas optimizadas.
 	\end{itemize}
-	
+
+	\section*{Historial de Versiones}
+	\begin{tabular}{@{}lll@{}}
+		\textbf{Versión} & \textbf{Fecha} & \textbf{Cambios} \\
+		1.0 & 18/09/2026 & Versión inicial. \\
+		1.1 & 19/10/2026 & Agente como orquestador; capa analítica (BI). \\
+	\end{tabular}
+
 \end{document}
