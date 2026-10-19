@@ -1,0 +1,30 @@
+{
+  "title": "Sistemas de Información de Gestión y Business Intelligence",
+  "subtitle": "Iván Rodríguez Steuerberg · Grado en Ingeniería Informática, Universidad de León · Curso 2026-2027",
+  "repository": "https://github.com/IvanSteuerberg/smart-basket",
+  "folders": {
+    "01-proyecto": "Proyecto de la asignatura: recomendador de cesta de la compra (Smart Basket).",
+    "02-informes": "Informes de opinión y análisis entregados.",
+    "03-lecturas": "Análisis de libros y enlaces de seguimiento.",
+    "04-referencias": "Material de referencia de terceros.",
+    "05-notas-de-clase": "Notas tomadas en cada sesión de clase.",
+    "99-archivo": "Material sustituido que se conserva como histórico."
+  },
+  "files": {
+    "01-proyecto/Concepto_del_proyecto.pdf": ["Problema de negocio, propuesta de valor y arquitectura del sistema.", "v1.1"],
+    "01-proyecto/Memoria_Prompts.pdf": ["Uso de IA generativa: prompts, respuestas contrastadas y decisiones (Señales de Tiempo 1-4).", "En curso"],
+    "01-proyecto/Registro_Actividad.pdf": ["Registro semanal de clases, tareas, investigaciones y decisiones.", "En curso"],
+    "02-informes/informe_opinion_ia_agentica.pdf": ["Opinión sobre la Lección 1 del curso de IA Agéntica de Fran Rodrigo.", "Entregado"],
+    "02-informes/InformeGenRec-IvanSteuerberg.pdf": ["El cambio de paradigma en sistemas de recomendación: el caso de GenRec en Netflix.", "Entregado (plazo 14/10)"],
+    "04-referencias/TFG_WEB_SCRAPPING_ALIMENTOS.pdf": ["TFG (UPM, 2023): app de ahorro en la compra de alimentos mediante web scraping.", "Referencia"],
+    "99-archivo/plantillas-latex": ["Plantilla LaTeX inicial de la memoria de prompts, sustituida por la del repositorio.", "Archivado"]
+  },
+  "list_only": ["05-notas-de-clase"],
+  "empty_notes": {
+    "03-lecturas": "Pendiente: TOP 10 de enlaces de seguimiento y análisis de libros."
+  },
+  "pending": [
+    "TOP 10 de enlaces de seguimiento (encargado el 21/09).",
+    "Análisis o crítica de los cuatro libros asignados y de dos de libre elección (encargado el 23/09)."
+  ]
+}

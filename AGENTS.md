@@ -49,7 +49,7 @@ Use of generative AI in the project is documented in `docs/memoria-prompts/`. It
 
 ## Publishing to OSF
 
-The author's OSF project (`ysmkz`, private, shared with the professor) receives the compiled PDFs. `python scripts/osf_publish.py` shows what would change; `--apply` compiles and uploads. Documents keep a fixed name in OSF, which stores every upload as a new version, so never create dated copies. Only publish with the author's go-ahead. The token lives in `.env` (`OSF_TOKEN`, git-ignored): never print or commit it.
+The author's OSF project (`ysmkz`, private, shared with the professor) receives the compiled PDFs. `python scripts/osf_publish.py` shows what would change; `--apply` compiles and uploads. Documents keep a fixed name in OSF, which stores every upload as a new version, so never create dated copies. After publishing or moving files, regenerate the index on the wiki home page with `python scripts/osf_index.py --apply`; descriptions, statuses and pending assignments live in `scripts/osf_index.json` (Spanish, keep it current). OSF folders: `01-proyecto`, `02-informes`, `03-lecturas`, `04-referencias`, `05-notas-de-clase` (`dd-mm-yyyy.txt`), `99-archivo`. Only publish with the author's go-ahead. The token lives in `.env` (`OSF_TOKEN`, git-ignored): never print or commit it.
 
 ## LaTeX
 

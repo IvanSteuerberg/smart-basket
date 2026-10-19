@@ -39,6 +39,7 @@ docs/
   registro-actividad/ Weekly activity log of all course work (LaTeX, Spanish)
 scripts/
   osf_publish.py      Compile the documents and publish the PDFs to OSF (dry run by default)
+  osf_index.py        Generate the OSF wiki index from the live file listing (+ osf_index.json)
 ```
 
 ## Building the documentation
