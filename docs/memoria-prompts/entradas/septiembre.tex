@@ -3,7 +3,7 @@
 % ------------------- ENTRADA 1 -------------------
 \subsection{Señal de Tiempo 1: Exploración del Estado del Arte en Persistencia}
 \textbf{Fecha:} 18 de septiembre de 2026 \\
-\textbf{Asistente Virtual Utilizado:} Gemini Notebook / DeepSeek \\
+\textbf{Asistente Virtual Utilizado:} Gemini Pro (Notebook) / DeepSeek (Pensamiento Profundo) \\
 \textbf{Objetivo:} Mapear las opciones tecnológicas actuales para resolver el almacenamiento transaccional, espacial y semántico.
 
 \begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
@@ -110,6 +110,87 @@ En esta fase exploratoria, la arquitectura de persistencia se mantiene abierta. 
 El estado del arte revela que el debate técnico debe centrarse en tres enfoques viables: un modelo \textbf{Relacional Extendido} (PostgreSQL + extensiones) para minimizar la fricción operativa, un ecosistema \textbf{Políglota Vectorial} (integrando motores como Qdrant para maximizar el rendimiento semántico), y las \textbf{Bases de Datos de Grafos (Neo4j)}. Esta última se mantiene explícitamente en evaluación por su capacidad nativa para resolver la optimización de rutas y su alto potencial para la extracción de Business Intelligence. 
 El siguiente hito consistirá en analizar en profundidad los \textit{trade-offs} de estas tres arquitecturas para definir la pila tecnológica definitiva del MVP.
 
-\textit{Nota de revisión (19 de octubre de 2026): la atribución a PostGIS y a Neo4j de capacidades de cálculo de rutas se corrige en la Señal de Tiempo 2, y la decisión de persistencia se cierra en la Señal de Tiempo 3.}
+\textit{Nota de revisión (19 de octubre de 2026): la atribución a PostGIS y a Neo4j de capacidades de cálculo de rutas se corrige en la Señal de Tiempo 3.}
+
+\vspace{0.5cm}
+
+% ------------------- ENTRADA 2 -------------------
+\subsection{Señal de Tiempo 2: Análisis de Trade-offs y Selección de Arquitectura}
+\textbf{Fecha:} 21 de septiembre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Gemini Pro (Notebook) / DeepSeek (Pensamiento Profundo) \\
+\textbf{Objetivo:} Evaluar la complejidad operativa, rendimiento en consultas híbridas y potencial de BI de las tres arquitecturas finalistas para definir la pila tecnológica definitiva del MVP.
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Software y Especialista en Bases de Datos. Tras el mapeo tecnológico inicial para el Sistema de Información de optimización de compras de supermercado, he descartado arquitecturas excesivamente complejas y he reducido las opciones a tres arquitecturas candidatas:
+	\begin{enumerate}
+		\item \textbf{Enfoque Relacional Extendido:} PostgreSQL centralizando todo con pgvector y PostGIS.
+		\item \textbf{Ecosistema Políglota Vectorial:} PostgreSQL para transacciones + Qdrant/Milvus para semántica.
+		\item \textbf{Grafos de Conocimiento:} Neo4j como motor principal.
+	\end{enumerate}
+
+	Necesito un análisis profundo de \textit{trade-offs} para decidir la pila tecnológica del Producto Mínimo Viable (MVP). Evalúa cada opción frente a estos tres criterios:
+	\begin{enumerate}[label=\Alph*)]
+		\item \textbf{Complejidad operativa:} Esfuerzo de despliegue, orquestación en Docker y consistencia de datos para un MVP desarrollado por un solo ingeniero.
+		\item \textbf{Resolución de consultas híbridas:} Eficiencia para peticiones cruzadas (ej. \texttt{Búsqueda semántica + Filtro relacional (precio) + Filtro espacial (radio 3km)}).
+		\item \textbf{Extracción de Business Intelligence (BI):} Facilidad nativa para descubrir patrones de consumo ocultos a futuro.
+	\end{enumerate}
+
+	Basándote en este análisis, ¿qué arquitectura recomiendas implementar para asegurar la entrega exitosa del MVP y por qué?
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Gemini, colframe=gray!60!black, breakable]
+	\textbf{Complejidad Operativa:}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido (Baja):} Un único contenedor centraliza el ecosistema, garantizando transacciones ACID nativas para las actualizaciones recurrentes del scraping, ideal para un MVP de un solo ingeniero.
+		\item \textit{Ecosistema Políglota (Alta):} Exige orquestar procesos de sincronización asíncrona (CDC) entre sistemas, añadiendo una carga de mantenimiento arquitectónico desproporcionada.
+		\item \textit{Neo4j (Media):} Reduce contenedores, pero exige el diseño de un modelo de datos desde cero y superar la curva de aprendizaje de Cypher.
+	\end{itemize}
+
+	\textbf{Resolución de Consultas Híbridas:}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido (Alta):} Resuelve el cruce espacial, semántico y de negocio en una única sentencia SQL, evitando mover masivamente datos hacia la capa de aplicación.
+		\item \textit{Ecosistema Políglota (Media):} La alta volatilidad de los precios en los supermercados dificulta mantener los metadatos sincronizados. Forzaría a cruzar identificadores (IDs) en la capa de código (FastAPI), penalizando la latencia.
+		\item \textit{Neo4j (Media):} Sobresale en la optimización espacial de rutas, pero sus índices vectoriales masivos no alcanzan aún la madurez y eficiencia de la extensión pgvector.
+	\end{itemize}
+
+	\textbf{Potencial de Business Intelligence (BI):}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido (Alta):} Al ser el estándar tabular absoluto, facilita la conexión nativa directa de cualquier herramienta visual de BI.
+		\item \textit{Ecosistema Políglota (Baja):} La dispersión fragmenta la analítica, haciendo imperativo el desarrollo de canalizaciones ETL adicionales.
+		\item \textit{Neo4j (Media-Alta):} Excepcional para el descubrimiento de relaciones ocultas, pero dependiente de conectores especializados para integrarse con el BI tradicional.
+	\end{itemize}
+
+	\textbf{Veredicto de la IA:} Recomienda sólidamente el Enfoque Relacional Extendido (PostgreSQL) para el MVP. Argumenta que eliminar los problemas de sincronización de estado (un factor de riesgo crítico dado que el catálogo se actualiza constantemente vía scraping) es la clave para asegurar la entrega ágil y la viabilidad técnica por parte de un solo desarrollador.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\textbf{Complejidad Operativa (Decisiva para el MVP):}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido:} Complejidad mínima. Un único contenedor centraliza gestión, transacciones (ACID) y despliegue, ideal para un solo desarrollador.
+		\item \textit{Ecosistema Políglota:} Alta complejidad. Requiere orquestar sincronización asíncrona (ETL/Bus de eventos) entre PostgreSQL y Qdrant, multiplicando los puntos de fallo y los costes de consistencia.
+		\item \textit{Neo4j:} Media-Alta. Exige dominar Cypher y carece de herramientas maduras para funciones transaccionales puras.
+	\end{itemize}
+
+	\textbf{Resolución de Consultas Híbridas (Tiempo Real):}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido:} Resolución nativa. Utiliza CTEs para pre-filtrar espacialmente (PostGIS) y por precio, aplicando la búsqueda vectorial (pgvector) sobre el subconjunto final de forma eficiente y sin ``postfiltrado''.
+		\item \textit{Ecosistema Políglota:} Requiere orquestación compleja a nivel de aplicación (FastAPI), generando \textit{round-trips} de red continuos entre sistemas que penalizan la latencia.
+		\item \textit{Neo4j:} Excepcional en rutas, pero menos expresivo para combinar similitud vectorial masiva y filtros relacionales frente a SQL.
+	\end{itemize}
+
+	\textbf{Potencial de Business Intelligence (BI):}
+	\begin{itemize}
+		\item \textit{PostgreSQL Extendido:} Estándar absoluto. Integración nativa con herramientas BI para consultas complejas (JOINs, ventanas) cruzando datos espaciales, transaccionales y semánticos sin moverlos.
+		\item \textit{Ecosistema Políglota:} Obliga a construir \textit{Data Lakes/Warehouses} adicionales para unificar el análisis.
+		\item \textit{Neo4j:} Excepcional para descubrir relaciones (comunidades), pero inferior a SQL en cargas puramente analíticas (agregaciones).
+	\end{itemize}
+
+	\textbf{Veredicto y Estrategia:} Recomienda unánimemente el Enfoque Relacional Extendido (PostgreSQL) para el MVP por eliminar la ``taxa de poliglotismo''. Permite iterar rápido y delegar la complejidad a un motor robusto. Si el catálogo escala a millones de vectores, la migración a un entorno políglota (añadiendo Qdrant) se plantearía como evolución natural posterior.
+\end{tcolorbox}
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+Apoyado en el análisis arquitectónico de ambos modelos, se establece como decisión firme implementar el \textbf{Enfoque Relacional Extendido (PostgreSQL + pgvector + PostGIS)} para la construcción del Producto Mínimo Viable. Esta arquitectura está estratégicamente alineada con las restricciones del proyecto, garantizando la viabilidad operativa a corto plazo al evitar la fricción de sincronización de datos y centralizar la resolución de consultas híbridas. El ecosistema de grafos (Neo4j) se descarta como núcleo transaccional del prototipo, pero se mantiene en el \textit{roadmap} tecnológico para futuras expansiones, específicamente para el módulo avanzado de Inteligencia de Negocio y el descubrimiento de patrones de consumo consolidados.
+
+\textit{Nota de revisión (19 de octubre de 2026): la valoración de Neo4j como excepcional en el cálculo de rutas se corrige en la Señal de Tiempo 3. La decisión se revalida con una estimación de volumen y una segunda fuente en la Señal de Tiempo 4.}
 
 \vspace{0.5cm}

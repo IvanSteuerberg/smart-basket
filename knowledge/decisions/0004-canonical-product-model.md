@@ -8,13 +8,13 @@ generated:
   by: claude-code/claude-opus-5-5
   at: 2026-10-19T18:45:00+02:00
 sources:
-  - id: st3
+  - id: st4
     resource: ../../docs/memoria-prompts/entradas/octubre.tex
-    title: Señal de Tiempo 3
+    title: Señal de Tiempo 4
 ---
 # Context
 
-Storing equivalences as free pairwise links lets them chain: skimmed and semi-skimmed milk are similar, semi-skimmed and whole are similar, so skimmed ends up "equivalent" to whole (semantic drift). That breaks functional equivalence, especially for allergies or diets.[^st3]
+Storing equivalences as free pairwise links lets them chain: skimmed and semi-skimmed milk are similar, semi-skimmed and whole are similar, so skimmed ends up "equivalent" to whole (semantic drift). That breaks functional equivalence, especially for allergies or diets.[^st4]
 
 # Decision
 
@@ -31,4 +31,4 @@ Every scraped product is assigned to one canonical product, by nearest-neighbour
 * How canonical products are created (manual seed, clustering, LLM-assisted).
 * Granularity: how specific a canonical product must be.
 
-[^st3]: Proposed by Gemini in prompt log Señal de Tiempo 3.
+[^st4]: Proposed by Gemini in prompt log Señal de Tiempo 4.

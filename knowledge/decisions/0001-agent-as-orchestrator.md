@@ -8,13 +8,13 @@ generated:
   by: claude-code/claude-opus-5-5
   at: 2026-10-19T18:45:00+02:00
 sources:
-  - id: st2
+  - id: st3
     resource: ../../docs/memoria-prompts/entradas/octubre.tex
-    title: Señal de Tiempo 2
+    title: Señal de Tiempo 3
 ---
 # Context
 
-The course requires a "recommender agent". Deciding what to buy and where is a combinatorial optimization problem, and LLMs do not guarantee optimal or reproducible results on it.[^st2]
+The course requires a "recommender agent". Deciding what to buy and where is a combinatorial optimization problem, and LLMs do not guarantee optimal or reproducible results on it.[^st3]
 
 # Decision
 
@@ -25,4 +25,4 @@ The recommender agent is an LLM-based orchestrator. It interprets the shopping l
 * Recommendations are verifiable and reproducible; the LLM can be swapped without changing results.
 * Tools need clear, typed interfaces the agent can call.
 
-[^st2]: Prompt log, Señal de Tiempo 2 (Claude and Gemini agree).
+[^st3]: Prompt log, Señal de Tiempo 3 (Claude and Gemini agree).

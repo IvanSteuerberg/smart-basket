@@ -12,12 +12,15 @@ sources:
     resource: ../../docs/memoria-prompts/entradas/septiembre.tex
     title: Señal de Tiempo 1
   - id: st2
-    resource: ../../docs/memoria-prompts/entradas/octubre.tex
+    resource: ../../docs/memoria-prompts/entradas/septiembre.tex
     title: Señal de Tiempo 2
+  - id: st3
+    resource: ../../docs/memoria-prompts/entradas/octubre.tex
+    title: Señal de Tiempo 3
 ---
 # Context
 
-Prompt log entry ST1 credited PostGIS and Neo4j with route calculation.[^st1] PostGIS only handles geometry (straight-line distance, radius, areas); road routing needs the OpenStreetMap road graph with directions, turn restrictions and speeds.[^st2]
+Prompt log entries ST1 and ST2 credited PostGIS and Neo4j with route calculation.[^st1][^st2] PostGIS only handles geometry (straight-line distance, radius, areas); road routing needs the OpenStreetMap road graph with directions, turn restrictions and speeds.[^st3]
 
 # Decision
 
@@ -31,4 +34,5 @@ Prompt log entry ST1 credited PostGIS and Neo4j with route calculation.[^st1] Po
 * Self-hosted engines use per-road-type speeds, not live traffic.
 
 [^st1]: Prompt log, Señal de Tiempo 1 (claim corrected later).
-[^st2]: Prompt log, Señal de Tiempo 2.
+[^st2]: Prompt log, Señal de Tiempo 2 (claim corrected later).
+[^st3]: Prompt log, Señal de Tiempo 3.

@@ -8,13 +8,16 @@ generated:
   by: claude-code/claude-opus-5-5
   at: 2026-10-19T18:45:00+02:00
 sources:
-  - id: st3
+  - id: st2
+    resource: ../../docs/memoria-prompts/entradas/septiembre.tex
+    title: Señal de Tiempo 2
+  - id: st4
     resource: ../../docs/memoria-prompts/entradas/octubre.tex
-    title: Señal de Tiempo 3
+    title: Señal de Tiempo 4
 ---
 # Context
 
-Expected volume: 30,000-100,000 products from 3-5 chains, about 300 MB of 768-dimension embeddings, and about 36 million price rows per year with daily snapshots. Alternatives evaluated: PostgreSQL alone, PostgreSQL + Qdrant, PostgreSQL + Neo4j.[^st3]
+Expected volume: 30,000-100,000 products from 3-5 chains, about 300 MB of 768-dimension embeddings, and about 36 million price rows per year with daily snapshots. Alternatives evaluated: PostgreSQL alone, PostgreSQL + Qdrant, PostgreSQL + Neo4j. The decision was first taken on 2026-09-21[^st2] and revalidated with volume estimates and a second source on 2026-10-19.[^st4]
 
 # Decision
 
@@ -37,4 +40,5 @@ Development starts directly on pgvector, without a prior benchmark.
 * One service, ACID transactions, no dual-write synchronization.
 * BI tools connect over standard SQL.
 
-[^st3]: Prompt log, Señal de Tiempo 3 (Claude and Gemini both recommend this option).
+[^st2]: Prompt log, Señal de Tiempo 2 (Gemini and DeepSeek recommend this option).
+[^st4]: Prompt log, Señal de Tiempo 4 (Claude and Gemini confirm it).

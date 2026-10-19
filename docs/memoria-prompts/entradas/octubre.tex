@@ -2,11 +2,11 @@
 
 \textbf{Nota metodológica:} desde este mes cada prompt se envía a dos asistentes. Claude responde dentro de la sesión de trabajo, con el contexto acumulado del proyecto; Gemini recibe el mismo prompt de forma autocontenida y sin contexto previo, a través de Antigravity CLI. Las respuestas originales de Gemini se conservan en \url{docs/memoria-prompts/fuentes/}.
 
-% ------------------- ENTRADA 2 -------------------
-\subsection{Señal de Tiempo 2: Descomposición del Cálculo de Rutas y Papel del Agente}
+% ------------------- ENTRADA 3 -------------------
+\subsection{Señal de Tiempo 3: Descomposición del Cálculo de Rutas y Papel del Agente}
 \textbf{Fecha:} 19 de octubre de 2026 \\
 \textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / Gemini 3.8 Flash (Antigravity CLI) \\
-\textbf{Objetivo:} Verificar la afirmación recogida en la Señal de Tiempo 1 de que PostGIS y las bases de datos de grafos resuelven el cálculo de rutas, y delimitar qué componente decide qué comprar y dónde.
+\textbf{Objetivo:} Verificar la afirmación recogida en las Señales de Tiempo 1 y 2 de que PostGIS y las bases de datos de grafos resuelven el cálculo de rutas, y delimitar qué componente decide qué comprar y dónde.
 
 \begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
 	Actúa como Arquitecto de Software. Diseño un sistema que, dada una lista de la compra, recomienda qué productos comprar y en qué supermercados para minimizar el coste total y el tiempo de desplazamiento del usuario. El proyecto exige un ``agente recomendador''.
@@ -50,17 +50,17 @@
 \end{tcolorbox}
 
 \textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
-Se corrige la Señal de Tiempo 1: PostGIS no calcula rutas por carretera y la capacidad de Neo4j para optimizar rutas deja de ser un criterio de selección de la persistencia. El cálculo se estructura en tres capas independientes: \textbf{filtrado espacial} de sucursales candidatas (PostGIS), \textbf{matriz de tiempos} mediante un motor de rutas externo sobre OpenStreetMap (OSRM o Valhalla, pendiente de elegir) y \textbf{optimización de la cesta} mediante un algoritmo propio (búsqueda exhaustiva en el MVP; programación lineal entera si el problema crece).
+Se corrigen las Señales de Tiempo 1 y 2: PostGIS no calcula rutas por carretera y la capacidad de Neo4j para optimizar rutas deja de ser un criterio de selección de la persistencia. El cálculo se estructura en tres capas independientes: \textbf{filtrado espacial} de sucursales candidatas (PostGIS), \textbf{matriz de tiempos} mediante un motor de rutas externo sobre OpenStreetMap (OSRM o Valhalla, pendiente de elegir) y \textbf{optimización de la cesta} mediante un algoritmo propio (búsqueda exhaustiva en el MVP; programación lineal entera si el problema crece).
 
-El \textbf{agente recomendador} exigido se define como un orquestador basado en LLM que utiliza las demás piezas como herramientas: interpreta la lista, aplica preferencias del usuario y explica el resultado, mientras que el optimizador garantiza que las cifras son correctas y reproducibles. Neo4j pasa a evaluarse únicamente como posible grafo de equivalencias entre productos (Señal de Tiempo 3).
+El \textbf{agente recomendador} exigido se define como un orquestador basado en LLM que utiliza las demás piezas como herramientas: interpreta la lista, aplica preferencias del usuario y explica el resultado, mientras que el optimizador garantiza que las cifras son correctas y reproducibles. Neo4j pasa a evaluarse únicamente como posible grafo de equivalencias entre productos (Señal de Tiempo 4).
 
 \vspace{0.5cm}
 
-% ------------------- ENTRADA 3 -------------------
-\subsection{Señal de Tiempo 3: Análisis de Trade-offs de la Capa de Persistencia}
+% ------------------- ENTRADA 4 -------------------
+\subsection{Señal de Tiempo 4: Revalidación de la Capa de Persistencia}
 \textbf{Fecha:} 19 de octubre de 2026 \\
 \textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / Gemini 3.8 Flash (Antigravity CLI) \\
-\textbf{Objetivo:} Comparar las tres arquitecturas de persistencia que quedaron abiertas en la Señal de Tiempo 1 y definir la pila del MVP.
+\textbf{Objetivo:} Revalidar la decisión de la Señal de Tiempo 2 con una estimación del volumen de datos y una segunda fuente, y definir cómo modelar las equivalencias entre productos.
 
 \begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
 	Actúa como Arquitecto de Software y Especialista en Datos. Diseño la capa de persistencia de un Sistema de Información y Business Intelligence que optimiza la cesta de la compra: dada una lista, recomienda qué productos comprar (incluyendo equivalencias entre marcas comerciales y marcas blancas) y en qué supermercados, minimizando coste y tiempo de desplazamiento.
@@ -118,7 +118,7 @@ El \textbf{agente recomendador} exigido se define como un orquestador basado en 
 \end{tcolorbox}
 
 \textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
-Se adopta para el MVP la \textbf{opción A: PostgreSQL como base de datos única}, con pgvector para los embeddings, PostGIS para la ubicación de las sucursales y particionado nativo mensual para el histórico de precios. TimescaleDB solo se incorporará si las agregaciones analíticas lo justifican. Ambas fuentes coinciden en que el volumen previsto no justifica una arquitectura políglota y en que esta introduciría problemas de sincronización.
+Se confirma la decisión de la Señal de Tiempo 2: \textbf{PostgreSQL como base de datos única}, con pgvector para los embeddings, PostGIS para la ubicación de las sucursales y particionado nativo mensual para el histórico de precios. TimescaleDB solo se incorporará si las agregaciones analíticas lo justifican. Ambas fuentes coinciden en que el volumen previsto no justifica una arquitectura políglota y en que esta introduciría problemas de sincronización.
 
 Las equivalencias entre productos se modelarán mediante un \textbf{modelo de producto canónico}, aportación de Gemini que evita la deriva semántica de un grafo de equivalencias libres. El desarrollo arranca directamente con pgvector, sin benchmark previo: solo se evaluará la migración a Qdrant si, con el catálogo real, el rendimiento de la búsqueda de equivalencias resulta inaceptable. Neo4j queda condicionado a que las consultas de varios saltos o los algoritmos de grafos pasen a ser una funcionalidad central. El siguiente hito será diseñar la separación entre el esquema transaccional (OLTP) y el esquema analítico (OLAP) de la capa de Business Intelligence.
 
