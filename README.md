@@ -35,6 +35,10 @@ docs/
   idea-base/          Concept document (LaTeX, Spanish)
   memoria-prompts/    Generative AI prompt log (LaTeX, Spanish)
     entradas/         One entry file per month, included from memoria-prompts.tex
+    fuentes/          Raw answers from the second AI source
+  registro-actividad/ Weekly activity log of all course work (LaTeX, Spanish)
+scripts/
+  osf_publish.py      Compile the documents and publish the PDFs to OSF (dry run by default)
 ```
 
 ## Building the documentation

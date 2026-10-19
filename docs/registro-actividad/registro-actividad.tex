@@ -1,0 +1,149 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\hyphenation{Elastic-search Post-greSQL}
+
+% Una actividad: \actividad{Tipo}{Descripción}{Resultado}
+\newcommand{\actividad}[3]{\item[\textbf{[#1]}] #2 \\ \textit{Resultado:} #3}
+
+\title{Registro de Actividad \\ \large Sistemas de Información de Gestión y Business Intelligence}
+\author{Iván Rodríguez Steuerberg}
+\date{Curso 2026-2027}
+
+\begin{document}
+	\maketitle
+
+	\section*{Cómo leer este registro}
+	Registro semanal de todo el trabajo de la asignatura: clases, tareas, investigaciones, decisiones y documentación. Las semanas van de lunes a domingo; cada una abre con un resumen y cada actividad indica su tipo y el resultado o artefacto producido. El detalle de las interacciones con IA generativa está en la \textit{Memoria de Prompts}; las decisiones técnicas, en la carpeta \texttt{knowledge} del repositorio del proyecto: \url{https://github.com/IvanSteuerberg/smart-basket}.
+
+	Tipos de actividad: \textbf{Clase}, \textbf{Tarea}, \textbf{Investigación}, \textbf{Decisión}, \textbf{Documentación} y \textbf{Análisis}.
+
+	\textbf{Reconstrucción:} las actividades anteriores al 19 de octubre de 2026 se han reconstruido a partir del historial del proyecto en OSF (fechas de creación y modificación de archivos), del contenido de las notas de clase y de los documentos entregados. La fecha de una actividad de clase es la de la sesión, aunque las notas se subieran más tarde.
+
+
+	\section*{Semana 1: 7 -- 13 de septiembre}
+	\textit{Resumen:} Arranque de la asignatura y presentación de las herramientas de trabajo (OSF y GitHub).
+	
+	\subsection*{Miércoles 9 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Presentación de la asignatura: OSF y GitHub como soporte del trabajo y control de asistencia. Lecturas recomendadas sobre IA y la era agéntica (Enrique López, Eduardo Entrala).}{Notas de clase del 9 de septiembre.}
+	\end{description}
+
+	\section*{Semana 2: 14 -- 20 de septiembre}
+	\textit{Resumen:} Criterios de valoración y metodología; creación y organización del proyecto en OSF; documento de concepto y primera investigación sobre persistencia.
+	
+	\subsection*{Lunes 14 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Criterios de valoración del proyecto: se valora más la IA local que la remota y el uso de agentes o enjambres de agentes; el proyecto puede servir como base del TFG. Referencias: Redwood Research y un artículo de Enrique López sobre la era agéntica.}{Notas de clase del 14 de septiembre.}
+		\actividad{Tarea}{Creación del proyecto privado de la asignatura en OSF.}{Proyecto en OSF.}
+	\end{description}
+
+	\subsection*{Miércoles 16 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Metodología de la asignatura: lectura y análisis de libros, cursos y seminarios (entre ellos, cursos de Neo4j), acceso a la plataforma SIBI-2026 y etapa de investigación como 60-70~\% de la asignatura mediante aprendizaje basado en proyectos. Referentes: Enrique Herrera Viedma y Félix Barrio (INCIBE); curso CS329A de Stanford sobre agentes de autoaprendizaje.}{Notas de clase del 16 de septiembre.}
+		\actividad{Tarea}{Alta del profesor como colaborador del proyecto en OSF.}{Proyecto compartido con el profesor.}
+	\end{description}
+
+	\subsection*{Jueves 17 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Organización inicial de OSF: carpetas de notas de clase, TFG de referencia e informes, y subida de las notas del 9, 14 y 16 de septiembre.}{Estructura \texttt{docs} en OSF.}
+		\actividad{Investigación}{Búsqueda de antecedentes: TFG ``Desarrollo de una Aplicación Móvil para el Ahorro de Gastos en la Compra de Alimentos Utilizando Técnicas de Web Scraping'' (Álvaro Alfonso Gómez, Universidad Politécnica de Madrid, 2023).}{TFG de referencia en OSF.}
+	\end{description}
+
+	\subsection*{Viernes 18 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Documentación}{Redacción del documento de concepto: problema de negocio, propuesta de valor y arquitectura general por módulos.}{Documento de Concepto v1.0, subido a OSF.}
+		\actividad{Documentación}{Creación de la plantilla LaTeX de la Memoria de Prompts con entradas mensuales.}{Plantilla subida a OSF.}
+		\actividad{Investigación}{Exploración del estado del arte en persistencia (transaccional, vectorial y espacial) con Gemini Pro y DeepSeek.}{Señal de Tiempo 1 de la Memoria de Prompts: se descartan Elasticsearch y NewSQL y quedan tres arquitecturas candidatas.}
+	\end{description}
+
+	\section*{Semana 3: 21 -- 27 de septiembre}
+	\textit{Resumen:} Encargos de lecturas y enlaces; decisión de la pila de persistencia del MVP.
+	
+	\subsection*{Lunes 21 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Encargos: un TOP 10 de enlaces de seguimiento (personas, vídeo favorito, del año en curso), con al menos 3 que no estén en Sicodinet2 ni los tengan los compañeros; lectura de libros de Sicodinet2 con comentario o crítica (mínimo 3-5). arXiv como fuente de artículos científicos.}{Notas de clase del 21 de septiembre.}
+		\actividad{Investigación}{Análisis de \textit{trade-offs} entre las tres arquitecturas candidatas (complejidad operativa, consultas híbridas y potencial de BI) con Gemini Pro y DeepSeek.}{Señal de Tiempo 2 de la Memoria de Prompts.}
+		\actividad{Decisión}{PostgreSQL con pgvector y PostGIS como pila de persistencia del MVP; Neo4j queda en el \textit{roadmap} para el módulo avanzado de BI.}{Memoria de Prompts actualizada en OSF.}
+	\end{description}
+
+	\subsection*{Miércoles 23 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Asignación de libros a analizar. Agentes: \textit{Agentic AI for DevOps Engineers} (2026) y \textit{Agentic AI For Dummies} (Pam Baker, 2025). IA: \textit{Building MCP Servers with C\#} (2026) y \textit{Building Trusted Data Platforms with Azure Databricks and GenAI}, 2.ª ed. (2026). Además, dos libros de libre elección.}{Notas de clase del 23 de septiembre.}
+		\actividad{Tarea}{Edición de la página principal (wiki) del proyecto en OSF.}{Wiki del proyecto.}
+	\end{description}
+
+	\section*{Semana 4: 28 de septiembre -- 4 de octubre}
+	\textit{Resumen:} Curso de IA Agéntica e informe de opinión sobre su primera lección; caso GenRec en clase.
+	
+	\subsection*{Lunes 28 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Presentación del curso de IA Agéntica de Fran Rodrigo como material práctico de la asignatura.}{Notas de clase del 28 de septiembre.}
+	\end{description}
+
+	\subsection*{Miércoles 30 de septiembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Casos de estudio: Netflix sustituye su sistema de recomendación por un LLM (GenRec) y uso de LLMs en YouTube.}{Notas de clase del 30 de septiembre.}
+		\actividad{Documentación}{Informe de opinión y análisis crítico de la Lección 1 (Introducción a los Agentes de IA) del curso de IA Agéntica de Fran Rodrigo: bucle percepción-razonamiento-acción-observación, niveles de autonomía y planificación.}{Informe de opinión (3 páginas), subido a OSF.}
+	\end{description}
+
+
+	\section*{Semana 5: 5 -- 11 de octubre}
+	\textit{Resumen:} Encargo del informe sobre GenRec. Sin clase el lunes 5.
+	
+	\subsection*{Miércoles 7 de octubre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Encargo de un informe de opinión sobre GenRec para subir a OSF, con fecha límite el 14 de octubre.}{Notas de clase del 7 de octubre.}
+	\end{description}
+
+	\section*{Semana 6: 12 -- 18 de octubre}
+	\textit{Resumen:} Entrega del informe sobre GenRec antes del plazo, puesta al día de las notas de clase en OSF y puesta en común del estado del proyecto en clase. Sin clase el lunes 12 (festivo).
+	
+	\subsection*{Lunes 12 de octubre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Documentación}{Informe ``El Cambio de Paradigma en Sistemas de Recomendación: de las características manuales a los modelos de lenguaje. El caso de GenRec en Netflix'': ingeniería de contexto, arquitectura y entrenamiento de GenRec, resultados con usuarios y fiabilidad.}{Informe de 6 páginas subido a OSF dentro del plazo.}
+		\actividad{Tarea}{Subida a OSF de las notas de clase del 21 de septiembre al 7 de octubre.}{Notas de clase completas en OSF.}
+	\end{description}
+
+	\subsection*{Miércoles 14 de octubre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Puesta en común del estado de los proyectos. Referencia al Open Knowledge Format (OKF) de Google, adoptado después para la base de conocimiento del proyecto.}{Notas de clase del 14 de octubre (pendientes de subir a OSF).}
+	\end{description}
+
+	\section*{Semana 7: 19 -- 25 de octubre}
+	\textit{Resumen:} Repositorio del proyecto, revisión de rutas y persistencia con dos fuentes de IA, base de conocimiento, requisitos del MVP y organización de OSF. Semana en curso.
+	
+	\subsection*{Lunes 19 de octubre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Creación en GitHub del repositorio público \texttt{smart-basket}, con un README e instrucciones para asistentes de IA (\texttt{AGENTS.md}). Código y documentación técnica en inglés; documentos académicos en español.}{Repositorio en GitHub.}
+		\actividad{Investigación}{Revisión del cálculo de rutas: se comprueba que PostGIS no calcula rutas por carretera y que Neo4j no aporta en este punto.}{Señal de Tiempo 3 de la Memoria de Prompts, que corrige las Señales 1 y 2.}
+		\actividad{Decisión}{El agente recomendador se define como orquestador basado en LLM que usa herramientas deterministas; el cálculo de rutas se organiza en tres capas (filtrado espacial, motor de rutas externo y optimizador propio).}{Decisiones 0001 y 0002 de la base de conocimiento.}
+		\actividad{Tarea}{Configuración de Antigravity CLI para enviar cada prompt también a Gemini 3.8 Flash y contrastar las respuestas con las de Claude.}{Memoria de Prompts con dos fuentes por entrada; respuestas originales en \texttt{docs/memoria-prompts/fuentes}.}
+		\actividad{Investigación}{Revalidación de la decisión de persistencia con una estimación del volumen de datos y una segunda fuente.}{Señal de Tiempo 4 de la Memoria de Prompts.}
+		\actividad{Decisión}{Se confirma PostgreSQL como base de datos única, empezando con pgvector sin benchmark previo. Equivalencias mediante modelo de producto canónico.}{Decisiones 0003 y 0004 de la base de conocimiento.}
+		\actividad{Documentación}{Actualización del documento de concepto: agente como orquestador, capa analítica (BI) e historial de versiones.}{Documento de Concepto v1.1.}
+		\actividad{Documentación}{Creación de la base de conocimiento del proyecto en formato Open Knowledge Format (OKF v0.2): visión, glosario, arquitectura y decisiones.}{Carpeta \texttt{knowledge} del repositorio.}
+		\actividad{Análisis}{Definición del alcance del MVP y de los requisitos: León, web adaptable a móvil, sin cuentas, a pie o en coche con un máximo de 3 tiendas, todas las promociones públicas y BI para consumidor y analista.}{Alcance del MVP, 35 requisitos funcionales y 12 no funcionales (borrador pendiente de revisión).}
+		\actividad{Tarea}{Lectura del estado del proyecto en OSF mediante su API, reconstrucción de la actividad anterior y recuperación en el repositorio de la Señal de Tiempo 2, que solo estaba en el PDF de OSF.}{Este registro de actividad, ahora semanal; Memoria de Prompts renumerada.}
+		\actividad{Tarea}{Reorganización de OSF en carpetas numeradas (proyecto, informes, lecturas, referencias, notas de clase y archivo), índice con metadatos en la wiki, descripción y etiquetas del proyecto, y publicación automática de los PDF con versiones conservadas por OSF.}{OSF organizado; script \texttt{scripts/osf\_publish.py} en el repositorio.}
+	\end{description}
+
+	\subsection*{Planificado para el resto de la semana}
+	\begin{itemize}
+		\item Estudio de viabilidad de las fuentes de datos (scraping) de las cadenas incluidas en el alcance.
+		\item Revisión de los requisitos del MVP.
+	\end{itemize}
+	
+	% ======================= PENDIENTES =======================
+	\section*{Encargos pendientes}
+	Encargos recogidos en las notas de clase que siguen sin hacer a 19 de octubre de 2026:
+	\begin{itemize}
+		\item TOP 10 de enlaces de seguimiento (encargado el 21 de septiembre).
+		\item Análisis o crítica de los cuatro libros asignados y de dos de libre elección (encargado el 23 de septiembre).
+	\end{itemize}
+
+\end{document}

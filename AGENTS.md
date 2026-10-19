@@ -39,6 +39,18 @@ Use of generative AI in the project is documented in `docs/memoria-prompts/`. It
 - When a working session with an agent produces a relevant decision or finding, offer the author to draft the matching entry.
 - If an AI answer already recorded contains an incorrect or unverified claim, point it out instead of taking it for granted.
 
+## Activity log (registro de actividad)
+
+`docs/registro-actividad/registro-actividad.tex` records all course work week by week (Monday to Sunday) and is published to OSF.
+
+- After any session that produces work, add one `\actividad{Tipo}{Descripción}{Resultado}` per activity under the day's `\subsection*{<Weekday> <d> de <mes>}`, inside the current week's `\section*{Semana N: <range>}`. Types: Clase, Tarea, Investigación, Decisión, Documentación, Análisis.
+- Keep it high level and point to the artifact (Señal de Tiempo, decision number, file) instead of repeating its content.
+- The current week ends with "Planificado para el resto de la semana". When a week closes, write its one-line `\textit{Resumen:}`, remove the plan, and open the next week. Assignments not yet done stay in "Encargos pendientes".
+
+## Publishing to OSF
+
+The author's OSF project (`ysmkz`, private, shared with the professor) receives the compiled PDFs. `python scripts/osf_publish.py` shows what would change; `--apply` compiles and uploads. Documents keep a fixed name in OSF, which stores every upload as a new version, so never create dated copies. Only publish with the author's go-ahead. The token lives in `.env` (`OSF_TOKEN`, git-ignored): never print or commit it.
+
 ## LaTeX
 
 - Build from each document's folder (`\input` paths are relative).
