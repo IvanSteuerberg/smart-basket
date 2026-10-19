@@ -1,7 +1,7 @@
 ---
 type: Product Vision
 title: Smart Basket vision
-description: Problem, value proposition and open scope questions for the MVP.
+description: Problem, value proposition and users of Smart Basket.
 tags: [product, scope]
 status: draft
 generated:
@@ -24,17 +24,12 @@ The system is also a Business Intelligence tool: it keeps a price history that s
 
 # Users
 
-* **Shopper:** manages shopping lists, receives recommendations and routes, tracks savings.
-* **Analyst** (academic BI scope): explores price evolution across chains and categories.
+* **Shopper:** writes or builds a shopping list, receives the recommended basket and route, and tracks savings locally in the browser (no account).
+* **Analyst** (academic BI scope): explores price evolution, promotions and private-label vs. national-brand prices across chains and categories.
+* **Administrator:** monitors data ingestion and reviews low-confidence product equivalences.
 
-# Open scope questions
+# Scope
 
-To be answered when defining requirements:
-
-* Which chains are included in the MVP, and is their data obtainable?
-* Geographic scope (one city, e.g. León, or wider).
-* Platform for the MVP: web first, or web and mobile from the start.
-* Travel mode (walking, car) and maximum number of stores per trip.
-* Whether user accounts and purchase history are part of the MVP.
+The MVP scope (León, responsive web, no accounts, walking or car with up to 3 stores, all public promotions) is defined in [MVP scope](/requirements/scope.md).
 
 [^concept]: Documento de Concepto, sections "Problema de Negocio" and "Propuesta de Valor".
