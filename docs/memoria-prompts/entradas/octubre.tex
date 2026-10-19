@@ -1,0 +1,125 @@
+\section{Registro Mensual: Octubre 2026}
+
+\textbf{Nota metodológica:} desde este mes cada prompt se envía a dos asistentes. Claude responde dentro de la sesión de trabajo, con el contexto acumulado del proyecto; Gemini recibe el mismo prompt de forma autocontenida y sin contexto previo, a través de Antigravity CLI. Las respuestas originales de Gemini se conservan en \url{docs/memoria-prompts/fuentes/}.
+
+% ------------------- ENTRADA 2 -------------------
+\subsection{Señal de Tiempo 2: Descomposición del Cálculo de Rutas y Papel del Agente}
+\textbf{Fecha:} 19 de octubre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / Gemini 3.8 Flash (Antigravity CLI) \\
+\textbf{Objetivo:} Verificar la afirmación recogida en la Señal de Tiempo 1 de que PostGIS y las bases de datos de grafos resuelven el cálculo de rutas, y delimitar qué componente decide qué comprar y dónde.
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Software. Diseño un sistema que, dada una lista de la compra, recomienda qué productos comprar y en qué supermercados para minimizar el coste total y el tiempo de desplazamiento del usuario. El proyecto exige un ``agente recomendador''.
+
+	Dos asistentes de IA me han indicado que PostGIS permite calcular rutas y que las bases de datos de grafos como Neo4j tienen en el cálculo de rutas su punto fuerte. Quiero verificarlo antes de elegir la arquitectura:
+	\begin{enumerate}
+		\item ¿Es correcto? Explica qué parte del problema resuelve cada tecnología: PostGIS, pgRouting, motores de rutas sobre OpenStreetMap (OSRM, Valhalla, GraphHopper) y Neo4j.
+		\item ¿Cómo descompondrías el problema completo de decidir qué comprar y en qué tiendas teniendo en cuenta precios y tiempos? ¿Tiene nombre en la literatura y es tratable para un MVP con pocas tiendas candidatas?
+		\item El componente que toma esa decisión, ¿debería ser un agente basado en LLM, un algoritmo, o una combinación? ¿Qué papel tendría cada uno?
+		\item Si Neo4j no aporta en el cálculo de rutas, ¿en qué podría aportar en este sistema?
+	\end{enumerate}
+	Indica qué afirmaciones no puedes verificar.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{PostGIS no calcula rutas:} aporta tipos geométricos e índices espaciales para distancias en línea recta, radios de búsqueda y áreas. En el sistema actúa como filtro barato para reducir las sucursales a unas pocas candidatas.
+
+		\item \textbf{Las rutas requieren el grafo viario:} tramos, sentidos, giros prohibidos y velocidades procedentes de OpenStreetMap. Los motores dedicados (OSRM, Valhalla, GraphHopper) preprocesan ese grafo y devuelven en milisegundos una \textit{matriz de tiempos} entre el usuario y las tiendas. pgRouting es la alternativa dentro de PostgreSQL, más lenta y costosa de mantener. Neo4j puede ejecutar Dijkstra o A* con su librería de algoritmos, pero obligaría a cargar la red viaria completa y no está diseñado para ello.
+
+		\item \textbf{La decisión de compra es el \textit{Traveling Purchaser Problem}}, generalización NP-difícil del problema del viajante. En el MVP es tratable por fuerza bruta: con un máximo de 3 tiendas entre 10 candidatas hay 175 combinaciones; en cada una, cada producto se asigna a la tienda más barata y se minimiza $\mathrm{coste} + \lambda \cdot \mathrm{minutos}$, siendo $\lambda$ el valor que el usuario da a su tiempo.
+
+		\item \textbf{Optimizador frente a agente:} el optimizador es un algoritmo determinista. El ``agente recomendador'' es el sistema completo, definido como un orquestador basado en LLM que interpreta la lista, invoca las herramientas (búsqueda de equivalencias, motor de rutas, optimizador) y explica el resultado. Los cálculos numéricos nunca los realiza el LLM.
+
+		\item \textbf{Neo4j} no aporta en rutas; su posible papel está en un grafo de conocimiento de productos (equivalencias, ingredientes, alérgenos, fabricantes).
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Gemini, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Coincide en la corrección:} califica las afirmaciones previas de imprecisas por confundir la teoría de grafos con los sistemas de información geográfica. PostGIS es imprescindible para el filtrado (\texttt{ST\_DWithin}), pgRouting es ineficiente para redes medianas y los motores sobre OSM (\textit{Contraction Hierarchies}, \textit{Multi-Level Dijkstra}) son la opción óptima. Considera Neo4j un antipatrón para rutas viales.
+
+		\item \textbf{Formalización del problema:} identifica el \textit{Traveling Purchaser Problem} y sus variantes capacitada y multiobjetivo (frontera de Pareto entre coste y tiempo). Con un máximo de 3 tiendas entre 8 candidatas estima 92 combinaciones y como mucho 6 órdenes de visita por combinación. Para escenarios mayores propone programación lineal entera mixta con Google OR-Tools o HiGHS.
+
+		\item \textbf{Arquitectura híbrida:} agente LLM con llamadas a herramientas para la normalización semántica de la lista, las restricciones blandas (``no más de 20 minutos'') y la explicación, junto a un solver determinista que garantiza optimalidad y reproducibilidad.
+
+		\item \textbf{Papel de Neo4j:} grafo de sustituibilidad entre productos, homogeneización de catálogos entre cadenas (cada referencia apunta a un producto canónico) y afinidad usuario-marca. No lo considera necesario de entrada en el MVP.
+
+		\item \textbf{Limitación señalada:} los motores sobre OSM autoalojados usan velocidades por tipo de vía, no tráfico en tiempo real.
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+Se corrige la Señal de Tiempo 1: PostGIS no calcula rutas por carretera y la capacidad de Neo4j para optimizar rutas deja de ser un criterio de selección de la persistencia. El cálculo se estructura en tres capas independientes: \textbf{filtrado espacial} de sucursales candidatas (PostGIS), \textbf{matriz de tiempos} mediante un motor de rutas externo sobre OpenStreetMap (OSRM o Valhalla, pendiente de elegir) y \textbf{optimización de la cesta} mediante un algoritmo propio (búsqueda exhaustiva en el MVP; programación lineal entera si el problema crece).
+
+El \textbf{agente recomendador} exigido se define como un orquestador basado en LLM que utiliza las demás piezas como herramientas: interpreta la lista, aplica preferencias del usuario y explica el resultado, mientras que el optimizador garantiza que las cifras son correctas y reproducibles. Neo4j pasa a evaluarse únicamente como posible grafo de equivalencias entre productos (Señal de Tiempo 3).
+
+\vspace{0.5cm}
+
+% ------------------- ENTRADA 3 -------------------
+\subsection{Señal de Tiempo 3: Análisis de Trade-offs de la Capa de Persistencia}
+\textbf{Fecha:} 19 de octubre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / Gemini 3.8 Flash (Antigravity CLI) \\
+\textbf{Objetivo:} Comparar las tres arquitecturas de persistencia que quedaron abiertas en la Señal de Tiempo 1 y definir la pila del MVP.
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Software y Especialista en Datos. Diseño la capa de persistencia de un Sistema de Información y Business Intelligence que optimiza la cesta de la compra: dada una lista, recomienda qué productos comprar (incluyendo equivalencias entre marcas comerciales y marcas blancas) y en qué supermercados, minimizando coste y tiempo de desplazamiento.
+
+	Requisitos de datos:
+	\begin{itemize}
+		\item Catálogo de 3-5 cadenas españolas obtenido por scraping: entre 30.000 y 100.000 productos en total.
+		\item Histórico de precios con actualización diaria.
+		\item Embeddings de productos ($\sim$768 dimensiones) para buscar equivalentes, combinados con filtros (categoría, alérgenos, formato) y búsqueda textual.
+		\item Usuarios y listas de la compra.
+		\item Análisis BI sobre la evolución de precios.
+		\item El cálculo de rutas lo hace un motor externo (OSRM/Valhalla); la base de datos solo guarda la ubicación de las sucursales.
+	\end{itemize}
+
+	Compara para un MVP académico estas tres arquitecturas:
+	\begin{enumerate}[label=\Alph*)]
+		\item PostgreSQL todo en uno (pgvector + PostGIS + particionado o TimescaleDB).
+		\item PostgreSQL + base vectorial nativa (Qdrant).
+		\item PostgreSQL + Neo4j (grafo de equivalencias entre productos).
+	\end{enumerate}
+
+	Evalúa: encaje con el volumen, calidad de la búsqueda de equivalencias, soporte para el histórico de precios y BI, consultas de relaciones de varios saltos, complejidad operativa y de consistencia, y coste/licencias. Da una tabla comparativa, una recomendación justificada y los umbrales concretos que harían cambiar de opción. Indica qué afirmaciones no puedes verificar.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{El volumen decide:} 100.000 embeddings de 768 dimensiones ocupan unos 300 MB (la mitad con \texttt{halfvec}). El histórico con una foto diaria supone unos 36 millones de filas al año, y bastantes menos si solo se registran los cambios de precio. Las bases vectoriales nativas compensan a partir de millones de vectores o de un número muy alto de consultas por segundo.
+
+		\item \textbf{Opción A:} combina en una sola consulta la similitud vectorial, los filtros y la búsqueda textual. El escaneo iterativo de pgvector 0.8 corrige la pérdida de resultados al filtrar sobre índices HNSW. El BI se resuelve en SQL con herramientas estándar (Metabase, Superset, Power BI). Un único servicio con transacciones y sin sincronización.
+
+		\item \textbf{Opción B:} superior en búsqueda vectorial a gran escala, pero sobredimensionada para el volumen previsto y obliga a sincronizar los vectores entre dos servicios.
+
+		\item \textbf{Opción C:} muy expresiva en relaciones de varios saltos. Neo4j Community se distribuye bajo GPLv3 y la edición gratuita de su librería de algoritmos de grafos está limitada a 4 núcleos. Neo4j como base de datos única queda descartada por su mal encaje con series temporales y BI.
+
+		\item \textbf{Recomendación:} opción A, con umbrales medibles para revisarla: incorporar Qdrant si la latencia p95 de la búsqueda filtrada supera los 100 ms con el catálogo real (verificable con un benchmark pgvector frente a Qdrant) e incorporar Neo4j si las consultas de varios saltos pasan a ser centrales. Como término medio, una exportación periódica del grafo de equivalencias a Neo4j como capa analítica fuera del camino crítico. Apache AGE queda como alternativa, aunque solo hay versiones candidatas para PostgreSQL 17 y 18.
+
+		\item \textbf{Cuestión derivada:} en un SIG con BI, decidir la base de datos implica decidir dónde vive la analítica: un esquema transaccional (OLTP) para la aplicación y un esquema en estrella (OLAP) para el análisis.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Gemini, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Mismo dimensionamiento y misma recomendación:} unos 307 MB de embeddings (450-600 MB con el índice HNSW) y 36,5 millones de filas de precios al año. Recomienda la opción A de forma ``unívoca''.
+
+		\item \textbf{Problema de la doble escritura:} en B y C, insertar en PostgreSQL y fallar en el segundo motor deja datos huérfanos si no se añaden colas o captura de cambios (CDC). En Qdrant, además, hay que duplicar metadatos dinámicos (precio, formato) o consultar en dos fases.
+
+		\item \textbf{Deriva semántica por transitividad:} en un grafo de equivalencias libres, a dos o tres saltos la sustitución deja de ser válida (leche desnatada $\leftrightarrow$ semidesnatada $\leftrightarrow$ entera). Propone en su lugar un \textbf{modelo de producto canónico}: cada producto obtenido por scraping se asigna a un producto canónico (por vecinos más cercanos con umbral de confianza o por reglas), y la búsqueda de equivalentes se reduce a una unión de un solo salto.
+
+		\item \textbf{Umbrales propuestos:} Qdrant a partir de 2 millones de vectores o 1.000 consultas por segundo; Neo4j con caminos de más de 4-5 saltos o algoritmos de grafos (Louvain, PageRank); un motor OLAP (ClickHouse, DuckDB) a partir de 100 millones de filas o informes de más de 3-5 segundos.
+
+		\item \textbf{No verificable sin pruebas:} la precisión de los embeddings para distinguir formatos (pack de 800 g frente a 200 g), la latencia real del filtrado en pgvector frente a Qdrant y la rotación de identificadores de producto en las webs de las cadenas.
+
+		\item \textbf{Imprecisiones detectadas:} sitúa el escaneo iterativo de pgvector en la versión 0.7, cuando se introdujo en la 0.8.0. Describe la licencia de la edición Community de TimescaleDB como limitada a usos no comerciales, cuando su restricción principal es ofrecerla como servicio de base de datos gestionado (pendiente de contrastar con el texto de la licencia).
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+Se adopta para el MVP la \textbf{opción A: PostgreSQL como base de datos única}, con pgvector para los embeddings, PostGIS para la ubicación de las sucursales y particionado nativo mensual para el histórico de precios. TimescaleDB solo se incorporará si las agregaciones analíticas lo justifican. Ambas fuentes coinciden en que el volumen previsto no justifica una arquitectura políglota y en que esta introduciría problemas de sincronización.
+
+Las equivalencias entre productos se modelarán mediante un \textbf{modelo de producto canónico}, aportación de Gemini que evita la deriva semántica de un grafo de equivalencias libres. El desarrollo arranca directamente con pgvector, sin benchmark previo: solo se evaluará la migración a Qdrant si, con el catálogo real, el rendimiento de la búsqueda de equivalencias resulta inaceptable. Neo4j queda condicionado a que las consultas de varios saltos o los algoritmos de grafos pasen a ser una funcionalidad central. El siguiente hito será diseñar la separación entre el esquema transaccional (OLTP) y el esquema analítico (OLAP) de la capa de Business Intelligence.
+
+\vspace{0.5cm}
