@@ -8,6 +8,7 @@
     "03-lecturas": "Análisis de libros y enlaces de seguimiento.",
     "04-referencias": "Material de referencia de terceros.",
     "05-notas-de-clase": "Notas tomadas en cada sesión de clase.",
+    "06-guias": "Guías prácticas para compañeros.",
     "99-archivo": "Material sustituido que se conserva como histórico."
   },
   "files": {
@@ -16,15 +17,17 @@
     "01-proyecto/Registro_Actividad.pdf": ["Registro semanal de clases, tareas, investigaciones y decisiones.", "En curso"],
     "02-informes/informe_opinion_ia_agentica.pdf": ["Opinión sobre la Lección 1 del curso de IA Agéntica de Fran Rodrigo.", "Entregado"],
     "02-informes/InformeGenRec-IvanSteuerberg.pdf": ["El cambio de paradigma en sistemas de recomendación: el caso de GenRec en Netflix.", "Entregado (plazo 14/10)"],
+    "03-lecturas/TOP10_Enlaces_Seguimiento.pdf": ["Diez fuentes de seguimiento (X, blogs, newsletters y YouTube) con el motivo de cada una.", "Entregado"],
     "04-referencias/TFG_WEB_SCRAPPING_ALIMENTOS.pdf": ["TFG (UPM, 2023): app de ahorro en la compra de alimentos mediante web scraping.", "Referencia"],
+    "06-guias/Guia_Automatizar_OSF.pdf": ["Guía para no técnicos: automatizar OSF con un asistente de IA (token, prompt maestro y uso diario).", "Entregado"],
+    "06-guias/Presentacion_Automatizar_OSF.html": ["Presentación de la guía para exponerla en clase (abrir en el navegador).", "Entregado"],
     "99-archivo/plantillas-latex": ["Plantilla LaTeX inicial de la memoria de prompts, sustituida por la del repositorio.", "Archivado"]
   },
   "list_only": ["05-notas-de-clase"],
   "empty_notes": {
-    "03-lecturas": "Pendiente: TOP 10 de enlaces de seguimiento y análisis de libros."
+    "03-lecturas": "Pendiente: análisis de libros."
   },
   "pending": [
-    "TOP 10 de enlaces de seguimiento (encargado el 21/09).",
     "Análisis o crítica de los cuatro libros asignados y de dos de libre elección (encargado el 23/09)."
   ]
 }

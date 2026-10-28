@@ -26,11 +26,15 @@ NODE = "ysmkz"
 API = "https://api.osf.io/v2"
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
-# (source folder, main .tex file, OSF folder, published file name)
+# (source folder, source file, OSF folder, published file name).
+# .tex sources are compiled to PDF; any other file is uploaded as it is.
 DOCUMENTS = [
     ("docs/idea-base", "idea.tex", "01-proyecto", "Concepto_del_proyecto.pdf"),
     ("docs/memoria-prompts", "memoria-prompts.tex", "01-proyecto", "Memoria_Prompts.pdf"),
     ("docs/registro-actividad", "registro-actividad.tex", "01-proyecto", "Registro_Actividad.pdf"),
+    ("docs/top10-enlaces", "top10-enlaces.tex", "03-lecturas", "TOP10_Enlaces_Seguimiento.pdf"),
+    ("docs/guia-osf", "guia-osf.tex", "06-guias", "Guia_Automatizar_OSF.pdf"),
+    ("docs/guia-osf", "presentacion.html", "06-guias", "Presentacion_Automatizar_OSF.html"),
 ]
 
 
@@ -98,6 +102,16 @@ def compile_pdf(folder, tex):
     return src / tex.replace(".tex", ".pdf"), bool(dirty)
 
 
+def build(folder, source):
+    """Return the file to publish and whether its sources have uncommitted changes."""
+    if source.endswith(".tex"):
+        return compile_pdf(folder, source)
+    path = f"{folder}/{source}"
+    dirty = subprocess.run(["git", "status", "--porcelain", "--", path], cwd=ROOT,
+                           capture_output=True, text=True).stdout.strip()
+    return ROOT / path, bool(dirty)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="upload instead of dry run")
@@ -108,8 +122,8 @@ def main():
     root_items = osf.list_folder(root["relationships"]["files"]["links"]["related"]["href"])
     folders = {}
 
-    for folder, tex, remote_folder, name in DOCUMENTS:
-        pdf, dirty = compile_pdf(folder, tex)
+    for folder, source, remote_folder, name in DOCUMENTS:
+        pdf, dirty = build(folder, source)
         local_hash = hashlib.sha256(pdf.read_bytes()).hexdigest()
         note = " (uncommitted changes)" if dirty else ""
 
@@ -121,10 +135,9 @@ def main():
                     folders[remote_folder] = None
                     print(f"upload  /{remote_folder}/{name}{note}")
                     continue
-                entity = osf.request(f"{root['links']['new_folder']}&name={remote_folder}", method="PUT")["data"]
-                entity = {"attributes": entity["attributes"], "links": entity["links"],
-                          "relationships": {"files": {"links": {"related": {"href":
-                              f"{API}/nodes/{NODE}/files/osfstorage{entity['attributes']['path']}"}}}}}
+                osf.request(f"{root['links']['new_folder']}&name={remote_folder}", method="PUT")
+                root_items = osf.list_folder(root["relationships"]["files"]["links"]["related"]["href"])
+                entity = root_items[remote_folder]
             folders[remote_folder] = (entity, osf.list_folder(entity["relationships"]["files"]["links"]["related"]["href"]))
 
         if folders[remote_folder] is None:

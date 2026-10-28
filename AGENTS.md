@@ -53,13 +53,13 @@ Use of generative AI in the project is documented in `docs/memoria-prompts/`. It
 
 `docs/registro-actividad/registro-actividad.tex` records all course work week by week (Monday to Sunday) and is published to OSF.
 
-- After any session that produces work, add one `\actividad{Tipo}{Descripción}{Resultado}` per activity under the day's `\subsection*{<Weekday> <d> de <mes>}`, inside the current week's `\section*{Semana N: <range>}`. Types: Clase, Tarea, Investigación, Decisión, Documentación, Análisis.
+- After any session that produces work, add one `\actividad{Tipo}{Descripción}{Resultado}` per activity under the day's `\subsection*{<Weekday> <d> de <mes>}`, inside the current week's `\section*{Semana N: <range>}`. Types: Clase, Tarea, Investigación, Decisión, Documentación, Análisis, Visita.
 - Keep it high level and point to the artifact (Señal de Tiempo, decision number, file) instead of repeating its content.
 - The current week ends with "Planificado para el resto de la semana". When a week closes, write its one-line `\textit{Resumen:}`, remove the plan, and open the next week. Assignments not yet done stay in "Encargos pendientes".
 
 ## Publishing to OSF
 
-The author's OSF project (`ysmkz`, private, shared with the professor) receives the compiled PDFs. `python scripts/osf_publish.py` shows what would change; `--apply` compiles and uploads. Documents keep a fixed name in OSF, which stores every upload as a new version, so never create dated copies. After publishing or moving files, regenerate the index on the wiki home page with `python scripts/osf_index.py --apply`; descriptions, statuses and pending assignments live in `scripts/osf_index.json` (Spanish, keep it current). OSF folders: `01-proyecto`, `02-informes`, `03-lecturas`, `04-referencias`, `05-notas-de-clase` (`dd-mm-yyyy.txt`), `99-archivo`. Only publish with the author's go-ahead. The token lives in `.env` (`OSF_TOKEN`, git-ignored): never print or commit it.
+The author's OSF project (`ysmkz`, private, shared with the professor) receives the compiled PDFs. `python scripts/osf_publish.py` shows what would change; `--apply` compiles and uploads. Documents keep a fixed name in OSF, which stores every upload as a new version, so never create dated copies. After publishing or moving files, regenerate the index on the wiki home page with `python scripts/osf_index.py --apply`; descriptions, statuses and pending assignments live in `scripts/osf_index.json` (Spanish, keep it current). OSF folders: `01-proyecto`, `02-informes`, `03-lecturas`, `04-referencias`, `05-notas-de-clase` (`dd-mm-yyyy.txt`), `06-guias`, `99-archivo`. New documents to publish are added to `DOCUMENTS` in `scripts/osf_publish.py` (`.tex` sources are compiled to PDF; other files are uploaded as they are). Only publish with the author's go-ahead. The token lives in `.env` (`OSF_TOKEN`, git-ignored): never print or commit it.
 
 ## LaTeX
 
