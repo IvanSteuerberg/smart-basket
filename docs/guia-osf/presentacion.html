@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automatizar OSF</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --fg: #1f1f1d; --muted: #5f5e5a; --accent: #185fa5;
+    --accent-bg: #e6f1fb; --warn-bg: #faeeda; --warn-fg: #633806; --card: #ffffff; --line: #d3d1c7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1c1c1a; --fg: #f1efe8; --muted: #b4b2a9; --accent: #85b7eb;
+      --accent-bg: #0c2b4a; --warn-bg: #3d2a0c; --warn-fg: #fac775; --card: #2c2c2a; --line: #444441; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .slide { display: none; min-height: 100vh; padding: 6vh 8vw; flex-direction: column; justify-content: center; }
+  .slide.active { display: flex; }
+  h1 { font-size: clamp(2rem, 5vw, 3.4rem); margin: 0 0 1rem; line-height: 1.1; }
+  h2 { font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin: 0 0 1.5rem; }
+  p, li { font-size: clamp(1.05rem, 2vw, 1.45rem); line-height: 1.5; }
+  ul, ol { padding-left: 1.4em; margin: 0; }
+  li { margin-bottom: .6em; }
+  .muted { color: var(--muted); }
+  .kicker { color: var(--accent); font-weight: 600; letter-spacing: .02em; margin-bottom: .5rem; }
+  code { background: var(--accent-bg); color: var(--accent); padding: .1em .4em; border-radius: 6px; font-size: .95em; }
+  .flow { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin: 1rem 0 2rem; }
+  .box { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.4rem; font-size: clamp(1rem, 1.8vw, 1.3rem); }
+  .arrow { font-size: 2rem; color: var(--muted); }
+  .warn { background: var(--warn-bg); color: var(--warn-fg); border-radius: 12px; padding: 1rem 1.4rem; margin-top: 1.5rem; }
+  .shot { max-width: 100%; max-height: 45vh; border: 1px solid var(--line); border-radius: 8px; margin-top: 1rem; align-self: flex-start; }
+  .say { background: var(--card); border-left: 4px solid var(--accent); padding: .8rem 1.2rem; margin: .6rem 0; font-size: clamp(1.1rem, 2.2vw, 1.5rem); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  @media (max-width: 700px) { .two { grid-template-columns: 1fr; } }
+  nav { position: fixed; bottom: 1rem; right: 1.5rem; color: var(--muted); font-size: .95rem; }
+  nav button { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 8px; padding: .3rem .8rem; cursor: pointer; margin-left: .4rem; }
+  @media print { .slide { display: flex !important; page-break-after: always; } nav { display: none; } }
+</style>
+</head>
+<body>
+
+<section class="slide active">
+  <div class="kicker">Sistemas de Información de Gestión y BI</div>
+  <h1>Automatizar OSF<br>con un asistente de IA</h1>
+  <p class="muted">Iván Rodríguez Steuerberg · Octubre de 2026</p>
+</section>
+
+<section class="slide">
+  <h2>El problema</h2>
+  <ul>
+    <li>Subir cada documento a mano cada vez que cambia.</li>
+    <li>Copias con fecha en el nombre: <code>memoria_v3_final_bueno.pdf</code></li>
+    <li>Un índice que nadie actualiza.</li>
+    <li>Varios ordenadores y versiones que no coinciden.</li>
+  </ul>
+</section>
+
+<section class="slide">
+  <h2>La idea</h2>
+  <div class="flow">
+    <div class="box">Tus documentos</div><div class="arrow">→</div>
+    <div class="box">Asistente de IA</div><div class="arrow">→</div>
+    <div class="box">OSF</div>
+  </div>
+  <ul>
+    <li>Sube <strong>siempre con el mismo nombre</strong>: OSF guarda las versiones anteriores solo.</li>
+    <li>Solo sube lo que ha cambiado.</li>
+    <li>Mantiene un índice en la wiki con fechas y versiones.</li>
+  </ul>
+  <p class="muted">Cómo organices las carpetas es cosa tuya.</p>
+</section>
+
+<section class="slide">
+  <h2>1 · Crear el token</h2>
+  <ol>
+    <li>OSF → <strong>Settings</strong> → <strong>Personal access tokens</strong> → <strong>Create Token</strong>.</li>
+    <li>Permisos: <code>osf.full_read</code> y <code>osf.full_write</code>. Nada más.</li>
+    <li>Copia el token al crearlo: OSF no lo vuelve a enseñar.</li>
+  </ol>
+  <img class="shot" src="img/02-crear-token.png" alt="Formulario de creación del token en OSF" onerror="this.remove()">
+</section>
+
+<section class="slide">
+  <h2>2 · Guardarlo bien</h2>
+  <p>En la carpeta de tus documentos, un archivo llamado <code>.env</code> con una línea:</p>
+  <p><code>OSF_TOKEN=tu-token</code></p>
+  <div class="warn">
+    <strong>Nunca</strong> lo pegues en un chat ni lo subas a GitHub. Si se filtra, bórralo en OSF y crea otro.
+  </div>
+</section>
+
+<section class="slide">
+  <h2>3 · El prompt maestro</h2>
+  <ol>
+    <li>Identificador del proyecto: los 5 caracteres de <code>osf.io/xxxxx</code>.</li>
+    <li>Copia el prompt de <code>docs/guia-osf/prompt-maestro.md</code> en GitHub (repositorio <em>smart-basket</em>).</li>
+    <li>Pégalo en un asistente que pueda trabajar en tu ordenador (Claude Code, Antigravity…).</li>
+  </ol>
+  <p class="muted">El asistente primero solo lee, luego simula y solo sube cuando le dices que sí.</p>
+</section>
+
+<section class="slide">
+  <h2>En el día a día</h2>
+  <div class="say">«Publica mis documentos en OSF»</div>
+  <div class="say">«Actualiza el índice de la wiki de OSF»</div>
+  <p class="muted">Y nada más. El historial de versiones queda en OSF.</p>
+</section>
+
+<section class="slide">
+  <h2>Lo que gano</h2>
+  <div class="two">
+    <ul>
+      <li>Cero subidas a mano.</li>
+      <li>Todas las versiones guardadas.</li>
+      <li>Un índice siempre al día.</li>
+    </ul>
+    <ul>
+      <li>Permisos mínimos y token fuera del chat.</li>
+      <li>El asistente pide permiso antes de tocar OSF.</li>
+      <li>Funciona desde cualquier ordenador.</li>
+    </ul>
+  </div>
+  <p style="margin-top:2rem">¿Preguntas?</p>
+</section>
+
+<nav><span id="count"></span><button id="prev" aria-label="Diapositiva anterior">←</button><button id="next" aria-label="Diapositiva siguiente">→</button></nav>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = 0;
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('active', k === i));
+    document.getElementById('count').textContent = (i + 1) + ' / ' + slides.length;
+  }
+  document.addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' '].includes(e.key)) show(i + 1);
+    if (['ArrowLeft', 'PageUp'].includes(e.key)) show(i - 1);
+  });
+  document.getElementById('next').onclick = () => show(i + 1);
+  document.getElementById('prev').onclick = () => show(i - 1);
+  show(0);
+</script>
+</body>
+</html>

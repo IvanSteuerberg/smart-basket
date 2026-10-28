@@ -1,0 +1,86 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+\definecolor{avisocolor}{RGB}{255, 243, 224}
+
+% Captura: si la imagen aún no existe, se muestra un recuadro con lo que debe contener.
+\newcommand{\captura}[2]{%
+	\begin{center}
+		\IfFileExists{img/#1}%
+		{\includegraphics[width=0.75\textwidth]{img/#1}}%
+		{\fbox{\parbox{0.85\textwidth}{\centering\vspace{1.5cm}\textit{Captura pendiente: #2}\vspace{1.5cm}}}}%
+	\end{center}}
+
+\title{Automatizar OSF con un asistente de IA \\ \large Guía rápida para no técnicos}
+\author{Iván Rodríguez Steuerberg}
+\date{Octubre de 2026}
+
+\begin{document}
+	\maketitle
+
+	\section*{Qué vas a conseguir}
+	Que un asistente de IA publique tus documentos en tu proyecto de OSF sin que tengas que subirlos a mano, conservando todas las versiones anteriores, y que mantenga un índice actualizado en la wiki del proyecto. Cómo organices tus carpetas es cosa tuya: esta guía solo cubre la conexión y la automatización.
+
+	\section*{Qué necesitas}
+	\begin{itemize}
+		\item Una cuenta de OSF con tu proyecto creado.
+		\item Un asistente de IA que pueda ejecutar órdenes en tu ordenador, como Claude Code o Antigravity. Un chat normal en el navegador no sirve, porque no puede acceder a tus archivos.
+		\item Unos 15 minutos.
+	\end{itemize}
+
+	\section{Crear tu token de OSF}
+	El token es una contraseña especial que permite al asistente trabajar con tu proyecto sin conocer tu contraseña de verdad.
+	\begin{enumerate}[itemsep=4pt]
+		\item En el menú lateral izquierdo de OSF, despliega \textbf{Settings} y entra en \textbf{Personal access tokens} (también puedes ir directamente a \url{https://osf.io/settings/tokens}).
+		\item Pulsa \textbf{Create Token}.
+	\end{enumerate}
+	\captura{01-tokens.png}{página Personal access tokens de los ajustes de OSF}
+	\begin{enumerate}[resume, itemsep=4pt]
+		\item Ponle un nombre que reconozcas, por ejemplo ``Asistente IA''.
+		\item Marca solo estos dos permisos: \texttt{osf.full\_read} (leer) y \texttt{osf.full\_write} (escribir).
+		\item Pulsa \textbf{Create Token} y \textbf{copia el token en ese momento}: OSF no te lo volverá a enseñar.
+	\end{enumerate}
+	\captura{02-crear-token.png}{formulario de creación del token con los dos permisos marcados (sin ningún token visible)}
+
+	\section{Guardar el token}
+	\begin{enumerate}[itemsep=4pt]
+		\item En la carpeta donde tienes tus documentos, crea un archivo de texto llamado exactamente \texttt{.env} (con el punto delante y sin \texttt{.txt} al final).
+		\item Escribe dentro una sola línea: \texttt{OSF\_TOKEN=} seguido del token que copiaste.
+		\item Guarda el archivo.
+	\end{enumerate}
+
+	\begin{tcolorbox}[colback=avisocolor, colframe=orange!70!black, title=Cuida tu token]
+		\begin{itemize}
+			\item No lo pegues nunca en un chat, ni siquiera en el del asistente: él lo leerá del archivo.
+			\item No lo subas a GitHub ni lo compartas con nadie.
+			\item Si crees que se ha filtrado, bórralo en la misma página de OSF y crea otro.
+		\end{itemize}
+	\end{tcolorbox}
+
+	\section{Averiguar el identificador de tu proyecto}
+	Abre tu proyecto en OSF y mira la barra de direcciones del navegador: el identificador son los cinco caracteres que van después de \texttt{osf.io/}. Por ejemplo, en la dirección \url{https://osf.io/ysmkz/overview} el identificador es \texttt{ysmkz}.
+
+	\section{Pegar el prompt maestro}
+	\begin{enumerate}[itemsep=4pt]
+		\item Abre tu asistente de IA en la carpeta de tus documentos.
+		\item Copia el prompt maestro del archivo \href{https://github.com/IvanSteuerberg/smart-basket/blob/main/docs/guia-osf/prompt-maestro.md}{\texttt{prompt-maestro.md}}, que está en GitHub, en el repositorio \textit{smart-basket} de IvanSteuerberg (carpeta \texttt{docs/guia-osf}).
+		\item Cambia los datos entre \texttt{<...>} (el identificador del proyecto y la carpeta) y envíalo.
+		\item El asistente primero solo leerá tu proyecto y te enseñará lo que encuentra. Después preparará los scripts y hará una simulación. Revisa lo que te propone y dile que sí solo si estás de acuerdo.
+	\end{enumerate}
+
+	\section{En el día a día}
+	Basta con pedírselo:
+	\begin{itemize}
+		\item \textbf{``Publica mis documentos en OSF''}: te enseña la simulación y, si aceptas, sube solo lo que ha cambiado. OSF guarda la versión anterior de cada archivo, así que no hace falta poner fechas en los nombres.
+		\item \textbf{``Actualiza el índice de la wiki de OSF''}: regenera la página principal con tus documentos, sus fechas y sus versiones.
+	\end{itemize}
+
+\end{document}

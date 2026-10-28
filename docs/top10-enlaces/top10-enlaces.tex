@@ -1,0 +1,46 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=3cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+% Una fuente: \fuente{Nombre}{URL}{Tema}{Por qué la sigo}
+\newcommand{\fuente}[4]{\item \textbf{#1} --- \url{#2} \\ \textit{Tema:} #3 \\ \textit{Por qué la sigo:} #4}
+
+\title{TOP 10 de Enlaces de Seguimiento \\ \large Sistemas de Información de Gestión y Business Intelligence}
+\author{Iván Rodríguez Steuerberg}
+\date{28 de octubre de 2026}
+
+\begin{document}
+	\maketitle
+
+	\section*{Criterio de selección}
+	Fuentes que sigo de forma habitual o que aportan directamente a la asignatura y a mi proyecto (un recomendador de la cesta de la compra con IA agéntica). Todas han publicado en los últimos meses de 2026 y combinan formatos: perfiles de X, blogs, newsletters y un canal de YouTube. Los perfiles de X y los blogs no figuran en la lista de Sicodinet2, que solo recoge enlaces de YouTube.
+
+	\section{Perfiles en X}
+	\begin{enumerate}[itemsep=8pt]
+		\fuente{Mihura (@XMihura)}{https://x.com/XMihura}{IA y tecnología en español, con mucha opinión sobre actualidad.}{Es una de mis fuentes generales en español. Además de comentar novedades, publica herramientas propias, como Kanvas, un proyecto de código abierto para coordinar proyectos con agentes de IA.}
+		\fuente{Álvaro (@alvarombt)}{https://x.com/alvarombt}{Ingeniería de software, IA y seguridad.}{Ingeniero de software español en Google (VirusTotal). Aporta la visión de quien construye software a gran escala y conecta con la ciberseguridad.}
+		\fuente{0xSero (@0xSero)}{https://x.com/0xSero}{IA local: modelos en el propio equipo, configuraciones y pruebas.}{Referencia práctica para decidir qué modelos pueden ejecutarse en local en mi proyecto y con qué hardware.}
+		\fuente{Artificial Analysis (@ArtificialAnlys)}{https://x.com/ArtificialAnlys}{Comparativas independientes de modelos de IA y proveedores: calidad, precio y velocidad.}{Me sirve para elegir modelos con datos y no por intuición.}
+		\fuente{Naz (@nothingto12)}{https://x.com/nothingto12}{Comparativas prácticas de modelos y servicios baratos o locales (DeepSeek, OpenCode Go, Ollama).}{Pruebas reales de opciones económicas, útiles para un proyecto que no puede tener costes recurrentes.}
+
+	\end{enumerate}
+
+	\section{Blogs y newsletters}
+	\begin{enumerate}[resume, itemsep=8pt]
+		\fuente{Eugene Yan}{https://eugeneyan.com}{Sistemas de recomendación y evaluación de sistemas con LLM.}{Es la fuente más cercana a mi proyecto: explica cómo se construyen y evalúan recomendadores en producción.}
+		\fuente{Simon Willison}{https://simonwillison.net}{LLM, agentes y herramientas prácticas; publica casi a diario.}{Prueba cada modelo y herramienta nada más salir y cuenta qué funciona de verdad.}
+		\fuente{Ethan Mollick --- One Useful Thing}{https://www.oneusefulthing.org}{Uso de la IA y de los agentes en el trabajo y la educación.}{Aporta una mirada de gestión, más allá de la técnica: cómo cambian las organizaciones con la IA, que es el terreno de un SIG.}
+		\fuente{Nathan Lambert --- Interconnects}{https://www.interconnects.ai}{Modelos abiertos, benchmarks y evolución del sector.}{Complementa a Artificial Analysis y a 0xSero con análisis de fondo sobre modelos abiertos.}
+	\end{enumerate}
+
+	\section{Canal de YouTube}
+	\begin{enumerate}[resume, itemsep=8pt]
+		\fuente{Fireship}{https://www.youtube.com/@Fireship}{Actualidad de programación e IA en vídeos cortos; publica varias veces por semana.}{Resume en pocos minutos lo más relevante de la semana en desarrollo de software e IA, con un tono directo que lo hace fácil de seguir.}
+	\end{enumerate}
+
+
+\end{document}
