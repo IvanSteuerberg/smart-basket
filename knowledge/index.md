@@ -20,6 +20,10 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 
 * [System overview](/architecture/system-overview.md) - Modules and how a recommendation flows through them.
 
+## Data
+
+* [Data-source viability study](/data/source-viability.md) - What each chain in León publishes, how to collect it automatically and what is still to check.
+
 ## Decisions
 
 * [0001 Agent as orchestrator](/decisions/0001-agent-as-orchestrator.md) - The required recommender agent is an LLM orchestrator; numbers come from deterministic tools.
@@ -27,6 +31,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0003 PostgreSQL as single database](/decisions/0003-postgresql-single-database.md) - pgvector, PostGIS and native partitioning in one PostgreSQL instance for the MVP.
 * [0004 Canonical product model](/decisions/0004-canonical-product-model.md) - Equivalences resolved by mapping every scraped product to a canonical product.
 * [0005 Local-first AI models](/decisions/0005-local-first-ai-models.md) - Local embeddings and a local-first LLM on the author's laptop, Gemini as fallback, a single agent and a pre-registered benchmark rule.
+* [0006 Data collection with a real browser](/decisions/0006-data-collection-with-a-real-browser.md) - Every chain with an online catalog, collected periodically with a real browser or the site's own API; catalog, prices and promotions stored apart.
 
 ## Evaluation
 

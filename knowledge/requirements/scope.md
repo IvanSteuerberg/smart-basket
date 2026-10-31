@@ -13,7 +13,7 @@ generated:
 | Area | MVP scope |
 | --- | --- |
 | Geography | City of León only. |
-| Chains | **Required:** Mercadona, Carrefour, Dia, Lidl. **If data allows:** Alcampo, E.Leclerc, Lupa, Aldi. Final list depends on the data-source viability study. |
+| Chains | Every chain with an online catalog: Mercadona, Carrefour, Dia, Alcampo, Eroski, Gadis, Lupa (if its online shop covers León) and Alimerka. Lidl, Aldi and E.Leclerc through their flyers. See the [data-source viability study](/data/source-viability.md) and [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
 | Platform | Responsive web app, mobile first. The MVP runs on the author's laptop ([0005](/decisions/0005-local-first-ai-models.md)). |
 | Users | Personal use by the author and people they share it with; the app is not published. No accounts and no authentication. Lists and personal history live in the user's browser. |
 | Travel | The user chooses walking or car and the shopping date for each request; at most 3 stores per trip. |
@@ -35,13 +35,13 @@ generated:
 # Constraints
 
 * Academic project for the course *Sistemas de Información de Gestión y Business Intelligence*, 2026-2027, for personal and non-commercial use.
-* Data comes from public sources of each chain; scraping must respect their terms and the legal constraints still to be studied.
+* Data comes from each chain's website and flyers, collected for personal, non-commercial academic use under the research exception of art. 135 TRLPI; the collected data is not published ([0006](/decisions/0006-data-collection-with-a-real-browser.md)).
 * No recurring costs: open-source components, local models or free API tiers.
-* Architecture decisions [0001](/decisions/0001-agent-as-orchestrator.md) to [0005](/decisions/0005-local-first-ai-models.md) apply.
+* Architecture decisions [0001](/decisions/0001-agent-as-orchestrator.md) to [0006](/decisions/0006-data-collection-with-a-real-browser.md) apply.
 
 # Assumptions and risks
 
-* **Data availability is the main risk.** Without good price and promotion data there is no good recommender. Lidl and Aldi publish many offers in weekly flyers rather than in an online catalog. The data-source viability study must confirm which chains, fields and promotions can be obtained automatically.
+* **Data availability** was checked in the [data-source viability study](/data/source-viability.md): a real browser reaches every chain checked, and only Alimerka needs a login. The remaining risks are site changes and tighter blocks. Lidl, Aldi and E.Leclerc only publish offers in weekly flyers.
 * **Store assortment.** A chain's online catalog is not what every store carries: small neighbourhood stores have a reduced range, so a recommended product may not be on the shelf. Mitigations, from most to least reliable: per-store catalogs where a chain publishes them (to check in the viability study), the user marking products as not found ([FR-38](/requirements/functional.md)), a fallback per item ([FR-39](/requirements/functional.md)) and estimates by store format ([FR-40](/requirements/functional.md)).
 * Online prices are assumed to match prices in León stores. Chains that price by postal code or warehouse need the León zone selected.
 * Without accounts, consumer savings history is lost if the user clears the browser data.

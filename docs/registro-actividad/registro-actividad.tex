@@ -162,12 +162,13 @@
 		\actividad{Decisión}{Enfoque local primero: embeddings y LLM ligero en el portátil del autor, Gemini Flash-Lite gratuito como reserva, un único agente con herramientas y modo degradado sin LLM. Los modelos concretos se eligen con una prueba y una regla fijada de antemano.}{Decisión 0005 de la base de conocimiento.}
 		\actividad{Análisis}{Ajuste de los requisitos a la decisión (latencia medida sobre el plan, privacidad, despliegue en el portátil, calidad de la IA y modo degradado) y plan de la prueba de modelos de IA.}{Requisitos revisados (FR-41, NFR-14) y plan en \texttt{knowledge/evaluation}.}
 		\actividad{Tarea}{DeepSeek V4.1 Flash con búsqueda web pasa a ser la segunda fuente por defecto de la Memoria de Prompts; Gemini queda como fuente opcional.}{Instrucciones para asistentes (\texttt{AGENTS.md}) actualizadas.}
+		\actividad{Investigación}{Estudio de viabilidad de las fuentes de datos: lectura del TFG de referencia, consulta con DeepSeek y comprobación de once cadenas con peticiones HTTP y con un navegador real. Con navegador se accede a los precios de todas las cadenas con tienda online; Alimerka pide iniciar sesión y Lidl solo publica folletos.}{Señal de Tiempo 6 y estudio de viabilidad en \texttt{knowledge/data}.}
+		\actividad{Decisión}{Recogida de datos de todas las cadenas con catálogo online mediante un navegador real (o la API pública de la web), con sesión del autor cuando haga falta, al amparo de la excepción de investigación del art.~135 TRLPI. Catálogo, precios y promociones se guardan por separado y se recogen de forma periódica.}{Decisión 0006 de la base de conocimiento; alcance y NFR-07 revisados.}
 	\end{description}
 
 	\subsection*{Planificado para el resto de la semana}
-	Aplazado de la semana 7:
+	Pendiente:
 	\begin{itemize}
-		\item Estudio de viabilidad de las fuentes de datos (scraping), incluidos los folletos que se puedan descargar automáticamente.
 		\item Plan de evaluación del recomendador (la parte de los modelos de IA ya está planificada).
 		\item Prueba de los modelos de IA en el portátil (la parte del LLM no depende de los datos).
 	\end{itemize}

@@ -237,3 +237,66 @@ Los modelos concretos se elegirán con una \textbf{prueba en el portátil} y una
 Como consecuencia metodológica, DeepSeek V4.1 Flash con búsqueda web pasa a ser la segunda fuente por defecto de esta memoria, y Gemini queda como tercera fuente opcional; los prompts pedirán expresamente buscar información actual y citar las fuentes.
 
 \vspace{0.5cm}
+
+% ------------------- ENTRADA 6 -------------------
+\subsection{Señal de Tiempo 6: Viabilidad de las Fuentes de Datos}
+\textbf{Fecha:} 31 de octubre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / DeepSeek V4.1 Flash (OpenCode Go) \\
+\textbf{Objetivo:} Determinar qué cadenas con presencia en León publican catálogo, precios, promociones y tiendas que puedan obtenerse de forma automática, con qué método y con qué riesgos técnicos y legales, tomando como punto de partida un TFG de 2023 sobre extracción de precios de supermercados.
+
+\textit{Nota: Claude respondió con el contexto del proyecto y comprobó además cada cadena con peticiones HTTP sencillas y con un navegador real; DeepSeek recibió el prompt sin contexto previo y con búsqueda web. Su respuesta original está en \url{docs/memoria-prompts/fuentes/}.}
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Ingeniero de Datos especializado en extracción web y en el marco legal de la reutilización de datos en la UE. Estudio la viabilidad de las fuentes de datos de un MVP académico (uso personal y no comercial, la aplicación no se publica) que recomienda en qué supermercados de León comprar una lista para minimizar coste + tiempo de desplazamiento.
+
+	Necesito, de forma automática y sin ningún paso manual, una vez al día o a la semana: el catálogo con precios de cada cadena (30.000-100.000 productos en total, con marca, formato y EAN si existe); las promociones con su vigencia (precio rebajado, NxM, segunda unidad al X\,\%, descuentos por volumen, precios con tarjeta y cupones públicos); y la ubicación y el horario de las tiendas en León. Cadenas imprescindibles: Mercadona, Carrefour, Dia y Lidl; si los datos lo permiten, Alcampo, E.Leclerc, Lupa y Aldi, además de otras con presencia en León (Gadis, Alimerka, Eroski).
+
+	Contexto: un TFG de 2023 extrajo precios con requests y BeautifulSoup producto a producto, con las URL guardadas a mano. Funcionó en Dia y Carrefour, Alcampo e Hipercor lo bloquearon, descartó Mercadona por pedir sesión y no extrajo promociones.
+
+	Preguntas: (1) para cada cadena, catálogo online, dependencia del código postal, API interna o datos estructurados, campos y promociones visibles, folletos descargables, robots.txt, condiciones de uso y medidas antibots; (2) fuentes para la ubicación y el horario de las tiendas; (3) fuentes alternativas (Open Food Facts, proyectos abiertos, datos públicos, agregadores) y sus licencias; (4) marco legal en España y la UE (derecho sui generis, jurisprudencia del TJUE, condiciones de uso, robots.txt, propiedad intelectual y novedades hasta 2026); (5) viabilidad de extraer promociones de folletos con OCR o modelos de visión locales.
+
+	Da una tabla por cadena, una recomendación de qué cadenas y fuentes entran en el MVP y con qué método, buenas prácticas y riesgos. Busca en internet información actual (hoy es 31 de octubre de 2026), consulta las webs y sus robots.txt, cita las fuentes con URL e indica qué no has podido verificar. No ejecutes comandos ni modifiques archivos.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Lecciones del TFG de referencia:} guardar a mano la URL de cada producto no escala y choca con el requisito de automatización; sin promociones el recomendador pierde gran parte de su valor; y su uso de Open Food Facts para completar datos por EAN sigue siendo útil.
+
+		\item \textbf{Peticiones HTTP sencillas:} Mercadona solo permite en su robots.txt las páginas de producto, que no traen el precio porque lo cargan desde su API (\texttt{/api}, prohibida para rastreadores). Carrefour y Dia responden 403; Lidl, Aldi, Alcampo, Eroski, Lupa y E.Leclerc responden con normalidad.
+
+		\item \textbf{Con un navegador real} (el navegador integrado de Claude Code, rechazando las cookies no esenciales) se accede a todas: Mercadona asigna a León (código postal 24001) el almacén 3683 y su API devuelve precio, precio por kilo o litro, formato y precio anterior; Carrefour, Dia, Alcampo, Eroski, Gadis y Lupa muestran precios y precio por unidad sin sesión; Alimerka exige iniciar sesión con DNI; Lidl publica sus folletos mediante una API con fechas de vigencia y PDF descargable, pero sin productos estructurados. Los 403 anteriores solo afectan a clientes que no son navegadores.
+
+		\item \textbf{Patrón común:} un navegador fija el código postal de León (varias cadenas aplican por defecto uno de Madrid) y se recorren las categorías leyendo el JSON o el HTML que la propia web carga. El EAN casi nunca aparece, así que el emparejamiento será por marca, nombre y formato, con Open Food Facts como apoyo.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Veredicto:} sin eludir bloqueos no es viable un proceso diario con las ocho cadenas, pero sí uno semanal con 4-5 (Lidl, Alcampo, Gadis, Eroski y, de forma condicional, Mercadona). Considera innecesario el catálogo completo y propone 300-800 productos por cadena para quedarse en una extracción no sustancial.
+
+		\item \textbf{Por cadena:} Carrefour, Dia y Alimerka bloquean a clientes automatizados, y los scrapers públicos de Carrefour suplantan la huella TLS de un navegador; Mercadona prohíbe su API en el robots.txt; E.Leclerc y Aldi no venden alimentación online; Gadis y E.Leclerc tienen avisos legales restrictivos; Lidl es la fuente más estable. Las promociones estructuradas son el punto débil: NxM, segunda unidad y cupones quedan en folletos o tras el login.
+
+		\item \textbf{Tiendas:} OpenStreetMap (licencia ODbL) como base mediante Overpass (en León capital, entre otras, Alimerka 8, Dia 7, Lidl 4, Mercadona 3, Alcampo 2 y Lupa 2) y los localizadores oficiales para validar horarios.
+
+		\item \textbf{Marco legal:} el derecho sui generis protege la inversión en obtener, verificar o presentar los datos, no en crearlos, lo que debilita la protección de los precios (BHB c. William Hill); Innoweb, CV-Online y Ryanair delimitan los metabuscadores y las condiciones contractuales. Para un uso académico, la excepción de investigación del art.~135 TRLPI; un \texttt{Disallow} en el robots.txt cuenta como reserva frente a la minería de textos y datos de la Directiva 2019/790.
+
+		\item \textbf{Folletos:} el OCR o los modelos de visión locales no compensan en el núcleo del MVP, porque un solo precio mal leído invierte la recomendación; quedarían como módulo experimental.
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Revisión de afirmaciones:} la conclusión de DeepSeek sobre Carrefour, Dia y Alimerka se basa en peticiones que no proceden de un navegador; con un navegador real, Claude accedió a los precios de Carrefour y Dia sin sesión y comprobó que Alimerka pide iniciar sesión, no que bloquee. DeepSeek recomienda no usar la API de Mercadona, pero la consultó para describir su JSON. Afirma que Lupa no tiene web por un fallo de DNS en un dominio incorrecto: su web es \texttt{lupa.com} y su tienda online, \texttt{lupaonline.com}. Su búsqueda web falló durante la sesión, por lo que la jurisprudencia de 2023-2026 y la numeración del precepto sobre minería de datos en el TRLPI quedan pendientes de verificar.
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+El autor decide ir más allá de la recomendación conservadora de DeepSeek y del TFG de referencia, con la excepción de investigación del art.~135 TRLPI como base legal y un uso personal, no comercial y no publicado (decisión 0006 de la base de conocimiento):
+
+\begin{itemize}
+	\item Entran todas las cadenas con catálogo online: Mercadona, Carrefour, Dia, Alcampo, Eroski, Gadis, Lupa (si su tienda online cubre León) y Alimerka (con la cuenta del autor). Lidl, Aldi y E.Leclerc aportan sus folletos.
+	\item La recogida usa un navegador real que fija el código postal de León y lee los datos que la propia web carga, o la API pública de la web cuando basta, como en Mercadona. Si hace falta, se inicia sesión con la cuenta del autor.
+	\item Se recoge el catálogo completo de cada cadena, a un ritmo moderado que se fijará tras las primeras ejecuciones; los datos no se publican.
+	\item Catálogo, precios y promociones se guardan por separado: el catálogo cambia poco, los precios forman el histórico y las promociones tienen vigencia y llegan también desde los folletos. Se recogen de forma periódica y no al crear la cesta, para cumplir el objetivo de latencia y alimentar el histórico del BI.
+	\item Las tiendas salen de OpenStreetMap y el EAN y los atributos se completan con Open Food Facts.
+\end{itemize}
+
+El estudio de viabilidad de la base de conocimiento recoge el detalle por cadena, los riesgos (cambios en las webs, bloqueos, condiciones de uso y reserva frente a la minería de datos) y las comprobaciones pendientes.
+
+\vspace{0.5cm}

@@ -2,6 +2,9 @@
 
 ## 2026-10-31
 
+* **Create** Data-source viability study in a new `data/` section, from Señal de Tiempo 6 (Claude and DeepSeek) and checks of every chain with plain HTTP and a real browser.
+* **Create** Decision 0006 (data collection with a real browser): every chain with an online catalog, full catalogs, catalog, prices and promotions stored apart, collected periodically. Status `draft` until the first runs.
+* **Update** Scope (chains, data constraint and availability risk), NFR-07 (responsible scraping) and the ingestion module in the system overview.
 * **Create** Decision 0005 (local-first AI models) from Señal de Tiempo 5, with three sources (Claude, Gemini and DeepSeek). Status `draft` until the AI model benchmark runs.
 * **Create** AI model benchmark plan in a new `evaluation/` section: candidates, datasets, metrics and the decision rule of 0005.
 * **Update** Requirements: the MVP runs on the author's laptop (scope, NFR-10); NFR-01 measures the 5 s target on the plan and streams the explanation; NFR-06 keeps data on the machine by default; new NFR-14 (AI quality) and FR-41 (degraded mode without LLM); FR-18 takes explanation figures from templates.
