@@ -123,3 +123,117 @@ Se confirma la decisión de la Señal de Tiempo 2: \textbf{PostgreSQL como base 
 Las equivalencias entre productos se modelarán mediante un \textbf{modelo de producto canónico}, aportación de Gemini que evita la deriva semántica de un grafo de equivalencias libres. El desarrollo arranca directamente con pgvector, sin benchmark previo: solo se evaluará la migración a Qdrant si, con el catálogo real, el rendimiento de la búsqueda de equivalencias resulta inaceptable. Neo4j queda condicionado a que las consultas de varios saltos o los algoritmos de grafos pasen a ser una funcionalidad central. El siguiente hito será diseñar la separación entre el esquema transaccional (OLTP) y el esquema analítico (OLAP) de la capa de Business Intelligence.
 
 \vspace{0.5cm}
+
+% ------------------- ENTRADA 5 -------------------
+\subsection{Señal de Tiempo 5: Modelos de IA Locales o en la Nube y Número de Agentes}
+\textbf{Fecha:} 31 de octubre de 2026 \
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / Gemini 3.8 Flash (Antigravity CLI) / DeepSeek V4.1 Flash (OpenCode Go) \
+\textbf{Objetivo:} Decidir qué modelos de IA usa el MVP para los embeddings de productos y para el agente orquestador (en local o en la nube sin coste) y si el agente recomendador debe ser uno solo o un sistema multiagente.
+
+\textit{Nota: esta entrada añade una tercera fuente. Claude respondió dentro de la sesión de trabajo, con el contexto del proyecto; Gemini y DeepSeek recibieron el mismo prompt de forma autocontenida y sin contexto previo. DeepSeek se ejecutó a través de la suscripción OpenCode Go, usando Claude Code en modo no interactivo como cliente. Un primer intento sin pedir búsqueda web (con DeepSeek V4 Pro) dio respuestas coherentes pero basadas en modelos ya obsoletos, así que se repitió añadiendo al prompt el último párrafo y usando DeepSeek V4.1 Flash con búsqueda web. Se recogen los resultados del segundo intento; las respuestas originales de ambos intentos están en \url{docs/memoria-prompts/fuentes/}.}
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Software especializado en sistemas con LLM. Diseño la capa de IA de un MVP académico (Sistemas de Información de Gestión y Business Intelligence) que optimiza la cesta de la compra en León (España): dada una lista, recomienda qué productos comprar y en qué supermercados (máximo 3 tiendas, a pie o en coche), minimizando coste + lambda * minutos de desplazamiento. Es de uso personal, no se publica, sin cuentas y en español.
+
+	Decisiones ya tomadas:
+	\begin{itemize}
+		\item El ``agente recomendador'' exigido es un orquestador basado en LLM: interpreta la lista escrita en texto libre (``leche sin lactosa, 2 kg de naranjas, algo para la cena''), aplica preferencias blandas, llama a herramientas deterministas (búsqueda de equivalencias, matriz de tiempos de viaje de OSRM/Valhalla, optimizador de cesta) y explica el resultado. Precios, tiempos y la cesta óptima nunca los calcula el LLM.
+		\item PostgreSQL único con pgvector y PostGIS. Cada producto obtenido por scraping (30.000-100.000 en total, 4-8 cadenas) se asigna a un producto canónico, por vecinos más cercanos sobre embeddings con un umbral de confianza, más reglas.
+		\item El proveedor de LLM queda detrás de una interfaz para poder cambiar entre local y nube.
+	\end{itemize}
+
+	Restricciones:
+	\begin{itemize}
+		\item Sin costes recurrentes: modelos locales ligeros o capas gratuitas de API (por ejemplo, Gemini Flash en la capa gratuita).
+		\item Todo el sistema se despliega con Docker Compose en un único servidor modesto, previsiblemente sin GPU dedicada. El portátil de desarrollo tiene un Intel Core Ultra 7 258V, 32 GB de RAM compartida, GPU integrada Intel Arc 140V y NPU.
+		\item Privacidad: a un LLM en la nube solo se le envía el texto de la lista, nunca la ubicación.
+		\item Objetivo de latencia: recomendación completa para una lista de 30 artículos en menos de 5 s (p95).
+		\item Volumen esperado: pocas decenas de recomendaciones al día. Los embeddings del catálogo se recalculan solo para productos nuevos o cambiados (ingesta diaria).
+	\end{itemize}
+
+	Preguntas:
+	\begin{enumerate}
+		\item Embeddings de productos (nombres cortos en español, con marca y formato, por ejemplo ``Leche semidesnatada Hacendado 1 L''): ¿modelo local o API? Propón 2-3 modelos concretos y abiertos, con dimensión, tamaño y si se ejecutan bien en CPU, y cómo evaluar cuál distingue mejor formatos y variantes (800 g frente a 200 g, entera frente a desnatada).
+		\item LLM del orquestador: ¿un modelo local ligero (3-8B, cuantizado, con Ollama o llama.cpp) es suficiente para interpretar la lista, llamar a herramientas con argumentos JSON válidos y explicar en español, cumpliendo la latencia sin GPU? Compáralo con un LLM en la nube de capa gratuita: calidad del uso de herramientas, latencia, límites de la capa gratuita, privacidad, dependencia del proveedor y reproducibilidad.
+		\item ¿Uno o varios agentes? Valora un único agente con herramientas frente a un sistema multiagente (por ejemplo, intérprete de lista, resolutor de equivalencias y explicador), para este alcance y para lo que se puede defender en una memoria académica.
+		\item ¿Hay tareas que convenga resolver sin LLM o con un modelo más pequeño (clasificación de categorías, extracción de formato y cantidad con reglas o expresiones regulares)?
+	\end{enumerate}
+
+	Da una recomendación concreta para el MVP (qué local, qué en la nube y por qué), un plan de reserva si la opción elegida falla y umbrales medibles que harían cambiar la decisión. Indica qué afirmaciones no puedes verificar o dependen de versiones o de límites de capa gratuita que pueden haber cambiado.
+
+	Antes de responder, busca en internet información actual (hoy es 31 de octubre de 2026): los modelos abiertos de embeddings y de LLM ligeros vigentes, y los modelos y límites actuales de la capa gratuita de la API de Gemini. Recomienda solo modelos vigentes y cita las fuentes con su URL. No ejecutes comandos ni modifiques archivos: usa solo la búsqueda web y la lectura de páginas.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Embeddings en local, sin discusión:} son unos 100.000 nombres cortos y solo se recalculan los nuevos o cambiados, así que en CPU caben de sobra. Candidatos: EmbeddingGemma 2 (desde 270M parámetros, 768 dimensiones recortables a 256 o 128), Qwen3-Embedding-0.6B (1024 dimensiones) y multilingual-e5-small (118M, 384 dimensiones) como referencia ligera.
+
+		\item \textbf{Los números no se confían al embedding:} los embeddings distinguen mal 800 g de 200 g. El formato, la cantidad y la marca se extraen con reglas al ingerir y se guardan como columnas para filtrar; el embedding solo decide el tipo de producto. Evaluación: un conjunto de unos 200 pares etiquetados a mano, midiendo recall@5 y precisión con el umbral de confianza, enlazado con NFR-04.
+
+		\item \textbf{LLM local en CPU no cumple los 5 s:} un modelo de 3-8B cuantizado genera del orden de 10-20 tokens por segundo en CPU, y procesar el esquema de las herramientas más una lista de 30 artículos ya lleva segundos antes de escribir la explicación. Gemini Flash gratuito responde en 1-3 s y llama bien a herramientas, pero los límites de su capa gratuita no están claros. Google ya no publica una tabla de límites (se ven por proyecto en la consola de Google AI Studio, y las fuentes de terceros van de unas decenas a 1.500 peticiones al día). Desde abril de 2026 los modelos Pro salieron de la capa gratuita; Flash y Flash-Lite siguen en ella.
+
+		\item \textbf{La reproducibilidad no depende del LLM:} por la decisión 0001 las cifras son deterministas. Basta con guardar la lista ya interpretada (en JSON) junto a la recomendación (NFR-05) para poder recalcularla sin volver a llamar al modelo.
+
+		\item \textbf{Un solo agente con herramientas:} el intérprete, el resolutor de equivalencias y el explicador propuestos como agentes son en realidad herramientas deterministas o una única llamada al LLM. Varios agentes multiplicarían la latencia, el consumo de la cuota gratuita y los puntos de fallo. Se defiende con un criterio explícito: un agente adicional solo cuando una tarea necesite razonamiento propio e independiente (por ejemplo, un agente analista sobre el BI, fuera del camino crítico).
+
+		\item \textbf{Menos LLM:} extracción de formato con expresiones regulares, categoría a partir de la taxonomía de cada cadena, búsqueda directa en el catálogo antes de recurrir al LLM, y cifras de la explicación por plantilla. El LLM queda para lo ambiguo (``algo para la cena'') y para redactar.
+
+		\item \textbf{Recomendación:} embeddings locales; orquestador con Gemini Flash gratuito por defecto y un modelo local pequeño en Ollama (candidatos actuales: Qwen 3.5 4B y Granite 4.2 3B, que anuncia uso de herramientas) como reserva y como referencia medida, ambos tras la misma interfaz (NFR-12). Umbrales: pasar a local si la cuota gratuita no cubre el uso diario o si el modelo local supera el 95\,\% de llamadas a herramientas válidas con un p95 inferior a 5 s en el servidor real; cambiar de modelo de embeddings si el recall@5 baja del 90\,\%.
+
+		\item \textbf{No verificado:} los límites actuales de la capa gratuita, las velocidades en tokens por segundo (hay que medirlas en el servidor real) y la clasificación de los modelos de embeddings en español.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Gemini, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Embeddings 100\,\% locales:} con la cuota gratuita, vectorizar el catálogo inicial llevaría semanas. Recomienda multilingual-e5-small (384 dimensiones, ONNX en CPU) frente a paraphrase-multilingual-MiniLM y bge-m3, que descarta por tamaño.
+
+		\item \textbf{Variantes y formatos con reglas:} ningún embedding separa de forma fiable entera de desnatada ni 200 g de 800 g, porque la tokenización por subpalabras fragmenta las cifras. Propone una búsqueda híbrida (el vector recupera los 30 mejores candidatos y las reglas SQL filtran por atributos) y un banco de 200-300 casos con tres negativos difíciles (variante, formato y marca), midiendo el porcentaje de aciertos y el margen de similitud.
+
+		\item \textbf{LLM local en CPU, inviable:} unos 800-1.100 tokens de salida a 5-24 tokens/s suponen 40-90 s, e incluso con la iGPU del portátil, 16-20 s.
+
+		\item \textbf{Un orquestador con un flujo neurosimbólico:} un parser determinista, el LLM solo para los artículos ambiguos, un pipeline sin LLM (pgvector, OSRM y un solver MILP con PuLP y HiGHS) y una única llamada para la explicación. El sistema multiagente sería ``sobreingeniería''.
+
+		\item \textbf{Reserva en dos niveles:} un modelo local pequeño solo para una explicación de 60-80 tokens, con la lista analizada por reglas, y como último recurso, una explicación por plantilla sin LLM.
+
+		\item \textbf{Problema:} aunque buscó en la web, sus consultas ya apuntaban a modelos antiguos, y recomienda Gemini 2.0 y 1.5 Flash y Qwen2.5 3B, que ya no son vigentes. Presenta como ``fuentes verificadas'' unos límites de 15 peticiones por minuto y 1.500 al día que la página oficial ya no publica.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Fuentes primarias:} el buscador le devolvía resultados pobres, así que comprobó modelos, límites y términos en la documentación oficial de Google, en las fichas de Hugging Face y en la librería de Ollama, con 25 consultas y lecturas de páginas.
+
+		\item \textbf{Embeddings en local con modelos vigentes:} recomienda Qwen3-Embedding-0.6B (1024 dimensiones, recortables por MRL), con EmbeddingGemma 2 (de 270M a 740M parámetros, 768 dimensiones) como alternativa rápida y BGE-M3 como referencia que hay que batir. Advierte que sus cifras de MTEB no son comparables entre sí.
+
+		\item \textbf{Evaluación propia:} unos 1.500 productos estratificados del catálogo, usando el título tal como llega del scraping como consulta y negativos difíciles de tamaño, variante y pack. Como métrica principal, la tasa de confusión con negativos difíciles. Antes de cambiar de modelo, añadir el veto por tamaño y una reordenación léxica.
+
+		\item \textbf{El LLM no debe generar la lista entera:} un preprocesador determinista hace un borrador y el LLM solo devuelve correcciones y ambigüedades, lo que baja la salida de unos 700 a 150-250 tokens. Para interpretar, Gemini 3.5 Flash-Lite gratuito; para la explicación, Qwen3.5 de 2B o 4B en local y en streaming, porque el plan incluye tiendas y tiempos y no debería salir a la nube.
+
+		\item \textbf{Hallazgo de privacidad:} según los términos actuales de la API, en el Espacio Económico Europeo se aplican también a la capa gratuita las condiciones de datos de pago, de modo que Google no usa los prompts para mejorar sus productos.
+
+		\item \textbf{Un agente con un bucle de dos turnos como máximo:} el intérprete, el resolutor y el explicador son nodos de un grafo fijo, no agentes autónomos. Propone una ablación (una llamada, dos llamadas o tres agentes) midiendo latencia y F1 para defenderlo en la memoria.
+
+		\item \textbf{Reserva en escalera} de N0 a N5, hasta el caso de que caigan Ollama, OSRM o pgvector, con la regla de que el sistema siempre devuelve una cesta. Propone definir ``recomendación completa'' como el plan (artículos, tiendas, coste y minutos), sin el texto explicativo, y dar umbrales para cada métrica.
+
+		\item \textbf{No verificado:} los límites numéricos de la capa gratuita (Google ya no los publica), las velocidades locales (estimadas por ancho de banda de memoria) y el soporte de la iGPU y la NPU en Ollama, que solo llega a Intel a través de Vulkan y no aprovecha la NPU.
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Revisión de afirmaciones:} con la misma instrucción de buscar en la web, Gemini lanzó búsquedas sobre modelos que ya conocía (Gemini 1.5 y 2.0 Flash, Qwen2.5) y su respuesta sigue desfasada: Gemini 1.5 y 2.0 Flash ya no figuran en la lista de modelos de la API, y los límites de 15 peticiones por minuto y 1.500 al día que da como verificados no aparecen en la página oficial, que remite a la consola de Google AI Studio. DeepSeek, en cambio, consultó la documentación oficial. Claude comprobó en las fuentes primarias tres de sus afirmaciones: la lista actual de modelos (Gemini 4 Argon, 3.8 y 3.6 Flash, 3.5 y 3.1 Flash-Lite), la existencia y las características de EmbeddingGemma 2, y la cláusula de los términos de la API para el Espacio Económico Europeo. Las velocidades en tokens por segundo de las tres fuentes son estimaciones y se medirán en el servidor real.
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \
+Las tres fuentes coinciden en que un modelo de 3-8B en CPU no puede escribir en 5 s la interpretación completa de una lista de 30 artículos, pero también en que la salida del LLM baja a unos 150-250 tokens si un preprocesador de reglas resuelve antes la mayor parte de la lista. Como la aplicación es de uso personal, se ejecutará en el portátil del autor (Intel Core Ultra 7 258V, 32 GB y GPU integrada Arc 140V, que Ollama aprovecha mediante Vulkan), y con esa salida reducida un modelo de 2-4B podría cumplir el objetivo. Se decide por tanto un enfoque \textbf{local primero} (decisión 0005 de la base de conocimiento), acorde con la preferencia del autor por los modelos locales:
+
+\begin{itemize}
+	\item \textbf{Embeddings en local}, con el formato, la cantidad, la variante y la marca extraídos por reglas y guardados como columnas para filtrar.
+	\item \textbf{Orquestador local en Ollama} (candidatos: Qwen3.5 de 2B y 4B y Granite 4.2 3B), con Gemini 3.5 Flash-Lite gratuito como reserva tras la misma interfaz.
+	\item \textbf{Un único agente} con dos llamadas al LLM como máximo: una para interpretar solo lo que las reglas no resuelven y otra para redactar la explicación, cuyas cifras salen de plantillas. El sistema multiagente se descarta y queda documentado como alternativa considerada.
+	\item El sistema \textbf{siempre devuelve una cesta}, con un modo degradado sin LLM, y guarda la lista interpretada con cada recomendación.
+\end{itemize}
+
+Los modelos concretos se elegirán con una \textbf{prueba en el portátil} y una regla fijada antes de medir: el modelo local queda como principal si el plan (artículos, tiendas, coste y minutos) está listo en 5 s o menos (p95), al menos el 95\,\% de las llamadas a herramientas tienen un JSON válido a la primera y la interpretación alcanza un F1 de 0,90; si no, Gemini interpreta la lista y el modelo local queda de reserva. Los embeddings se compararán (Qwen3-Embedding-0.6B, EmbeddingGemma 2 y multilingual-e5-small) por su tasa de confusión con negativos difíciles de formato y variante, cuando haya nombres reales de productos tras el estudio de fuentes de datos. El objetivo de 5 s pasa a medirse sobre el plan, y la explicación se muestra después en streaming.
+
+Como consecuencia metodológica, DeepSeek V4.1 Flash con búsqueda web pasa a ser la segunda fuente por defecto de esta memoria, y Gemini queda como tercera fuente opcional; los prompts pedirán expresamente buscar información actual y citar las fuentes.
+
+\vspace{0.5cm}

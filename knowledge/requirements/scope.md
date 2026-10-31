@@ -14,12 +14,12 @@ generated:
 | --- | --- |
 | Geography | City of León only. |
 | Chains | **Required:** Mercadona, Carrefour, Dia, Lidl. **If data allows:** Alcampo, E.Leclerc, Lupa, Aldi. Final list depends on the data-source viability study. |
-| Platform | Responsive web app, mobile first. |
+| Platform | Responsive web app, mobile first. The MVP runs on the author's laptop ([0005](/decisions/0005-local-first-ai-models.md)). |
 | Users | Personal use by the author and people they share it with; the app is not published. No accounts and no authentication. Lists and personal history live in the user's browser. |
 | Travel | The user chooses walking or car and the shopping date for each request; at most 3 stores per trip. |
 | Promotions | Discounted prices, multi-unit offers (NxM, second unit at X %), volume discounts, loyalty-card prices and public coupons, each with its validity period. Collected automatically: flyers (PDF or images) are only used if they can be downloaded without manual steps. |
 | List input | Free text interpreted by the agent, plus catalog search to pick specific products or categories. |
-| AI models | Lightweight local models preferred, especially for product embeddings. A cloud LLM with no recurring cost (e.g. Gemini Flash on the free API tier) is acceptable where a light local model is not good enough. Final choice pending (prompt log, next signal). |
+| AI models | Local first ([0005](/decisions/0005-local-first-ai-models.md)): local embeddings and a small local LLM in Ollama, with Gemini Flash-Lite on the free API tier as fallback. Final models chosen with the [AI model benchmark](/evaluation/ai-model-benchmark.md). |
 | BI | Consumer view (savings per recommendation, local history) and analyst panel (market price evolution). |
 
 # Out of scope
@@ -37,7 +37,7 @@ generated:
 * Academic project for the course *Sistemas de Información de Gestión y Business Intelligence*, 2026-2027, for personal and non-commercial use.
 * Data comes from public sources of each chain; scraping must respect their terms and the legal constraints still to be studied.
 * No recurring costs: open-source components, local models or free API tiers.
-* Architecture decisions [0001](/decisions/0001-agent-as-orchestrator.md) to [0004](/decisions/0004-canonical-product-model.md) apply.
+* Architecture decisions [0001](/decisions/0001-agent-as-orchestrator.md) to [0005](/decisions/0005-local-first-ai-models.md) apply.
 
 # Assumptions and risks
 

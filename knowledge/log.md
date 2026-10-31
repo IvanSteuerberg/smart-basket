@@ -1,5 +1,12 @@
 # Log
 
+## 2026-10-31
+
+* **Create** Decision 0005 (local-first AI models) from Señal de Tiempo 5, with three sources (Claude, Gemini and DeepSeek). Status `draft` until the AI model benchmark runs.
+* **Create** AI model benchmark plan in a new `evaluation/` section: candidates, datasets, metrics and the decision rule of 0005.
+* **Update** Requirements: the MVP runs on the author's laptop (scope, NFR-10); NFR-01 measures the 5 s target on the plan and streams the explanation; NFR-06 keeps data on the machine by default; new NFR-14 (AI quality) and FR-41 (degraded mode without LLM); FR-18 takes explanation figures from templates.
+* **Update** System overview: rule-based preprocessor in the recommender; embedding model open point now points to 0005.
+
 ## 2026-10-19
 
 * **Update** Requirements review with the author: personal use without publication or authentication, shopping date and promotion validity (FR-36, FR-37), store assortment mitigations (FR-38 to FR-40), automatic-only data collection (NFR-13), no recurring cost with local or free-tier models.

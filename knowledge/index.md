@@ -26,3 +26,8 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0002 Routing in three layers](/decisions/0002-routing-in-three-layers.md) - Spatial filter in PostGIS, travel-time matrix from an external routing engine, basket optimizer in our code.
 * [0003 PostgreSQL as single database](/decisions/0003-postgresql-single-database.md) - pgvector, PostGIS and native partitioning in one PostgreSQL instance for the MVP.
 * [0004 Canonical product model](/decisions/0004-canonical-product-model.md) - Equivalences resolved by mapping every scraped product to a canonical product.
+* [0005 Local-first AI models](/decisions/0005-local-first-ai-models.md) - Local embeddings and a local-first LLM on the author's laptop, Gemini as fallback, a single agent and a pre-registered benchmark rule.
+
+## Evaluation
+
+* [AI model benchmark](/evaluation/ai-model-benchmark.md) - How the candidate LLMs and embedding models are measured on the laptop, and the rule that picks them.

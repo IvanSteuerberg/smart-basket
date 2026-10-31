@@ -18,7 +18,7 @@ sources:
 | --- | --- |
 | Ingestion (scraping) | Periodic extraction of catalogs, prices and store locations from each chain. |
 | Persistence | Single PostgreSQL instance: users, lists, catalog, embeddings, store locations, price history. See [0003](/decisions/0003-postgresql-single-database.md). |
-| Recommender | Orchestrator agent plus three tools: equivalence search, travel-time matrix, basket optimizer. See [0001](/decisions/0001-agent-as-orchestrator.md). |
+| Recommender | Orchestrator agent plus three tools: equivalence search, travel-time matrix, basket optimizer. See [0001](/decisions/0001-agent-as-orchestrator.md). A rule-based preprocessor resolves most list lines before the LLM; models in [0005](/decisions/0005-local-first-ai-models.md). |
 | Analytics (BI) | Analytical model separated from the transactional one, for price evolution and savings indicators. Design pending. |
 | User interface | Web (and later mobile) app: lists, recommendations, routes, savings history. |
 
@@ -35,4 +35,4 @@ sources:
 
 * Choice of routing engine (OSRM or Valhalla).
 * OLTP/OLAP separation for the BI layer.
-* Embedding model for products.
+* Embedding and LLM models: local first, picked with the [AI model benchmark](/evaluation/ai-model-benchmark.md) ([0005](/decisions/0005-local-first-ai-models.md)).

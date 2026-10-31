@@ -42,7 +42,8 @@ Priorities follow MoSCoW: **M** must, **S** should, **C** could. Scope is define
 | FR-15 | M | Promotions valid on the shopping date are applied according to the quantity bought (NxM, second unit, volume discounts). |
 | FR-16 | S | Loyalty-card prices and public coupons are applied when the user has the card, and are labeled as such. |
 | FR-17 | M | Savings are shown against a reference: buying the whole list at the cheapest single nearby store. |
-| FR-18 | M | The agent explains the result in natural language: savings, extra time, substitutions made ([0001](/decisions/0001-agent-as-orchestrator.md)). |
+| FR-18 | M | The agent explains the result in natural language: savings, extra time, substitutions made ([0001](/decisions/0001-agent-as-orchestrator.md)). Figures in the explanation come from templates, not from the LLM. |
+| FR-41 | S | If no LLM is available, the system still returns a basket: the list is interpreted by rules only, the explanation comes from a template and the interface shows that it is working in degraded mode ([0005](/decisions/0005-local-first-ai-models.md)). |
 | FR-19 | S | Two or three alternatives along the cost-time trade-off are offered (e.g. one store vs. three stores). |
 | FR-20 | M | The route is shown on a map. |
 | FR-21 | M | Items with no match or no equivalent are reported, not silently dropped. |

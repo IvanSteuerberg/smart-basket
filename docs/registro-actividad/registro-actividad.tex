@@ -158,14 +158,18 @@
 	\subsection*{Sábado 31 de octubre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
 		\actividad{Tarea}{Revisión del TOP 10: entran los canales de YouTube The PrimeTime y NeetCode (con sus dos canales), salen los blogs de Nathan Lambert y Ethan Mollick, y se añade como vídeo favorito \textit{You won't fall behind} (The PrimeTime, julio de 2026).}{Nueva versión del TOP 10 de Enlaces de Seguimiento.}
+		\actividad{Investigación}{Consulta sobre modelos de IA locales o en la nube para los embeddings y el agente orquestador, y sobre uno o varios agentes, con tres fuentes (Claude, Gemini y DeepSeek). Un primer intento sin búsqueda web dio modelos obsoletos y se repitió pidiendo información actual.}{Señal de Tiempo 5 de la Memoria de Prompts.}
+		\actividad{Decisión}{Enfoque local primero: embeddings y LLM ligero en el portátil del autor, Gemini Flash-Lite gratuito como reserva, un único agente con herramientas y modo degradado sin LLM. Los modelos concretos se eligen con una prueba y una regla fijada de antemano.}{Decisión 0005 de la base de conocimiento.}
+		\actividad{Análisis}{Ajuste de los requisitos a la decisión (latencia medida sobre el plan, privacidad, despliegue en el portátil, calidad de la IA y modo degradado) y plan de la prueba de modelos de IA.}{Requisitos revisados (FR-41, NFR-14) y plan en \texttt{knowledge/evaluation}.}
+		\actividad{Tarea}{DeepSeek V4.1 Flash con búsqueda web pasa a ser la segunda fuente por defecto de la Memoria de Prompts; Gemini queda como fuente opcional.}{Instrucciones para asistentes (\texttt{AGENTS.md}) actualizadas.}
 	\end{description}
 
 	\subsection*{Planificado para el resto de la semana}
 	Aplazado de la semana 7:
 	\begin{itemize}
-		\item Señal de Tiempo 5: IA local frente a nube para el agente y los embeddings, y uno o varios agentes.
 		\item Estudio de viabilidad de las fuentes de datos (scraping), incluidos los folletos que se puedan descargar automáticamente.
-		\item Plan de evaluación del recomendador.
+		\item Plan de evaluación del recomendador (la parte de los modelos de IA ya está planificada).
+		\item Prueba de los modelos de IA en el portátil (la parte del LLM no depende de los datos).
 	\end{itemize}
 	
 	% ======================= PENDIENTES =======================
