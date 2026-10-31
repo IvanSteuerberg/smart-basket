@@ -8,6 +8,7 @@ unchanged document produces the same bytes and is not uploaded again.
 Usage:
     python scripts/osf_publish.py            # dry run: show what would change
     python scripts/osf_publish.py --apply    # compile and upload
+    python scripts/osf_publish.py --only Registro_Actividad.pdf   # limit to some documents
 
 Requires OSF_TOKEN in the environment or in the repo's .env file, with the
 osf.full_write scope for --apply.
@@ -115,14 +116,19 @@ def build(folder, source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="upload instead of dry run")
+    parser.add_argument("--only", nargs="+", metavar="NAME",
+                        help="publish only these published file names (e.g. Registro_Actividad.pdf)")
     args = parser.parse_args()
+    documents = [d for d in DOCUMENTS if not args.only or d[3] in args.only]
+    if args.only and len(documents) != len(args.only):
+        sys.exit(f"Unknown names in --only; valid: {', '.join(d[3] for d in DOCUMENTS)}")
 
     osf = Osf(load_token())
     root = osf.root()
     root_items = osf.list_folder(root["relationships"]["files"]["links"]["related"]["href"])
     folders = {}
 
-    for folder, source, remote_folder, name in DOCUMENTS:
+    for folder, source, remote_folder, name in documents:
         pdf, dirty = build(folder, source)
         local_hash = hashlib.sha256(pdf.read_bytes()).hexdigest()
         note = " (uncommitted changes)" if dirty else ""
