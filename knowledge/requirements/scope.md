@@ -13,7 +13,7 @@ generated:
 | Area | MVP scope |
 | --- | --- |
 | Geography | City of León only. |
-| Chains | Every chain with an online catalog: Mercadona, Carrefour, Dia, Alcampo, Eroski, Gadis, Lupa (if its online shop covers León) and Alimerka. Lidl, Aldi and E.Leclerc through their flyers. See the [data-source viability study](/data/source-viability.md) and [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
+| Chains | Every chain with an online catalog that serves León: Mercadona, Carrefour, Dia, Alcampo, Gadis, Lupa and Alimerka. Aldi through its weekly offers page, Lidl and E.Leclerc through their flyers. Eroski only if it opens a store in León capital. See the [data-source viability study](/data/source-viability.md) and [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
 | Platform | Responsive web app, mobile first. The MVP runs on the author's laptop ([0005](/decisions/0005-local-first-ai-models.md)). |
 | Users | Personal use by the author and people they share it with; the app is not published. No accounts and no authentication. Lists and personal history live in the user's browser. |
 | Travel | The user chooses walking or car and the shopping date for each request; at most 3 stores per trip. |
@@ -41,7 +41,7 @@ generated:
 
 # Assumptions and risks
 
-* **Data availability** was checked in the [data-source viability study](/data/source-viability.md): a real browser reaches every chain checked, and only Alimerka needs a login. The remaining risks are site changes and tighter blocks. Lidl, Aldi and E.Leclerc only publish offers in weekly flyers.
+* **Data availability** was checked in the [data-source viability study](/data/source-viability.md): a real browser reaches every chain checked, with no login. The remaining risks are site changes and tighter blocks. Lidl, Aldi and E.Leclerc only publish offers in weekly flyers.
 * **Store assortment.** A chain's online catalog is not what every store carries: small neighbourhood stores have a reduced range, so a recommended product may not be on the shelf. Mitigations, from most to least reliable: per-store catalogs where a chain publishes them (to check in the viability study), the user marking products as not found ([FR-38](/requirements/functional.md)), a fallback per item ([FR-39](/requirements/functional.md)) and estimates by store format ([FR-40](/requirements/functional.md)).
 * Online prices are assumed to match prices in León stores. Chains that price by postal code or warehouse need the León zone selected.
 * Without accounts, consumer savings history is lost if the user clears the browser data.

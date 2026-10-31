@@ -14,11 +14,11 @@ sources:
 ---
 # Context
 
-Good recommendations need prices and promotions from as many chains in León as possible, collected with no manual steps ([NFR-13](/requirements/non-functional.md)). The [data-source viability study](/data/source-viability.md) found that plain HTTP clients are blocked by Carrefour, Dia and Alimerka and that Mercadona keeps prices in an API its robots.txt disallows, but that a real browser reaches every chain checked; only Alimerka needs a login. A conservative reading (DeepSeek in Señal de Tiempo 6) would keep only 4-5 chains and a few hundred products each.[^st6] The author chose to go further, for personal, non-commercial academic use with the data kept private, under the research exception of art. 135 TRLPI.
+Good recommendations need prices and promotions from as many chains in León as possible, collected with no manual steps ([NFR-13](/requirements/non-functional.md)). The [data-source viability study](/data/source-viability.md) found that plain HTTP clients are blocked by Carrefour, Dia and Alimerka and that Mercadona keeps prices in an API its robots.txt disallows, but that a real browser reaches every chain checked, with no login (Alimerka through its guest access with a postal code). A conservative reading (DeepSeek in Señal de Tiempo 6) would keep only 4-5 chains and a few hundred products each.[^st6] The author chose to go further, for personal, non-commercial academic use with the data kept private, under the research exception of art. 135 TRLPI.
 
 # Decision
 
-1. **Chains:** every chain with an online catalog: Mercadona, Carrefour, Dia, Alcampo, Eroski, Gadis, Lupa (if its online shop covers León) and Alimerka (with the author's account). Lidl, Aldi and E.Leclerc contribute their flyers.
+1. **Chains:** every chain with an online catalog that serves León: Mercadona, Carrefour, Dia, Alcampo, Gadis, Lupa and Alimerka. Aldi contributes its weekly offers page, and Lidl and E.Leclerc their flyers. Eroski stays out for now: it has no store in León capital and choosing a zone needs a login.
 2. **Method:** a real browser (Chromium driven by a script) sets León's postal code, keeps the session and walks the categories, reading the JSON or HTML the site itself loads. Where the site's own public API is enough once the zone is set, it is called directly (Mercadona). A login with the author's account is used where needed; credentials live in `.env` or the author's vault, never in the repository.
 3. **Scope:** the full catalog of each chain. Rate and frequency are set after the first runs, with prices no older than 48 h as the target ([NFR-02](/requirements/non-functional.md)).
 4. **Storage, collected periodically and not when a basket is requested:**

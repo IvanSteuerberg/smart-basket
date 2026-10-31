@@ -2,6 +2,8 @@
 
 ## 2026-10-31
 
+* **Update** Data-source viability study with the pending checks: León set in Carrefour, Dia, Alcampo and Gadis; Lupa and Gadis serve León; Eroski has no store in León capital and needs a login to set a zone; Aldi offers in HTML; E.Leclerc León flyer with text; catalog sizes of Mercadona and Carrefour; promotion types. Decision 0006 and scope drop Eroski for now.
+* **Update** Alimerka works as a guest with a postal code (no login needed): study, decision 0006 and scope.
 * **Create** Data-source viability study in a new `data/` section, from Señal de Tiempo 6 (Claude and DeepSeek) and checks of every chain with plain HTTP and a real browser.
 * **Create** Decision 0006 (data collection with a real browser): every chain with an online catalog, full catalogs, catalog, prices and promotions stored apart, collected periodically. Status `draft` until the first runs.
 * **Update** Scope (chains, data constraint and availability risk), NFR-07 (responsible scraping) and the ingestion module in the system overview.
