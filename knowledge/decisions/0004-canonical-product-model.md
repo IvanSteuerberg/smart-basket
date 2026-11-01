@@ -28,7 +28,6 @@ Every scraped product is assigned to one canonical product, by nearest-neighbour
 
 # Open questions
 
-* How canonical products are created (manual seed, clustering, LLM-assisted).
-* Granularity: how specific a canonical product must be.
+Both answered in [0007](/decisions/0007-data-model.md): a canonical product is the product type plus equivalence-changing variants, with no brand or size, and canonicals are created from a seed taxonomy, rules, embeddings within the same category and a review queue.
 
 [^st4]: Proposed by Gemini in prompt log Señal de Tiempo 4.

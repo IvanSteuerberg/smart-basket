@@ -1,0 +1,60 @@
+\section{Registro Mensual: Noviembre 2026}
+
+% ------------------- ENTRADA 7 -------------------
+\subsection{Señal de Tiempo 7: Separación OLTP/OLAP y Modelo de Datos}
+\textbf{Fecha:} 1 de noviembre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / DeepSeek V4.1 Flash (OpenCode Go) \\
+\textbf{Objetivo:} Diseñar el modelo transaccional (OLTP) que alimenta al recomendador y el modelo analítico (OLAP) que responde a los requisitos de Business Intelligence, y decidir si ambos conviven en el mismo PostgreSQL.
+
+\textit{Nota: Claude respondió con el contexto del proyecto; DeepSeek recibió el prompt sin contexto previo y con búsqueda web. Su respuesta original está en \url{docs/memoria-prompts/fuentes/}.}
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como Arquitecto de Datos especializado en sistemas transaccionales y Business Intelligence sobre PostgreSQL. Diseño el modelo de datos de un MVP académico que recomienda en qué supermercados de León comprar una lista para minimizar coste + lambda * minutos de desplazamiento, con un máximo de 3 tiendas.
+
+	Decisiones ya tomadas: PostgreSQL único con pgvector, PostGIS y particionado nativo para el histórico de precios; modelo de producto canónico con asignación por embeddings, reglas y cola de revisión; recogida diaria con navegador real de 7 cadenas (de unos 4.500 a unos 26.000 productos cada una), ofertas de Aldi y folletos de Lidl y E.Leclerc, guardando las respuestas en bruto; surtido dependiente de la zona y precio aparentemente igual entre zonas; promociones de varios tipos (precio rebajado, NxM, segunda unidad, volumen, tarjeta y cupones) con vigencia y aplicables a productos, categorías o marcas; tiendas de OpenStreetMap; sin cuentas de usuario, guardando solo recomendaciones anónimas con sus entradas para recalcularlas; y un precio efectivo por fecha y cantidad que usa un optimizador.
+
+	Requisitos de BI: evolución de precios por producto canónico, categoría y cadena; marca blanca frente a marca de fabricante; índice de precios de una cesta de referencia por cadena; frecuencia y profundidad de las promociones; ahorro de las recomendaciones; analítica de uso anónima.
+
+	Preguntas: (1) entidades, claves y columnas del modelo transaccional, con un esbozo de DDL; (2) histórico de precios como foto diaria o como intervalos de validez, con estimación de volumen, particionado e índices; (3) modelo de las promociones y cálculo determinista del precio efectivo; (4) granularidad y creación del producto canónico; (5) separación OLTP/OLAP: esquema en estrella en el mismo PostgreSQL o un motor aparte como DuckDB, con hechos, dimensiones, tipo de cambio lento y granularidad, y herramienta de BI gratuita; (6) riesgos y umbrales que harían cambiar el diseño.
+
+	Da una recomendación concreta para el MVP, con lo mínimo necesario y lo que puede esperar. Busca información actual (hoy es 1 de noviembre de 2026) sobre las versiones vigentes de PostgreSQL, pgvector, PostGIS y herramientas de BI gratuitas, cita las fuentes con URL e indica qué no has podido verificar. No ejecutes comandos ni modifiques archivos.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Producto canónico sin marca ni formato:} ``leche semidesnatada sin lactosa'', con las variantes que cambian la equivalencia como atributos. La marca y el formato van en el producto de cada cadena y los equivalentes se comparan por precio por unidad de medida; ``solo esta marca'' o ``este formato'' son filtros, no otros canónicos.
+
+		\item \textbf{Precios como intervalos de vigencia:} una fila por producto y zona mientras el precio no cambia, apoyándose en las claves temporales de PostgreSQL 18 (\texttt{WITHOUT OVERLAPS}). Con unos 50.000 productos, una foto diaria serían unos 18 millones de filas al año; con intervalos, del orden de cientos de miles. Una tabla aparte registra en qué ejecución se vio cada producto.
+
+		\item \textbf{Surtido separado del precio}, porque el surtido depende de la zona y el precio parece no hacerlo. \textbf{Promociones} en una tabla con parámetros por tipo y una tabla de destinos; el precio efectivo, en una función pura del código con pruebas.
+
+		\item \textbf{OLAP en el mismo PostgreSQL:} un esquema \texttt{bi} con un esquema en estrella refrescado tras cada ingesta, con hechos de precio diario por producto, de promoción y de recomendación, y dimensiones de fecha, cadena, tienda, producto de cadena y producto canónico. Metabase como herramienta gratuita; DuckDB solo si el histórico supera unos 100 millones de filas o los informes tardan más de unos segundos.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{``El OLTP guarda intervalos de precio, no fotos; el OLAP guarda agregados, no el detalle producto por día'':} así el histórico ocupa unas cien veces menos y el BI sigue respondiendo a todos los requisitos.
+
+		\item \textbf{Histórico en dos tablas:} \texttt{price\_current} con el precio vigente de cada producto y zona, que es lo que lee el recomendador, y \texttt{price\_history} con intervalos cerrados, escrita solo cuando el precio cambia y particionada por año. Evita las restricciones de exclusión sobre tablas particionadas. Estima de 0,4 a 1,8 millones de filas al año frente a 36-73 millones con fotos diarias, y advierte que la ausencia de observación no equivale a un precio sin cambios.
+
+		\item \textbf{Promociones:} tabla única con columnas tipadas para las mecánicas frecuentes y JSONB solo para los escalones por volumen; destinos polimórficos (producto, canónico, categoría con sus descendientes y marca); un indicador de si el precio observado ya incluye la promoción, para no aplicarla dos veces; sin acumulación de promociones en el MVP y un cálculo del precio efectivo determinista y versionado.
+
+		\item \textbf{Producto canónico con formato:} propone que el canónico incluya cantidad y número de envases (``leche semidesnatada, 1 L, pack de 1''), sin marca salvo cuando la marca es el producto, para que el optimizador no sustituya formatos sin permiso. Para crear el catálogo, una taxonomía semilla de 120-200 categorías hecha una sola vez, reglas, embeddings comparados solo dentro de la misma categoría y unidad, y cola de revisión, primando la precisión.
+
+		\item \textbf{OLAP en el mismo PostgreSQL}, en un esquema \texttt{bi} con hechos agregados (precio por categoría, cadena, tipo de marca y zona; índice de la cesta de referencia; promociones; recomendaciones y sus líneas; uso), dimensiones de tipo 1 con columnas preparadas para el tipo 2 y una vista para la evolución de un producto concreto. Refresco incremental de una ventana reciente tras cada ingesta, no vistas materializadas completas. Metabase OSS frente a Superset (más infraestructura) y Grafana (observabilidad).
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Revisión de afirmaciones:} la búsqueda web de DeepSeek volvió a fallar y recurrió a leer directamente las páginas oficiales. La versión 0.8.7 de pgvector coincide con lo que encontró Claude; la fase de PostgreSQL 19 (DeepSeek habla de una versión candidata, las fuentes de Claude de versiones beta) y las fechas de Metabase y Superset no se han verificado, y no cambian el diseño. DeepSeek trata el proyecto como un TFG con tribunal, algo que no podía saber por no tener contexto.
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+Se separa el modelo transaccional del analítico dentro del mismo PostgreSQL (decisión 0007 de la base de conocimiento, con el detalle en el modelo de datos):
+
+\begin{itemize}
+	\item \textbf{OLTP:} cadenas, zonas, tiendas, taxonomía propia, marcas, productos canónicos y de cadena, surtido por zona, precios en dos tablas (vigente e histórico por intervalos), promociones con sus destinos, ejecuciones de ingesta, respuestas en bruto, cola de revisión y recomendaciones anónimas. Se adoptan las tablas \texttt{price\_current} y \texttt{price\_history} y el indicador de promoción incluida en el precio que propone DeepSeek, en lugar de las claves temporales de la propuesta de Claude.
+	\item \textbf{OLAP:} un esquema en estrella en el esquema \texttt{bi}, con hechos diarios agregados por categoría (como propone DeepSeek, en lugar del grano producto por día), índice de la cesta de referencia, promociones, recomendaciones y uso, más una vista para la evolución de cada producto. Se refresca tras cada ingesta y se consulta con Metabase. DuckDB queda como alternativa si los hechos superan los 100 millones de filas.
+	\item \textbf{Producto canónico sin marca ni formato}, como propone Claude, porque encaja con listas expresadas en cantidades (``2 L de leche'') y con la comparación por precio unitario. El riesgo que señala DeepSeek se cubre respetando el formato cuando el usuario lo pide; si aparecen sustituciones no deseadas, se revisará.
+\end{itemize}
+
+\vspace{0.5cm}

@@ -50,7 +50,7 @@ Use of generative AI in the project is documented in `docs/memoria-prompts/`. It
   - **Gemini (optional third source):** `agy -p "<prompt>" --model gemini-3.8-flash-high --disable-slash-commands`; it can search the web but tends to anchor on older models. On the author's main Windows machine the binary is `%LOCALAPPDATA%\agy\bin\agy.exe`. Save it as `fuentes/YYYY-MM-DD-stN-gemini.md`.
 
   Save each raw answer with the prompt in `docs/memoria-prompts/fuentes/` and summarize it in its own *Insights de <asistente>* box. State in the entry that the agent in the session answered with project context and the other sources without it.
-- When a working session with an agent produces a relevant decision or finding, offer the author to draft the matching entry.
+- Entries are for fundamental decisions only (for example local or cloud AI, data sources, the OLTP/OLAP split, which is central to the course), a few per month. Design that follows from them (adapters, tooling, schema details) goes to `knowledge/` without an entry. When a session produces a fundamental decision or finding, offer the author to draft the matching entry.
 - If an AI answer already recorded contains an incorrect or unverified claim, point it out instead of taking it for granted.
 
 ## Activity log (registro de actividad)

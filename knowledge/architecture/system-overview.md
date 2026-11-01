@@ -34,5 +34,5 @@ sources:
 # Open points
 
 * Choice of routing engine (OSRM or Valhalla).
-* OLTP/OLAP separation for the BI layer.
+* OLTP/OLAP separation for the BI layer: a `bi` star schema in the same PostgreSQL, see [0007](/decisions/0007-data-model.md) and the [data model](/architecture/data-model.md).
 * Embedding and LLM models: local first, picked with the [AI model benchmark](/evaluation/ai-model-benchmark.md) ([0005](/decisions/0005-local-first-ai-models.md)).

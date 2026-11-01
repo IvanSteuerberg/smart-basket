@@ -1,5 +1,10 @@
 # Log
 
+## 2026-11-01
+
+* **Create** Decision 0007 (data model) and the data model document: canonical products without brand or size, prices as change-only intervals with a current-price table, typed promotions with targets, anonymous recommendations, and an aggregated star schema in a `bi` schema. From Señal de Tiempo 7 (Claude and DeepSeek V4.1 Flash), the first entry of November, kept because the OLTP/OLAP split is central to the course.
+* **Update** Decision 0004 open questions now point to 0007; system overview OLTP/OLAP point resolved.
+
 ## 2026-10-31
 
 * **Update** Data-source viability study with the pending checks: León set in Carrefour, Dia, Alcampo and Gadis; Lupa and Gadis serve León; Eroski has no store in León capital and needs a login to set a zone; Aldi offers in HTML; E.Leclerc León flyer with text; catalog sizes of Mercadona and Carrefour; promotion types. Decision 0006 and scope drop Eroski for now.
