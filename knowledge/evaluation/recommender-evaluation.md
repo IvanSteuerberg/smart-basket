@@ -42,7 +42,7 @@ Complements the [AI model benchmark](/evaluation/ai-model-benchmark.md), which p
 | Freshness | 95 % of prices less than 48 h old on any day | Ingestion runs and `last_seen` ([NFR-02](/requirements/non-functional.md)) |
 | Coverage | Share of benchmark items with a price in at least 3 chains | Replay of the benchmark lists |
 | Matching precision | At least 90 % of canonical assignments correct ([NFR-04](/requirements/non-functional.md)); hard-negative confusion at most 3 % (NFR-14) | Labelled sample of 300 assignments, stratified by chain and category |
-| Price accuracy | Online price equals shelf price for at least 90 % of spot-checked items | Receipts, plus the zone samples of the viability study |
+| Price accuracy | Online price equals shelf price for at least 90 % of spot-checked items | Receipts, plus the zone samples of the viability study. In-store markdowns that no website publishes (for example -30 % on fresh meat close to its use-by date) are excluded, and loyalty discounts shown as separate lines on the receipt are compared with the online loyalty price |
 | Promotion parsing | At least 95 % of promotions with the right mechanic, parameters and dates | Sample of 100 promotions checked against the source page or flyer |
 
 # Value of the recommendations

@@ -94,3 +94,16 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 | `fact_usage_daily` | Day × event | Events | FR-35 |
 
 The reference basket is a set of canonical products with weights; a chain missing an item lowers its coverage instead of borrowing another chain's price. Product-level price evolution (FR-31) comes from the view `bi.v_price_asof` over `price_history`. After each ingestion run a job recomputes the last few days of the facts and the index; monthly roll-ups are materialized views refreshed at night. Metabase OSS connects with a read-only role limited to `bi`.
+
+# Browser storage
+
+Without accounts, personal data lives in the user's browser. It is stored as versioned JSON with the same entities and fields a future server schema would use, so adding accounts is a copy ([Path to user accounts](/requirements/scope.md#path-to-user-accounts)):
+
+| Entity | Key fields |
+| --- | --- |
+| `list` | id (uuid), name, created_at, updated_at, items (text, interpreted item, quantity, unit, preferences) |
+| `accepted_basket` | recommendation_id, accepted_at, total_cost, savings |
+| `loyalty_card` | chain_id |
+| `not_found` | store_id, chain_product_id, reported_at |
+
+A `schema_version` field lets the app migrate stored data when the structure changes.
