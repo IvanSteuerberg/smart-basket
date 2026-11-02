@@ -27,7 +27,7 @@ Priorities follow MoSCoW: **M** must, **S** should, **C** could. Scope is define
 | --- | --- | --- |
 | FR-07 | M | The user sets the starting point with the browser's geolocation or an address in León. |
 | FR-08 | M | The user chooses walking or car and the maximum number of stores (1 to 3). |
-| FR-09 | S | The user chooses how to trade money against time: prioritize savings, balanced, or prioritize time (sets the time value lambda). |
+| FR-09 | S | The user chooses how to trade money against time: prioritize savings, balanced, or prioritize time. Each mode sets the time value lambda in the objective cost + lambda * minutes: 0.05, 0.15 and 0.40 €/min (3, 9 and 24 €/h) as starting values. |
 | FR-10 | S | The user excludes chains or specific stores. |
 | FR-11 | C | The user forces a store to be included in the route. |
 | FR-12 | S | The user states which loyalty cards they have, so only usable loyalty prices are applied. |

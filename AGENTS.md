@@ -19,7 +19,7 @@ The author works from several computers, and documents edited outside the repo h
 
 ## Current phase
 
-- The project is in **design phase**: no code yet.
+- The project moved from design to **implementation** on 2026-11-03. The stack is set in decision 0008; the first deliveries are the skeleton, the basket optimizer and the rule-based preprocessor.
 - Do not assume a technology (database, framework, language) is chosen unless it is recorded as a decision in `knowledge/decisions/`.
 - Always favor a scoped **MVP** that can be justified in the academic context.
 

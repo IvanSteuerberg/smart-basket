@@ -35,6 +35,8 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0006 Data collection with a real browser](/decisions/0006-data-collection-with-a-real-browser.md) - Every chain with an online catalog, collected periodically with a real browser or the site's own API; catalog, prices and promotions stored apart.
 * [0007 Data model](/decisions/0007-data-model.md) - Brand- and size-agnostic canonical products, prices as change-only intervals, typed promotions and an aggregated star schema in the same PostgreSQL.
 * [0008 Application structure and stack](/decisions/0008-application-structure-and-stack.md) - Python backend and React web app as Docker Compose services, Ollama native on the host, the HTTP API as the only contract for web and future Android clients.
+* [0009 Valhalla as routing engine](/decisions/0009-valhalla-routing-engine.md) - Self-hosted Valhalla returns walking and driving travel-time matrices; OSRM to be compared later.
+* [0010 Covering quantities with packs](/decisions/0010-covering-quantities-with-packs.md) - Pack combinations within 80-150 % of the requested quantity compete on price per base unit; near ties go to the one reaching the quantity.
 
 ## Evaluation
 

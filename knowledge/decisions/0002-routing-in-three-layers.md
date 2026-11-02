@@ -25,7 +25,7 @@ Prompt log entries ST1 and ST2 credited PostGIS and Neo4j with route calculation
 # Decision
 
 1. **Spatial filter:** PostGIS selects candidate stores near the user.
-2. **Travel times:** an external routing engine over OpenStreetMap (OSRM or Valhalla, to be chosen) returns the travel-time matrix.
+2. **Travel times:** an external routing engine over OpenStreetMap (Valhalla, see [0009](/decisions/0009-valhalla-routing-engine.md)) returns the travel-time matrix.
 3. **Optimization:** our own optimizer solves the Traveling Purchaser Problem. MVP: exhaustive search with at most 3 stores among about 10 candidates; mixed-integer programming (OR-Tools, HiGHS) if the problem grows.
 
 # Consequences

@@ -37,6 +37,6 @@ Docker Compose services `db`, `api`, `worker`, `routing`, `web` and `metabase` o
 
 # Open points
 
-* Choice of routing engine (OSRM or Valhalla).
+* Routing engine: Valhalla for the MVP, with a later comparison against OSRM ([0009](/decisions/0009-valhalla-routing-engine.md)).
 * OLTP/OLAP separation for the BI layer: a `bi` star schema in the same PostgreSQL, see [0007](/decisions/0007-data-model.md) and the [data model](/architecture/data-model.md).
 * Embedding and LLM models: local first, picked with the [AI model benchmark](/evaluation/ai-model-benchmark.md) ([0005](/decisions/0005-local-first-ai-models.md)).

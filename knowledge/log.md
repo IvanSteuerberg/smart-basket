@@ -1,8 +1,13 @@
 # Log
 
+## 2026-11-03
+
+* **Create** Decision 0009 (Valhalla as routing engine, OSRM to be compared later) and decision 0010 (covering quantities with packs: 80-150 % band, lowest price per base unit, near ties to the one reaching the quantity). 0002, 0008 and the system overview point to 0009.
+* **Update** FR-02: list built by browsing or searching the catalog, generic item by default. NFR-11 and 0005: the paid Gemini tier is required if the app is published to users in the EEA.
+* **Update** FR-09 with starting lambda values (0.05, 0.15 and 0.40 €/min). 0008: latest stable versions, pinned.
+
 ## 2026-11-02
 
-* **Update** FR-02: list built by browsing or searching the catalog, generic item by default. NFR-11 and 0005: the paid Gemini tier is required if the app is published to users in the EEA.
 * **Create** Decision 0008 (application structure and stack): one repository, Python/FastAPI backend shared by the `api` and `worker` services, React + Vite + TypeScript PWA served by Caddy, PostgreSQL, routing engine and Metabase in Docker Compose, Ollama native on the host, scraping with Playwright in the worker. System overview and NFR-10 updated.
 * **Update** AI model benchmark: Qwen3.5 0.8B added (fastest, same accuracy as 2B on the example lists); a real household list shows that example lists overestimate accuracy and that the preprocessor must normalize abbreviations and joined words. 0005 candidates updated.
 
