@@ -172,11 +172,16 @@
 		\actividad{Decisión}{Diseño del modelo de datos: producto canónico sin marca ni formato, precios guardados como intervalos de vigencia, promociones con su mecánica y destinos, recomendaciones anónimas y esquema en estrella para el BI en el mismo PostgreSQL. Propuesta propia contrastada con DeepSeek.}{Señal de Tiempo 7 de la Memoria de Prompts, decisión 0007 y modelo de datos en \texttt{knowledge/architecture}.}
 		\actividad{Tarea}{Se acota la Memoria de Prompts a las decisiones de fondo, unas pocas al mes.}{Instrucciones para asistentes (\texttt{AGENTS.md}) actualizadas.}
 		\actividad{Análisis}{Plan de evaluación del recomendador: corrección del optimizador frente a una búsqueda exhaustiva, calidad de los datos, ahorro frente a tres alternativas sin la aplicación (tienda más barata, más cercana y cadena habitual), robustez, rendimiento, usabilidad y BI.}{Plan de evaluación en \texttt{knowledge/evaluation}.}
-		\actividad{Tarea}{Instalación de Ollama y primera pasada de la prueba de modelos de IA en el portátil, en CPU y en la GPU integrada (Arc 140V): Qwen3.5 2B y 4B, Gemma 4 E2B y E4B y Granite 4.2 3B sobre 8 listas de ejemplo. Ningún modelo interpreta una lista completa en menos de 5 s, lo que confirma la necesidad del preprocesador de reglas; la GPU integrada acelera entre 1,5 y 2,2 veces; Qwen3.5 2B y Gemma 4 E4B quedan en cabeza y Granite se descarta.}{Resultados en el plan de prueba de modelos y en \texttt{experiments/llm-benchmark}.}
+		\actividad{Tarea}{Instalación de Ollama y primera pasada de la prueba de modelos de IA en el portátil, en CPU y en la GPU integrada (Arc 140V): Qwen3.5 0.8B, 2B y 4B, Gemma 4 E2B y E4B y Granite 4.2 3B sobre 8 listas de ejemplo y una lista real. Ningún modelo interpreta una lista completa en menos de 5 s, lo que confirma la necesidad del preprocesador de reglas; la GPU integrada acelera entre 1,5 y 2,2 veces; Qwen3.5 0.8B (el más rápido, con la misma precisión que el 2B), Qwen3.5 2B y Gemma 4 E4B quedan en cabeza y Granite se descarta; la lista real resulta mucho más difícil que las de ejemplo.}{Resultados en el plan de prueba de modelos y en \texttt{experiments/llm-benchmark}.}
 	\end{description}
 
 	\section*{Semana 9: 2 -- 8 de noviembre}
 	\textit{Resumen:} Semana en curso.
+
+	\subsection*{Lunes 2 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Decisión}{Estructura de la aplicación: un único repositorio con el backend en Python (FastAPI) y la web en React como aplicación instalable, ejecutados como servicios de Docker Compose en el portátil (base de datos, API, procesos programados de recogida de datos, motor de rutas, web y Metabase), con Ollama fuera de Docker para usar la GPU integrada. La API es el único contrato, de modo que el paso a un servidor o una futura app Android no cambian el diseño.}{Decisión 0008 de la base de conocimiento.}
+	\end{description}
 
 	\subsection*{Planificado para la semana}
 	\begin{itemize}

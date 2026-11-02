@@ -15,7 +15,7 @@ Priorities follow MoSCoW: **M** must, **S** should, **C** could. Scope is define
 | ID | Pri. | Requirement |
 | --- | --- | --- |
 | FR-01 | M | The user writes the list in free text ("leche, pan, algo para desayunar") and the agent turns it into items, generic or specific, with quantities. |
-| FR-02 | M | The user searches the catalog and adds specific products or categories to the list. |
+| FR-02 | M | The user builds the list from the catalog, browsing the seed taxonomy or searching it. Picking a product adds its generic (canonical) item by default, so the optimizer can still choose brand and chain; a specific brand is kept as a line preference (FR-04). |
 | FR-03 | M | The user reviews and corrects the agent's interpretation before the recommendation is computed. |
 | FR-04 | S | Per item, the user states preferences: exact brand only, private label accepted, dietary restrictions (gluten-free, lactose-free). |
 | FR-05 | S | Lists are saved in the browser and can be reused. |

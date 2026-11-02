@@ -16,11 +16,11 @@ sources:
 
 | Module | Responsibility |
 | --- | --- |
-| Ingestion (scraping) | Periodic extraction of catalogs, prices, promotions and flyers from each chain with a real browser or the site's own API; store locations from OpenStreetMap. See [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
+| Ingestion (scraping) | Periodic extraction of catalogs, prices, promotions and flyers from each chain with a real browser or the site's own API; store locations from OpenStreetMap. Runs in the `worker` service. See [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
 | Persistence | Single PostgreSQL instance: users, lists, catalog, embeddings, store locations, price history. See [0003](/decisions/0003-postgresql-single-database.md). |
 | Recommender | Orchestrator agent plus three tools: equivalence search, travel-time matrix, basket optimizer. See [0001](/decisions/0001-agent-as-orchestrator.md). A rule-based preprocessor resolves most list lines before the LLM; models in [0005](/decisions/0005-local-first-ai-models.md). |
 | Analytics (BI) | Analytical model separated from the transactional one, for price evolution and savings indicators. Design pending. |
-| User interface | Web (and later mobile) app: lists, recommendations, routes, savings history. |
+| User interface | React web app, mobile-first and installable as a PWA: lists, recommendations, routes, savings history. A native Android app would be another client of the same API. See [0008](/decisions/0008-application-structure-and-stack.md). |
 
 # Recommendation flow
 
@@ -30,6 +30,10 @@ sources:
 4. The routing engine returns the travel-time matrix for those stores.
 5. The optimizer picks the stores and per-store purchases minimizing cost + lambda * minutes.
 6. The agent explains the result: savings, extra time and route.
+
+# Deployment
+
+Docker Compose services `db`, `api`, `worker`, `routing`, `web` and `metabase` on the author's laptop, with Ollama native on the host to use the Arc GPU. The backend is one Python package used by `api` and `worker`. See [0008](/decisions/0008-application-structure-and-stack.md).
 
 # Open points
 

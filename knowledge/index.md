@@ -34,6 +34,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0005 Local-first AI models](/decisions/0005-local-first-ai-models.md) - Local embeddings and a local-first LLM on the author's laptop, Gemini as fallback, a single agent and a pre-registered benchmark rule.
 * [0006 Data collection with a real browser](/decisions/0006-data-collection-with-a-real-browser.md) - Every chain with an online catalog, collected periodically with a real browser or the site's own API; catalog, prices and promotions stored apart.
 * [0007 Data model](/decisions/0007-data-model.md) - Brand- and size-agnostic canonical products, prices as change-only intervals, typed promotions and an aggregated star schema in the same PostgreSQL.
+* [0008 Application structure and stack](/decisions/0008-application-structure-and-stack.md) - Python backend and React web app as Docker Compose services, Ollama native on the host, the HTTP API as the only contract for web and future Android clients.
 
 ## Evaluation
 

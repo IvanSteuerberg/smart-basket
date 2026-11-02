@@ -24,7 +24,7 @@ Measures the candidates of [0005](/decisions/0005-local-first-ai-models.md) agai
 
 | Part | Candidates |
 | --- | --- |
-| Orchestrator LLM (local) | Qwen3.5 2B, Qwen3.5 4B, Gemma 4 E2B, Gemma 4 E4B, Granite 4.2 3B |
+| Orchestrator LLM (local) | Qwen3.5 0.8B, Qwen3.5 2B, Qwen3.5 4B, Gemma 4 E2B, Gemma 4 E4B, Granite 4.2 3B |
 | Orchestrator LLM (cloud fallback) | Gemini 3.5 Flash-Lite (free tier) |
 | Embeddings (local) | Qwen3-Embedding-0.6B, EmbeddingGemma 2 (270M), multilingual-e5-small |
 
@@ -66,6 +66,8 @@ Preliminary: 8 example lists written for the pass (5 to 29 items), not the 30 re
 
 | Model | Device | Generation (tokens/s) | Valid JSON | F1 | 5 items | 12 items | 29 items | Valid tool calls | Explanation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Qwen3.5 0.8B | Arc | 81 | 8/8 | 0.92 | 3 s | 7 s | 15 s | 19/22 | 1.5 s |
+| Qwen3.5 0.8B | CPU | 39 | 8/8 | 0.88 | 5 s | 13 s | 30 s | 19/22 | 5.5 s |
 | Gemma 4 E2B | Arc | 55 | 8/8 | 0.79 | 4 s | 10 s | 22 s | 14/22 | 6 s |
 | Gemma 4 E2B | CPU | 28 | 8/8 | 0.88 | 9 s | 20 s | 45 s | 9/22 | 12 s |
 | Gemma 4 E4B | Arc | 35 | 8/8 | 0.86 | 6 s | 15 s | 34 s | 17/22 | 7.5 s |
@@ -86,4 +88,7 @@ Findings:
 * **Explanation:** a ~120-word explanation takes 4-6 s on the Arc with the small models, so a local explanation in streaming fits NFR-01.
 * **Reproducibility:** with the same seed and temperature 0, CPU and Arc gave different interpretations in some cases; storing the interpreted list with each recommendation (0005) covers this.
 
-Provisional ranking for the next pass: Qwen3.5 2B and Gemma 4 E4B on the Arc. The next pass adds the rule-based preprocessor, the 30 real lists and scoring for clarification questions.
+* **Qwen3.5 0.8B** (measured on 2026-11-02) is the fastest model tried, three times faster than Qwen3.5 2B on the Arc, with the same accuracy on the example lists and 19/19 valid tool calls outside the ambiguous list.
+* **A real household list** (abbreviations such as "d" for "de", joined words, a misspelt product, no quantities) was much harder than the example lists: F1 0.7 for Qwen3.5 0.8B and 2B and 0.8 for Gemma 4 E4B. The 0.8B model mostly copied the lines without normalizing them and invented litres for coffee; the 2B model invented kilograms and marked most lines as ambiguous; Gemma 4 E4B normalized best but turned a brand into a generic product. The rule-based preprocessor must normalize abbreviations and joined words before the LLM, and the example lists overestimate accuracy, so the next pass needs real lists.
+
+Provisional ranking for the next pass: Qwen3.5 0.8B, Qwen3.5 2B and Gemma 4 E4B on the Arc. The next pass adds the rule-based preprocessor, the 30 real lists and scoring for clarification questions.
