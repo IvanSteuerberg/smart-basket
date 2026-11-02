@@ -2,6 +2,8 @@
 
 ## 2026-11-01
 
+* **Update** AI model benchmark with a first pass on the laptop (Ollama 0.40.13, CPU and Arc): no candidate interprets a whole list within 5 s; Qwen3.5 2B and Gemma 4 E4B on the Arc lead; Granite 4.2 3B discarded. Gemma 4 added to the candidates in 0005. Script and data in `experiments/llm-benchmark/`.
+* **Create** Recommender evaluation plan: optimizer checked against brute force, determinism and promotion unit tests; data-quality targets; savings against three baselines; robustness, latency, usability and BI checks.
 * **Create** Decision 0007 (data model) and the data model document: canonical products without brand or size, prices as change-only intervals with a current-price table, typed promotions with targets, anonymous recommendations, and an aggregated star schema in a `bi` schema. From Señal de Tiempo 7 (Claude and DeepSeek V4.1 Flash), the first entry of November, kept because the OLTP/OLAP split is central to the course.
 * **Update** Decision 0004 open questions now point to 0007; system overview OLTP/OLAP point resolved.
 

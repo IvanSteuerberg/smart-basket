@@ -38,3 +38,4 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 ## Evaluation
 
 * [AI model benchmark](/evaluation/ai-model-benchmark.md) - How the candidate LLMs and embedding models are measured on the laptop, and the rule that picks them.
+* [Recommender evaluation plan](/evaluation/recommender-evaluation.md) - Optimizer correctness, data quality, savings against baselines, robustness, performance, usability and BI.
