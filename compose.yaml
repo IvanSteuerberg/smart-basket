@@ -1,0 +1,141 @@
+# Smart Basket on one machine (decision 0008, NFR-10). Ollama is NOT here: it runs natively on
+# the host to use the integrated GPU, and the backend reaches it at OLLAMA_URL.
+# Copy .env.example to .env and set the passwords before the first `docker compose up`.
+
+name: smart-basket
+
+x-backend: &backend
+  image: smart-basket-backend:${SMART_BASKET_TAG:-dev}
+  build:
+    context: ./backend
+  restart: unless-stopped
+  environment: &backend-env
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-smart_basket}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-smart_basket}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    TIMEZONE: Europe/Madrid
+    TZ: Europe/Madrid
+    LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+    OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+    OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:0.8b}
+    GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
+    VALHALLA_URL: http://routing:8002
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+services:
+  db:
+    build:
+      context: ./infra/db
+    image: smart-basket-db:${SMART_BASKET_TAG:-dev}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smart_basket}
+      POSTGRES_USER: ${POSTGRES_USER:-smart_basket}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      BI_READER_PASSWORD: ${BI_READER_PASSWORD:?set BI_READER_PASSWORD in .env}
+      METABASE_DB_PASSWORD: ${METABASE_DB_PASSWORD:?set METABASE_DB_PASSWORD in .env}
+      TZ: Europe/Madrid
+    volumes:
+      - db-data:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["smart-basket-migrate", "upgrade", "head"]
+    healthcheck:
+      disable: true
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    command: ["smart-basket-api"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "8000"
+
+  worker:
+    <<: *backend
+    command: ["smart-basket-worker"]
+    healthcheck:
+      disable: true
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  routing:
+    # Valhalla (decision 0009). On first start it downloads the OpenStreetMap extract and
+    # builds the routing tiles into the routing-data volume (several minutes); later starts
+    # reuse them. Map data is never committed to the repository.
+    image: ghcr.io/valhalla/valhalla-scripted:3.9.1
+    restart: unless-stopped
+    environment:
+      tile_urls: ${VALHALLA_PBF_URL:-https://download.geofabrik.de/europe/spain/castilla-y-leon-latest.osm.pbf}
+      use_tiles_ignore_pbf: "True"
+      build_admins: "True"
+      build_time_zones: "True"
+      build_elevation: "False"
+      serve_tiles: "True"
+      server_threads: ${VALHALLA_THREADS:-2}
+    volumes:
+      - routing-data:/custom_files
+    ports:
+      - "127.0.0.1:${ROUTING_PORT:-8002}:8002"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8002/status || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30m
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    image: smart-basket-web:${SMART_BASKET_TAG:-dev}
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  metabase:
+    # Metabase OSS keeps its own questions and dashboards in the `metabase` database; it reads
+    # Smart Basket data only through the bi_reader role, limited to the `bi` schema (0007).
+    image: metabase/metabase:v0.65.2.6
+    restart: unless-stopped
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_HOST: db
+      MB_DB_PORT: "5432"
+      MB_DB_DBNAME: metabase
+      MB_DB_USER: metabase
+      MB_DB_PASS: ${METABASE_DB_PASSWORD:?set METABASE_DB_PASSWORD in .env}
+      MB_ANON_TRACKING_ENABLED: "false"
+      MB_CHECK_FOR_UPDATES: "false"
+      JAVA_TIMEZONE: Europe/Madrid
+    ports:
+      - "127.0.0.1:${METABASE_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:
+  routing-data:

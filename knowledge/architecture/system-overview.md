@@ -19,7 +19,7 @@ sources:
 | Ingestion (scraping) | Periodic extraction of catalogs, prices, promotions and flyers from each chain with a real browser or the site's own API; store locations from OpenStreetMap. Runs in the `worker` service. See [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
 | Persistence | Single PostgreSQL instance: users, lists, catalog, embeddings, store locations, price history. See [0003](/decisions/0003-postgresql-single-database.md). |
 | Recommender | Orchestrator agent plus three tools: equivalence search, travel-time matrix, basket optimizer. See [0001](/decisions/0001-agent-as-orchestrator.md). A rule-based preprocessor resolves most list lines before the LLM; models in [0005](/decisions/0005-local-first-ai-models.md). |
-| Analytics (BI) | Analytical model separated from the transactional one, for price evolution and savings indicators. Design pending. |
+| Analytics (BI) | Star schema in the `bi` schema of the same PostgreSQL, refreshed by the worker, read by Metabase through a read-only role. See [0007](/decisions/0007-data-model.md) and the [data model](/architecture/data-model.md). |
 | User interface | React web app, mobile-first and installable as a PWA: lists, recommendations, routes, savings history. A native Android app would be another client of the same API. See [0008](/decisions/0008-application-structure-and-stack.md). |
 
 # Recommendation flow
@@ -33,7 +33,16 @@ sources:
 
 # Deployment
 
-Docker Compose services `db`, `api`, `worker`, `routing`, `web` and `metabase` on the author's laptop, with Ollama native on the host to use the Arc GPU. The backend is one Python package used by `api` and `worker`. See [0008](/decisions/0008-application-structure-and-stack.md).
+Docker Compose services `db`, `migrate` (one-shot), `api`, `worker`, `routing`, `web` and `metabase` on the author's laptop, with Ollama native on the host to use the Arc GPU. The backend is one Python package (`backend/`, package `smart_basket`) used by `migrate`, `api` and `worker`; the web app lives in `web/`. See [0008](/decisions/0008-application-structure-and-stack.md) and, for the layout and tooling of the skeleton, [0011](/decisions/0011-skeleton-layout-and-tooling.md).
+
+# Implementation status
+
+| Part | Status |
+| --- | --- |
+| Skeleton: Compose services, database image, migrations of both schemas, `/api/health`, worker with placeholder jobs, PWA placeholder, CI | Done (2026-11-03) |
+| Basket optimizer and effective price (`smart_basket.optimizer`), routing interface with a Valhalla client (`smart_basket.routing`) | Done, not yet wired to the API (2026-11-03, [0013](/decisions/0013-basket-optimizer-rules.md)) |
+| Rule-based preprocessor v1 (`smart_basket.preprocessor`) with a lexicon interface, LLM provider protocol with Ollama and Gemini (`smart_basket.llm`) | Done with a synthetic lexicon, not yet wired to the API (2026-11-03, [0014](/decisions/0014-rule-based-preprocessor.md)) |
+| Ingestion, matching, BI refresh, catalog lexicon, recommendation endpoint, list UI | Pending |
 
 # Open points
 

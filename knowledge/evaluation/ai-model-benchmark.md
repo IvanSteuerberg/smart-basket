@@ -91,4 +91,10 @@ Findings:
 * **Qwen3.5 0.8B** (measured on 2026-11-02) is the fastest model tried, three times faster than Qwen3.5 2B on the Arc, with the same accuracy on the example lists and 19/19 valid tool calls outside the ambiguous list.
 * **A real household list** (abbreviations such as "d" for "de", joined words, a misspelt product, no quantities) was much harder than the example lists: F1 0.7 for Qwen3.5 0.8B and 2B and 0.8 for Gemma 4 E4B. The 0.8B model mostly copied the lines without normalizing them and invented litres for coffee; the 2B model invented kilograms and marked most lines as ambiguous; Gemma 4 E4B normalized best but turned a brand into a generic product. The rule-based preprocessor must normalize abbreviations and joined words before the LLM, and the example lists overestimate accuracy, so the next pass needs real lists.
 
+## Rules only (2026-11-03)
+
+The rule-based preprocessor of [0014](/decisions/0014-rule-based-preprocessor.md), with a synthetic fixture lexicon and no LLM, on the same 8 example lists and with `bench.py`'s scoring: mean F1 0.967 (micro 0.974), 72 of 78 lines resolved without the LLM (the 6 left are the ambiguous ones). The lexicon was written knowing the lists, so this overestimates what the catalog lexicon will do on real lists; it confirms that the LLM can be limited to ambiguous lines.
+
+On the real household list of the first pass (kept local), the same rules with the fixture lexicon reach F1 0.9, above the three leading LLMs (0.7-0.8), and resolve 4 of its 10 lines; the other 6 (a product missing from the fixture, vague lines such as fruit or meat, and personal shorthand) would go to the LLM.
+
 Provisional ranking for the next pass: Qwen3.5 0.8B, Qwen3.5 2B and Gemma 4 E4B on the Arc. The next pass adds the rule-based preprocessor, the 30 real lists and scoring for clarification questions.
