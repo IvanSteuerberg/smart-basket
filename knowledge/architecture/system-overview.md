@@ -41,6 +41,8 @@ Docker Compose services `db`, `migrate` (one-shot), `api`, `worker`, `routing`, 
 | --- | --- |
 | Skeleton: Compose services, database image, migrations of both schemas, `/api/health`, worker with placeholder jobs, PWA placeholder, CI | Done (2026-11-03) |
 | Basket optimizer and effective price (`smart_basket.optimizer`), routing interface with a Valhalla client (`smart_basket.routing`) | Done, not yet wired to the API (2026-11-03, [0013](/decisions/0013-basket-optimizer-rules.md)) |
+| Rule-based preprocessor v1 (`smart_basket.preprocessor`) with a lexicon interface, LLM provider protocol with Ollama and Gemini (`smart_basket.llm`) | Done with a synthetic lexicon, not yet wired to the API (2026-11-03, [0014](/decisions/0014-rule-based-preprocessor.md)) |
+| Ingestion, matching, BI refresh, catalog lexicon, recommendation endpoint, list UI | Pending |
 
 # Open points
 

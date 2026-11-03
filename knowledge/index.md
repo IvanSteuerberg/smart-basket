@@ -40,6 +40,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0011 Skeleton layout and tooling](/decisions/0011-skeleton-layout-and-tooling.md) - Repository layout, pinned versions (Python 3.15), database image with PostGIS and pgvector, Alembic SQL migrations, Compose services and CI.
 * [0012 Schema implementation details](/decisions/0012-schema-implementation-details.md) - Columns added to the logical model, yearly partition management, validity types, the as-of price view and embeddings without a fixed dimension.
 * [0013 Basket optimizer rules](/decisions/0013-basket-optimizer-rules.md) - Stores compared by comparable cost, coverage first, round trips, missing lines with a reason, promotion details and tie-breaks; the store count can rise with lambda.
+* [0014 Rule-based preprocessor v1](/decisions/0014-rule-based-preprocessor.md) - Normalization pipeline, resolution criteria, the lexicon interface with a synthetic fixture, and the LLM provider protocol for unresolved lines.
 
 ## Evaluation
 

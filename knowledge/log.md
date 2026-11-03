@@ -2,6 +2,8 @@
 
 ## 2026-11-03 (implementation)
 
+* **Create** Decision 0014 (rule-based preprocessor v1), from the third delivery: `smart_basket.preprocessor` (normalization, quantities, brands, variants, lexicon interface, synthetic fixture lexicon) and `smart_basket.llm` (Ollama and Gemini behind one protocol).
+* **Update** AI model benchmark with the rules-only pass on the 8 example lists (mean F1 0.967, 92 % of lines resolved, optimistic because the fixture lexicon knows the lists). System overview: preprocessor status and pending parts.
 * **Create** Decision 0013 (basket optimizer rules), from the second delivery: `smart_basket.optimizer` (effective price, pack covering of 0010, exhaustive search) and `smart_basket.routing` (interface and Valhalla client).
 * **Update** Recommender evaluation plan: the lambda sweep checks minutes and cost monotonicity; the store count is not monotone in general (counter-example in 0013). Data model: effective price points to the implementation and to 0013. System overview: optimizer status.
 * **Create** Decision 0011 (skeleton layout and tooling) and decision 0012 (schema implementation details), from the first implementation delivery: `backend/`, `web/`, `infra/`, `compose.yaml`, Alembic migrations of the transactional and `bi` schemas, CI.

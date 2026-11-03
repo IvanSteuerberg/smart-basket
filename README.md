@@ -59,6 +59,10 @@ scripts/
 
 * **Basket optimizer** (`backend/src/smart_basket/optimizer/`): pure Python, no database or network. `optimize(BasketRequest)` takes interpreted lines, candidate stores with products, prices and promotions, a travel-time matrix, max stores and lambda, and returns per-store purchases, totals, minutes, visiting order, missing lines and the engine version. Rules: decisions 0010 and 0013.
 * **Routing** (`backend/src/smart_basket/routing/`): `RoutingEngine` protocol (origin and stores in, minutes matrix out) and a Valhalla client.
+* **Rule-based preprocessor** (`backend/src/smart_basket/preprocessor/`): `Preprocessor(lexicon).preprocess(text)` turns a free-text list into items with the LLM item schema and marks the lines the LLM must interpret. The lexicon sits behind an interface; tests use the synthetic `backend/tests/fixtures/lexicon_es.json`. Rules: decision 0014.
+* **LLM providers** (`backend/src/smart_basket/llm/`): Ollama and Gemini behind one protocol; `interpret_unresolved` sends only the unresolved lines and falls back to the rules (FR-41).
+
+The evaluation on the benchmark lists prints its figures with `uv run pytest tests/preprocessor -s -k benchmark`.
 
 ## Running with Docker Compose
 
