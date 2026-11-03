@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (ruff, pytest, migrations)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:ci@127.0.0.1:5432/smart_basket_test
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      # The database image of the repository (PostgreSQL 18 + PostGIS + pgvector), so CI
+      # migrates against exactly what Compose runs.
+      - name: Build and start the database
+        working-directory: infra/db
+        run: |
+          docker build -t smart-basket-db:ci .
+          docker run -d --name db -p 5432:5432 \
+            -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=smart_basket_test \
+            -e BI_READER_PASSWORD=ci-bi -e METABASE_DB_PASSWORD=ci-mb \
+            smart-basket-db:ci
+          for i in $(seq 1 60); do
+            docker exec db pg_isready -U postgres -d smart_basket_test && break
+            sleep 1
+          done
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.6"
+          enable-cache: true
+
+      - name: Install Python and dependencies
+        run: uv sync --frozen --python 3.15.2
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Migrations (upgrade, downgrade, upgrade)
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: |
+          uv run smart-basket-migrate upgrade head
+          uv run smart-basket-migrate downgrade base
+          uv run smart-basket-migrate upgrade head
+
+      - name: Tests
+        run: uv run pytest -q
+
+  web:
+    name: Web (TypeScript, build)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: "26.13.0"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+
+  compose:
+    name: Compose and images
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Validate compose.yaml
+        run: docker compose --env-file .env.example config --quiet
+      - name: Build backend and web images
+        run: docker compose --env-file .env.example build api web

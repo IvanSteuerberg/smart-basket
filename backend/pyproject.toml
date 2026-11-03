@@ -1,0 +1,59 @@
+[project]
+name = "smart-basket"
+version = "0.1.0"
+description = "Smart Basket backend: HTTP API, worker, basket optimizer and list preprocessor."
+readme = "README.md"
+requires-python = ">=3.15,<3.16"
+dependencies = [
+    "alembic==1.20.1",
+    "apscheduler==3.11.3",
+    "fastapi==0.162.0",
+    "httpx==0.28.1",
+    "psycopg[binary]==3.3.6",
+    "pydantic==2.14.2",
+    "pydantic-settings==2.16.2",
+    "rapidfuzz==3.14.6",
+    "sqlalchemy==2.1.6",
+    "uvicorn[standard]==0.54.0",
+]
+
+[project.scripts]
+smart-basket-api = "smart_basket.api.__main__:main"
+smart-basket-worker = "smart_basket.worker.__main__:main"
+smart-basket-migrate = "smart_basket.db.migrate:main"
+
+[dependency-groups]
+dev = [
+    "pytest==9.2.0",
+    "ruff==0.17.3",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.6,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py315"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "C4", "PT"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+# Hand-written SQL DDL.
+"src/smart_basket/db/migrations/versions/*.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    # FastAPI's TestClient still uses httpx; harmless for these tests.
+    "ignore:Using `httpx` with `starlette.testclient`",
+]
+markers = [
+    "db: needs a PostgreSQL database with PostGIS and pgvector (set TEST_DATABASE_URL)",
+]

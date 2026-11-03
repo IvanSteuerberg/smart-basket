@@ -8,7 +8,7 @@ generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-01T12:00:00+01:00
 ---
-Logical model behind [0007](/decisions/0007-data-model.md). Column lists name the key fields, not the final DDL. Conventions: money as `numeric` (never float), timestamps as `timestamptz` in UTC, BI dates in `Europe/Madrid`, internal keys as `bigint` identities and anonymous public identifiers as `uuidv7()`.
+Logical model behind [0007](/decisions/0007-data-model.md). Column lists name the key fields, not the final DDL, which lives in the Alembic migrations of `backend/src/smart_basket/db/migrations/` (choices made there are recorded in [0012](/decisions/0012-schema-implementation-details.md)). Conventions: money as `numeric` (never float), timestamps as `timestamptz` in UTC, BI dates in `Europe/Madrid`, internal keys as `bigint` identities and anonymous public identifiers as `uuidv7()`.
 
 # Transactional schema
 
@@ -27,7 +27,7 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 
 | Entity | Key fields | Notes |
 | --- | --- | --- |
-| `canonical_product` | id, category_id, name, variant_key, base_unit, embedding, merged_into, created_at | Type plus equivalence-changing variants, no brand or size ([0004](/decisions/0004-canonical-product-model.md)) |
+| `canonical_product` | id, category_id, name, variant_key, base_unit, default_quantity, embedding, merged_into, created_at | Type plus equivalence-changing variants, no brand or size ([0004](/decisions/0004-canonical-product-model.md)) |
 | `chain_product` | id, chain_id, chain_sku, name, brand_id, ean, base_quantity, base_unit, pack_count, packaging, dietary_tags, chain_category, canonical_id, match_confidence, match_method, embedding, url, first_seen, last_seen, is_active | One row per product of a chain; `unique (chain_id, chain_sku)` |
 | `chain_product_zone` | chain_product_id, zone_id, first_seen, last_seen, is_available | Assortment per zone |
 | `product_match` | id, chain_product_id, canonical_id, method (`ean`, `rule`, `embedding`, `review`), score, decided_at | Audit of every assignment and merge |
@@ -39,9 +39,11 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 | --- | --- | --- |
 | `price_current` | chain_product_id, zone_id, price, price_per_unit, valid_from, last_seen_run | One row per product and zone, read by the recommender |
 | `price_history` | id, chain_product_id, zone_id, price, price_per_unit, valid_from, valid_to | Closed intervals, written on change; partitioned by year on `valid_from`; index on (chain_product_id, zone_id, valid_from) including price |
-| `promotion` | id, chain_id, kind (`promo_price`, `percent_off`, `nxm`, `second_unit`, `volume_tier`, `loyalty_price`, `coupon`), promo_price, percent, amount, buy_n, pay_m, reference_price, tiers (JSONB), requires_loyalty, coupon_code, applied_in_price, valid (range), source (`web`, `flyer`), source_ref, raw_text, confidence | Check constraints per kind |
+| `promotion` | id, chain_id, kind (`promo_price`, `percent_off`, `nxm`, `second_unit`, `volume_tier`, `loyalty_price`, `coupon`), promo_price, percent, amount, buy_n, pay_m, reference_price, tiers (JSONB), requires_loyalty, coupon_code, applied_in_price, priority, valid (daterange), source (`web`, `flyer`), source_ref, raw_text, confidence | Check constraints per kind |
 | `promotion_target` | promotion_id, chain_product_id \| canonical_id \| category_id \| brand_id | Exactly one target per row |
 | `promotion_zone` | promotion_id, zone_id | No rows means the whole chain |
+| `reference_basket` | id, code, name | Reference baskets of the price index ([FR-33](/requirements/functional.md)) |
+| `reference_basket_item` | basket_id, canonical_id, quantity, weight | Items and weights of each reference basket |
 
 ## Ingestion
 
@@ -55,7 +57,7 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 | Entity | Key fields | Notes |
 | --- | --- | --- |
 | `recommendation` | id (uuidv7), created_at, data_as_of, engine_version, origin_cell, mode, max_stores, lambda, request (JSONB: interpreted list, preferences), result (JSONB), total_cost, reference_cost, savings, minutes | Anonymous; the origin is rounded to a grid cell ([NFR-06](/requirements/non-functional.md)) |
-| `recommendation_item` | recommendation_id, line, canonical_id, chain_product_id, store_id, quantity, unit_price, line_total, promotion_id | One row per line |
+| `recommendation_item` | recommendation_id, line, part, canonical_id, chain_product_id, store_id, quantity, unit_price, line_total, promotion_id | One row per line and format bought |
 | `not_found_report` | store_id, chain_product_id, reported_at | Anonymous reports behind [FR-38](/requirements/functional.md) |
 
 ## Effective price
@@ -81,12 +83,13 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 | `dim_brand` | Brand, with brand type (private label or manufacturer) | Type 1, ready for type 2 |
 | `dim_product` | Canonical product | Type 1, ready for type 2; merges resolved |
 | `dim_promotion_kind` | Promotion mechanic | Type 0 |
+| `dim_reference_basket` | Reference basket | Type 1 |
 
 ## Facts
 
 | Fact | Grain | Measures | Serves |
 | --- | --- | --- | --- |
-| `fact_price_category_daily` | Day × category × chain × brand type × zone | Mean, median, min and max price per unit, products, products on promotion | [FR-31](/requirements/functional.md), FR-32 |
+| `fact_price_category_daily` | Day × category × chain × brand type × zone × base unit | Mean, median, min and max price per unit, products, products on promotion | [FR-31](/requirements/functional.md), FR-32 |
 | `fact_price_index_daily` | Day × chain × reference basket | Index (base 100), coverage, items | FR-33 |
 | `fact_promotion_daily` | Day × chain × category × promotion kind | Promotions, products, mean and max depth, share needing a loyalty card | FR-34 |
 | `fact_recommendation` | Recommendation | Total cost, reference cost, savings, minutes, stores, lambda, data age | FR-29, FR-35 |

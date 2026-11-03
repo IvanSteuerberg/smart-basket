@@ -2,7 +2,7 @@
 
 Business Intelligence and semantic recommendation engine for grocery shopping: given a shopping list, it proposes the combination of products and supermarkets that minimizes total cost and travel time, including equivalences between national brands and private labels.
 
-> **Status:** concept phase. There is no code yet; the repository holds the design documentation and the generative AI usage log.
+> **Status:** implementation phase (since 2026-11-03). The skeleton runs with Docker Compose; see the implementation status in the [system overview](knowledge/architecture/system-overview.md#implementation-status).
 
 ## Problem
 
@@ -16,7 +16,7 @@ A recommender agent that, from a generic or specific shopping list:
 - computes the **lowest-cost** basket,
 - takes **travel time** between stores into account.
 
-## Planned architecture
+## Architecture
 
 | Module | Responsibility |
 | --- | --- |
@@ -25,11 +25,24 @@ A recommender agent that, from a generic or specific shopping list:
 | Recommender | Semantic product matching and shopping-route optimization. |
 | Interface | Web and mobile app: shopping lists, savings history and routes. |
 
-Architecture decisions so far (single PostgreSQL database, routing in three layers, agent as orchestrator) are recorded in the [knowledge base](knowledge/index.md).
+Architecture decisions (single PostgreSQL database, routing in three layers, agent as orchestrator, stack and layout) are recorded in the [knowledge base](knowledge/index.md).
 
 ## Repository layout
 
 ```
+backend/              Python package smart_basket (uv project): API, worker, migrations, recommender
+  src/smart_basket/
+    api/              FastAPI app (/api/health, OpenAPI at /api/docs)
+    db/               Engine, sessions and Alembic migrations (hand-written SQL)
+    worker/           APScheduler process (ingestion, matching and BI refresh placeholders)
+  tests/              pytest suite (synthetic data only)
+web/                  React + Vite + TypeScript PWA (Spanish UI)
+infra/
+  db/                 PostgreSQL 18 image with PostGIS and pgvector, first-start role script
+  caddy/              Caddyfile: serves the web app and proxies /api to the backend
+compose.yaml          db, migrate, api, worker, routing (Valhalla), web (Caddy), metabase
+.env.example          Configuration template (copy to .env, which is git-ignored)
+experiments/          One-off benchmarks (LLM benchmark of decision 0005)
 knowledge/            Engineering knowledge base (OKF v0.2): vision, architecture, decisions
 docs/
   idea-base/          Concept document (LaTeX, Spanish)
@@ -41,6 +54,82 @@ scripts/
   osf_publish.py      Compile the documents and publish the PDFs to OSF (dry run by default)
   osf_index.py        Generate the OSF wiki index from the live file listing (+ osf_index.json)
 ```
+
+## Running with Docker Compose
+
+Requires Docker with Compose v2. Ollama runs natively on the host (decision 0005), outside Compose.
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and set the three passwords, then:
+
+```bash
+docker compose up -d --build
+```
+
+* Web app: <http://localhost:8080> (the placeholder page calls `/api/health`).
+* API: <http://localhost:8080/api/health>, OpenAPI docs at <http://localhost:8080/api/docs>.
+* Metabase: <http://localhost:3000>. On first use, add a PostgreSQL database with host `db`, database `smart_basket`, user `bi_reader` and the `BI_READER_PASSWORD` of `.env`; that role only sees the `bi` schema.
+* Valhalla: <http://localhost:8002/status>. On first start it downloads the Castilla y León extract from Geofabrik and builds the routing tiles (several minutes); later starts reuse the `routing-data` volume.
+* PostgreSQL: `127.0.0.1:5432` (user and password from `.env`).
+
+The `migrate` service applies the migrations and exits; `api`, `worker` and `metabase` wait for it. The roles `bi_reader` and `metabase` are created when the data volume is first initialized, so changing their passwords later needs `ALTER ROLE` (or `docker compose down -v`, which deletes all data).
+
+Ollama: install it on the host, pull the model in `OLLAMA_MODEL` (`ollama pull qwen3.5:0.8b`) and keep `ollama serve` running. The containers reach it at `OLLAMA_URL`. `LLM_PROVIDER=none` runs in rules-only mode (FR-41).
+
+## Developing
+
+Backend (needs [uv](https://docs.astral.sh/uv/); it installs Python 3.15 itself):
+
+```bash
+cd backend && uv sync
+```
+
+```bash
+docker compose up -d db && uv run smart-basket-migrate upgrade head
+```
+
+```bash
+uv run smart-basket-api
+```
+
+The backend reads `DATABASE_URL` and the other settings from the environment or a `.env` file in the working directory (see `smart_basket/config.py`). Lint and format with ruff:
+
+```bash
+uv run ruff check . && uv run ruff format --check .
+```
+
+Web (Node 26), with `/api` proxied to `http://localhost:8000` (override with `VITE_API_PROXY`):
+
+```bash
+cd web && npm ci && npm run dev
+```
+
+## Testing
+
+```bash
+cd backend && uv run pytest
+```
+
+The migration tests need a disposable database; they downgrade it to empty and upgrade it again:
+
+```bash
+docker compose exec db createdb -U smart_basket smart_basket_test
+```
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://smart_basket:<password>@localhost:5432/smart_basket_test uv run pytest tests/db
+```
+
+Web type check and build:
+
+```bash
+cd web && npm run typecheck && npm run build
+```
+
+CI (`.github/workflows/ci.yml`) runs ruff, pytest with the migration tests against the repository's database image, the TypeScript check and web build, and validates and builds the Compose images.
 
 ## Building the documentation
 

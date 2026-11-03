@@ -37,6 +37,8 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0008 Application structure and stack](/decisions/0008-application-structure-and-stack.md) - Python backend and React web app as Docker Compose services, Ollama native on the host, the HTTP API as the only contract for web and future Android clients.
 * [0009 Valhalla as routing engine](/decisions/0009-valhalla-routing-engine.md) - Self-hosted Valhalla returns walking and driving travel-time matrices; OSRM to be compared later.
 * [0010 Covering quantities with packs](/decisions/0010-covering-quantities-with-packs.md) - Pack combinations within 80-150 % of the requested quantity compete on price per base unit; near ties go to the one reaching the quantity.
+* [0011 Skeleton layout and tooling](/decisions/0011-skeleton-layout-and-tooling.md) - Repository layout, pinned versions (Python 3.15), database image with PostGIS and pgvector, Alembic SQL migrations, Compose services and CI.
+* [0012 Schema implementation details](/decisions/0012-schema-implementation-details.md) - Columns added to the logical model, yearly partition management, validity types, the as-of price view and embeddings without a fixed dimension.
 
 ## Evaluation
 

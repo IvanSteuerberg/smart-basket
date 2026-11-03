@@ -1,5 +1,10 @@
 # Log
 
+## 2026-11-03 (implementation)
+
+* **Create** Decision 0011 (skeleton layout and tooling) and decision 0012 (schema implementation details), from the first implementation delivery: `backend/`, `web/`, `infra/`, `compose.yaml`, Alembic migrations of the transactional and `bi` schemas, CI.
+* **Update** Data model: `canonical_product.default_quantity`, `promotion.priority` and `daterange` validity, `recommendation_item.part`, reference basket tables and dimension, base unit in the category price fact. System overview: BI module, deployment with the `migrate` service and an implementation status table.
+
 ## 2026-11-03
 
 * **Create** Decision 0009 (Valhalla as routing engine, OSRM to be compared later) and decision 0010 (covering quantities with packs: 80-150 % band, lowest price per base unit, near ties to the one reaching the quantity). 0002, 0008 and the system overview point to 0009.
