@@ -1,15 +1,14 @@
 # Log
 
-## 2026-11-03 (implementation)
+## 2026-11-03
 
+* **Fix** Local review of the three deliveries on the author's laptop: `.gitattributes` forces LF for shell scripts, since a CRLF checkout broke the database's first start (0011). Verified there: 601 tests and migrations, the whole Compose stack, `bi_reader` limited to `bi`, Metabase, and Valhalla with the real Castilla y León extract (walking and driving matrices). Rules-only result on the local real list added to the AI model benchmark.
 * **Create** Decision 0014 (rule-based preprocessor v1), from the third delivery: `smart_basket.preprocessor` (normalization, quantities, brands, variants, lexicon interface, synthetic fixture lexicon) and `smart_basket.llm` (Ollama and Gemini behind one protocol).
 * **Update** AI model benchmark with the rules-only pass on the 8 example lists (mean F1 0.967, 92 % of lines resolved, optimistic because the fixture lexicon knows the lists). System overview: preprocessor status and pending parts.
 * **Create** Decision 0013 (basket optimizer rules), from the second delivery: `smart_basket.optimizer` (effective price, pack covering of 0010, exhaustive search) and `smart_basket.routing` (interface and Valhalla client).
 * **Update** Recommender evaluation plan: the lambda sweep checks minutes and cost monotonicity; the store count is not monotone in general (counter-example in 0013). Data model: effective price points to the implementation and to 0013. System overview: optimizer status.
 * **Create** Decision 0011 (skeleton layout and tooling) and decision 0012 (schema implementation details), from the first implementation delivery: `backend/`, `web/`, `infra/`, `compose.yaml`, Alembic migrations of the transactional and `bi` schemas, CI.
 * **Update** Data model: `canonical_product.default_quantity`, `promotion.priority` and `daterange` validity, `recommendation_item.part`, reference basket tables and dimension, base unit in the category price fact. System overview: BI module, deployment with the `migrate` service and an implementation status table.
-
-## 2026-11-03
 
 * **Create** Decision 0009 (Valhalla as routing engine, OSRM to be compared later) and decision 0010 (covering quantities with packs: 80-150 % band, lowest price per base unit, near ties to the one reaching the quantity). 0002, 0008 and the system overview point to 0009.
 * **Update** FR-02: list built by browsing or searching the catalog, generic item by default. NFR-11 and 0005: the paid Gemini tier is required if the app is published to users in the EEA.

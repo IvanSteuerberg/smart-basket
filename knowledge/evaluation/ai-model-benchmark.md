@@ -95,4 +95,6 @@ Findings:
 
 The rule-based preprocessor of [0014](/decisions/0014-rule-based-preprocessor.md), with a synthetic fixture lexicon and no LLM, on the same 8 example lists and with `bench.py`'s scoring: mean F1 0.967 (micro 0.974), 72 of 78 lines resolved without the LLM (the 6 left are the ambiguous ones). The lexicon was written knowing the lists, so this overestimates what the catalog lexicon will do on real lists; it confirms that the LLM can be limited to ambiguous lines.
 
+On the real household list of the first pass (kept local), the same rules with the fixture lexicon reach F1 0.9, above the three leading LLMs (0.7-0.8), and resolve 4 of its 10 lines; the other 6 (a product missing from the fixture, vague lines such as fruit or meat, and personal shorthand) would go to the LLM.
+
 Provisional ranking for the next pass: Qwen3.5 0.8B, Qwen3.5 2B and Gemma 4 E4B on the Arc. The next pass adds the rule-based preprocessor, the 30 real lists and scoring for clarification questions.

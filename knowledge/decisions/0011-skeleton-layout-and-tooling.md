@@ -28,6 +28,7 @@ Decision [0008](/decisions/0008-application-structure-and-stack.md) fixed the st
 # Consequences
 
 * `docker compose up` starts the whole system from a clean checkout once `.env` exists; the first start of `routing` takes several minutes and needs network access to Geofabrik.
+* `.gitattributes` keeps shell scripts with LF line endings: on a Windows checkout with `core.autocrlf`, a CRLF `infra/db/initdb/10-roles.sh` breaks the first start of `db` (no `bi_reader` login, no Metabase database). Found when the stack was first run on the author's laptop.
 * Pinned PGDG package versions make the database image reproducible, but PGDG drops superseded packages, so a rebuild can fail until the build arguments are bumped (the Dockerfile says how).
 * Moderate npm advisories remain in build-time dependencies of vite-plugin-pwa (workbox-build); they do not reach the served app.
 
