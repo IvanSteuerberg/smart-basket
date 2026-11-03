@@ -55,6 +55,11 @@ scripts/
   osf_index.py        Generate the OSF wiki index from the live file listing (+ osf_index.json)
 ```
 
+## Recommender components
+
+* **Basket optimizer** (`backend/src/smart_basket/optimizer/`): pure Python, no database or network. `optimize(BasketRequest)` takes interpreted lines, candidate stores with products, prices and promotions, a travel-time matrix, max stores and lambda, and returns per-store purchases, totals, minutes, visiting order, missing lines and the engine version. Rules: decisions 0010 and 0013.
+* **Routing** (`backend/src/smart_basket/routing/`): `RoutingEngine` protocol (origin and stores in, minutes matrix out) and a Valhalla client.
+
 ## Running with Docker Compose
 
 Requires Docker with Compose v2. Ollama runs natively on the host (decision 0005), outside Compose.

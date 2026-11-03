@@ -39,6 +39,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0010 Covering quantities with packs](/decisions/0010-covering-quantities-with-packs.md) - Pack combinations within 80-150 % of the requested quantity compete on price per base unit; near ties go to the one reaching the quantity.
 * [0011 Skeleton layout and tooling](/decisions/0011-skeleton-layout-and-tooling.md) - Repository layout, pinned versions (Python 3.15), database image with PostGIS and pgvector, Alembic SQL migrations, Compose services and CI.
 * [0012 Schema implementation details](/decisions/0012-schema-implementation-details.md) - Columns added to the logical model, yearly partition management, validity types, the as-of price view and embeddings without a fixed dimension.
+* [0013 Basket optimizer rules](/decisions/0013-basket-optimizer-rules.md) - Stores compared by comparable cost, coverage first, round trips, missing lines with a reason, promotion details and tie-breaks; the store count can rise with lambda.
 
 ## Evaluation
 

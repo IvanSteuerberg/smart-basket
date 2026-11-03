@@ -33,7 +33,8 @@ Complements the [AI model benchmark](/evaluation/ai-model-benchmark.md), which p
 * **Exhaustive check:** with at most 3 stores among about 10 candidates there are at most 175 store combinations, so for every benchmark case a brute-force solver enumerates them all and the optimizer must return a basket of the same cost (objective `cost + lambda * minutes`, tolerance one cent).
 * **Determinism:** the same list, origin, lambda and snapshot always give the same basket ([NFR-03](/requirements/non-functional.md)); checked by running every case twice and comparing results byte for byte.
 * **Effective price:** unit tests for each promotion mechanic and quantity (for example 3x2 with 2, 3, 4 and 7 units; second unit at -50 % with odd quantities), for loyalty prices with and without the card, and for promotions already included in the price.
-* **Lambda sweep:** for a few lists, lambda from 0 (savings only) to a high value (time only); the number of stores must not increase as lambda grows, and the extremes must match the cheapest basket and the nearest single store.
+* **Lambda sweep:** for a few lists, lambda from 0 (savings only) to a high value (time only); the minutes must never increase and the cost never decrease as lambda grows, and the extremes must match the cheapest basket and the nearest single store. The number of stores usually falls as lambda grows, but not always: a far cheap store can give way to two near ones before a single near store wins, so it is checked on typical cases rather than as a rule ([0013](/decisions/0013-basket-optimizer-rules.md), point 17).
+* **Automated so far** (`backend/tests/optimizer/`): 300 random small instances against an independent brute-force solver, determinism and order independence, the promotion mechanics and 0010 examples, the lambda sweep and a timing test of 30 lines x 10 stores. The same checks on the benchmark lists need real data.
 
 # Data quality
 

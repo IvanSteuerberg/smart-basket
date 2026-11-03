@@ -57,7 +57,9 @@ export default function App() {
             </div>
             <div>
               <dt>Versión</dt>
-              <dd>{state.health.version}</dd>
+              <dd>
+                {state.health.version} · {state.health.engine_version}
+              </dd>
             </div>
           </dl>
         )}

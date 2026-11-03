@@ -67,7 +67,9 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 1. Base price as of the date (`price_current`, or `price_history` for past dates). No price means not available.
 2. Candidate promotions of the chain valid on that date, matching the zone and a target (product, canonical, category or ancestor, brand), with loyalty or coupon requirements met.
 3. Line cost per mechanic for the quantity, e.g. buy N pay M: `pay = qty - floor(qty / N) * (N - M)`; second unit at X %: pairs at `base * (2 - X/100)` plus a single unit at base.
-4. The lowest line cost wins, tie-break by priority and id; promotions already included in the observed price are not applied again.
+4. The lowest line cost wins, tie-break by priority (higher first) and id; promotions already included in the observed price are not applied again.
+
+Implemented in `smart_basket.optimizer.pricing`, together with the pack-covering rule of [0010](/decisions/0010-covering-quantities-with-packs.md); the remaining rules (comparable cost between stores, coupons, volume tiers, mixing formats) are in [0013](/decisions/0013-basket-optimizer-rules.md).
 
 # BI star schema (`bi`)
 

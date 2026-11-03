@@ -2,6 +2,8 @@
 
 ## 2026-11-03 (implementation)
 
+* **Create** Decision 0013 (basket optimizer rules), from the second delivery: `smart_basket.optimizer` (effective price, pack covering of 0010, exhaustive search) and `smart_basket.routing` (interface and Valhalla client).
+* **Update** Recommender evaluation plan: the lambda sweep checks minutes and cost monotonicity; the store count is not monotone in general (counter-example in 0013). Data model: effective price points to the implementation and to 0013. System overview: optimizer status.
 * **Create** Decision 0011 (skeleton layout and tooling) and decision 0012 (schema implementation details), from the first implementation delivery: `backend/`, `web/`, `infra/`, `compose.yaml`, Alembic migrations of the transactional and `bi` schemas, CI.
 * **Update** Data model: `canonical_product.default_quantity`, `promotion.priority` and `daterange` validity, `recommendation_item.part`, reference basket tables and dimension, base unit in the category price fact. System overview: BI module, deployment with the `migrate` service and an implementation status table.
 

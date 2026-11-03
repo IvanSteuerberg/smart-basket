@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from smart_basket import __version__
 from smart_basket.db import check_database
+from smart_basket.optimizer import ENGINE_VERSION
 
 router = APIRouter(tags=["health"])
 
@@ -15,6 +16,7 @@ router = APIRouter(tags=["health"])
 class Health(BaseModel):
     status: Literal["ok", "degraded"]
     version: str
+    engine_version: str
     database: Literal["ok", "unavailable"]
 
 
@@ -26,5 +28,6 @@ async def health(response: Response) -> Health:
     return Health(
         status="ok" if db_ok else "degraded",
         version=__version__,
+        engine_version=ENGINE_VERSION,
         database="ok" if db_ok else "unavailable",
     )

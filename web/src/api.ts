@@ -3,6 +3,7 @@
 export interface Health {
   status: "ok" | "degraded";
   version: string;
+  engine_version: string;
   database: "ok" | "unavailable";
 }
 

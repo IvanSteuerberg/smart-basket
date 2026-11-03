@@ -40,6 +40,7 @@ Docker Compose services `db`, `migrate` (one-shot), `api`, `worker`, `routing`, 
 | Part | Status |
 | --- | --- |
 | Skeleton: Compose services, database image, migrations of both schemas, `/api/health`, worker with placeholder jobs, PWA placeholder, CI | Done (2026-11-03) |
+| Basket optimizer and effective price (`smart_basket.optimizer`), routing interface with a Valhalla client (`smart_basket.routing`) | Done, not yet wired to the API (2026-11-03, [0013](/decisions/0013-basket-optimizer-rules.md)) |
 
 # Open points
 

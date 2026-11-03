@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from smart_basket.api import app as app_module
 from smart_basket.api import health
 from smart_basket.api.app import create_app
+from smart_basket.optimizer import ENGINE_VERSION
 
 
 def client(monkeypatch, db_ok: bool) -> TestClient:
@@ -16,6 +17,7 @@ def test_health_ok(monkeypatch):
     body = response.json()
     assert body["status"] == "ok"
     assert body["database"] == "ok"
+    assert body["engine_version"] == ENGINE_VERSION
 
 
 def test_health_reports_database_down(monkeypatch):
