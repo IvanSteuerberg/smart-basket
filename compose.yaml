@@ -20,6 +20,9 @@ x-backend: &backend
     GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
     VALHALLA_URL: http://routing:8002
+    DATA_DIR: /data
+    MERCADONA_WAREHOUSES: ${MERCADONA_WAREHOUSES:-3683}
+    INGEST_DELAY_SECONDS: ${INGEST_DELAY_SECONDS:-1.5}
   extra_hosts:
     - "host.docker.internal:host-gateway"
 
@@ -68,6 +71,9 @@ services:
   worker:
     <<: *backend
     command: ["smart-basket-worker"]
+    # Raw responses of each ingestion run, compressed (decision 0007); never in the repository.
+    volumes:
+      - ingest-data:/data
     healthcheck:
       disable: true
     depends_on:
@@ -138,4 +144,5 @@ services:
 
 volumes:
   db-data:
+  ingest-data:
   routing-data:

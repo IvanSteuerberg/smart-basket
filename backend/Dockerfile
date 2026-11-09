@@ -11,7 +11,7 @@ COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.15.2-slim-trixie
-RUN useradd --system --uid 10001 --home-dir /app smartbasket
+RUN useradd --system --uid 10001 --home-dir /app smartbasket && mkdir -p /data && chown smartbasket /data
 COPY --from=build /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
 WORKDIR /app
