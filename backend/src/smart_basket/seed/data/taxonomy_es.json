@@ -362,13 +362,24 @@
        ]
       },
       {
-       "key": "pavo_aves",
-       "name": "Pavo y otras aves",
+       "key": "pavo",
+       "name": "Pavo",
        "base_unit": "kg",
        "forms": [
         "pavo",
         "pechuga de pavo fresca",
-        "codorniz"
+        "muslo de pavo",
+        "filetes de pavo"
+       ]
+      },
+      {
+       "key": "otras_aves",
+       "name": "Otras aves",
+       "base_unit": "kg",
+       "forms": [
+        "codorniz",
+        "pato",
+        "picantón"
        ]
       },
       {
@@ -439,14 +450,34 @@
        ]
       },
       {
-       "key": "embutido_fresco",
-       "name": "Chorizo y salchicha frescos",
+       "key": "chorizo_fresco",
+       "name": "Chorizo fresco para cocinar",
        "base_unit": "kg",
        "forms": [
         "chorizo fresco",
+        "chorizo para cocinar",
+        "chorizo de cocinar",
+        "chorizo criollo"
+       ]
+      },
+      {
+       "key": "salchicha_fresca",
+       "name": "Salchicha fresca y longaniza",
+       "base_unit": "kg",
+       "forms": [
         "salchicha fresca",
         "longaniza",
-        "morcilla"
+        "butifarra"
+       ]
+      },
+      {
+       "key": "morcilla",
+       "name": "Morcilla",
+       "base_unit": "kg",
+       "forms": [
+        "morcilla",
+        "morcilla de león",
+        "morcilla de burgos"
        ]
       },
       {
@@ -2045,7 +2076,7 @@
     },
     {
      "key": "desayuno",
-     "name": "Cereales y galletas",
+     "name": "Cereales",
      "vague": true,
      "children": [
       {
@@ -2081,19 +2112,6 @@
        ]
       },
       {
-       "key": "galletas",
-       "name": "Galletas",
-       "base_unit": "kg",
-       "forms": [
-        "galletas",
-        "galletas maría",
-        "galletas de desayuno",
-        "galletas digestive",
-        "galletas de chocolate",
-        "galletas rellenas"
-       ]
-      },
-      {
        "key": "tortitas",
        "name": "Tortitas de arroz y maíz",
        "base_unit": "kg",
@@ -2101,6 +2119,59 @@
         "tortitas de arroz",
         "tortitas de maíz",
         "tortitas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "galletas",
+     "name": "Galletas",
+     "vague": true,
+     "forms": [
+      "galletas",
+      "galleta"
+     ],
+     "children": [
+      {
+       "key": "galletas_desayuno",
+       "name": "Galletas de desayuno",
+       "base_unit": "kg",
+       "forms": [
+        "galletas maría",
+        "galletas de desayuno",
+        "galletas tostadas"
+       ]
+      },
+      {
+       "key": "galletas_integrales",
+       "name": "Galletas integrales y digestive",
+       "base_unit": "kg",
+       "forms": [
+        "galletas integrales",
+        "galletas digestive",
+        "digestive"
+       ]
+      },
+      {
+       "key": "galletas_chocolate",
+       "name": "Galletas con chocolate y rellenas",
+       "base_unit": "kg",
+       "forms": [
+        "galletas de chocolate",
+        "galletas rellenas",
+        "galletas con chocolate",
+        "oreo",
+        "príncipe"
+       ]
+      },
+      {
+       "key": "galletas_surtidas",
+       "name": "Galletas surtidas",
+       "base_unit": "kg",
+       "forms": [
+        "galletas surtidas",
+        "surtido de galletas",
+        "caja de galletas"
        ]
       }
      ]
@@ -2116,14 +2187,21 @@
      "children": [
       {
        "key": "cafe_molido",
-       "name": "Café molido y en grano",
+       "name": "Café molido",
        "base_unit": "kg",
        "forms": [
         "café",
         "café molido",
-        "café en grano",
         "café natural",
         "café mezcla"
+       ]
+      },
+      {
+       "key": "cafe_grano",
+       "name": "Café en grano",
+       "base_unit": "kg",
+       "forms": [
+        "café en grano"
        ]
       },
       {
@@ -3122,8 +3200,15 @@
         "crema hidratante",
         "body milk",
         "aceite corporal",
-        "crema de manos",
         "crema de pies"
+       ]
+      },
+      {
+       "key": "crema_manos",
+       "name": "Crema de manos",
+       "base_unit": "ud",
+       "forms": [
+        "crema de manos"
        ]
       },
       {
@@ -3391,17 +3476,48 @@
      "vague": true,
      "children": [
       {
-       "key": "complementos_alimenticios",
-       "name": "Complementos alimenticios y fitoterapia",
+       "key": "omega_3",
+       "name": "Omega 3",
        "base_unit": "ud",
        "forms": [
         "omega 3",
         "cápsulas de omega 3",
         "pastillas de omega 3",
+        "perlas de omega 3",
+        "aceite de pescado"
+       ]
+      },
+      {
+       "key": "vitaminas",
+       "name": "Vitaminas",
+       "base_unit": "ud",
+       "forms": [
         "vitaminas",
+        "multivitamínico",
+        "vitamina c",
+        "vitamina d"
+       ]
+      },
+      {
+       "key": "magnesio",
+       "name": "Magnesio",
+       "base_unit": "ud",
+       "forms": [
         "magnesio",
+        "pastillas de magnesio"
+       ]
+      },
+      {
+       "key": "complementos_otros",
+       "name": "Otros complementos y fitoterapia",
+       "base_unit": "ud",
+       "forms": [
+        "complementos",
         "melatonina",
-        "complementos"
+        "colágeno",
+        "valeriana",
+        "jalea real",
+        "infusión medicinal"
        ]
       },
       {

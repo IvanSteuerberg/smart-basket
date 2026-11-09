@@ -2,6 +2,7 @@
 
 ## 2026-11-09
 
+* **Update** Decision 0015 is `stable` after the author's review of the taxonomy: turkey and other poultry, fresh chorizo, fresh sausage and black pudding, ground and bean coffee, four kinds of biscuits, supplements (omega 3, vitamins, magnesium) and hand cream split; 338 leaves. Reloading the seed into the running database kept the three replaced keys as stale categories without forms.
 * **Create** Decision 0015 (seed taxonomy: 13 sections, 56 groups, 327 leaves of interchangeable products, every Mercadona level 3 section mapped) and decision 0016 (ingestion adapters). Iteration 10 built the seed loader, the Mercadona adapter and the lexicon builder; first real runs stored 4,307 products of Mercadona León with change-only prices. Decision 0007 and the data model point to 0015; the system overview lists the new parts.
 * **Update** Decision 0013: the separate-stop rule is implemented (engine 1.1.0). A line left out is priced at its cheapest comparable cost plus the coverage margin, so the margin is compared with the detour, not with the item's whole price; `store_limit` is replaced by `separate_stop` and `unreachable`. Decision 0014: numbers inside names and slash or "o" alternatives fixed; the second real list goes from F1 0.82 to 0.88. 712 backend tests pass.
 * **Create** Course evaluation (deliverables and report structure from the class of 2026-11-04) and Competitors (QuéFalta, Soysuper, Carritus, Tiendeo, OkLista; gap and SWOT inputs).

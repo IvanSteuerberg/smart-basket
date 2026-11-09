@@ -1002,7 +1002,7 @@
    "code": "369",
    "name": "Café en grano",
    "parent_code": "83",
-   "category": "cafe_molido"
+   "category": "cafe_grano"
   },
   {
    "code": "84",
@@ -1074,7 +1074,7 @@
    "code": "282",
    "name": "Pavo y otras aves",
    "parent_code": "38",
-   "category": "pavo_aves"
+   "category": "carne_fresca"
   },
   {
    "code": "281",
@@ -1134,7 +1134,7 @@
    "code": "286",
    "name": "Embutido",
    "parent_code": "43",
-   "category": "embutido_fresco"
+   "category": "carne_fresca"
   },
   {
    "code": "44",
@@ -1224,25 +1224,25 @@
    "code": "821",
    "name": "Galletas desayuno",
    "parent_code": "80",
-   "category": "galletas"
+   "category": "galletas_desayuno"
   },
   {
    "code": "361",
    "name": "Galletas integrales y digestive",
    "parent_code": "80",
-   "category": "galletas"
+   "category": "galletas_integrales"
   },
   {
    "code": "360",
    "name": "Con chocolate y rellenas",
    "parent_code": "80",
-   "category": "galletas"
+   "category": "galletas_chocolate"
   },
   {
    "code": "822",
    "name": "Galletas surtidas",
    "parent_code": "80",
-   "category": "galletas"
+   "category": "galletas_surtidas"
   },
   {
    "code": "79",
@@ -1974,7 +1974,7 @@
    "code": "613",
    "name": "Crema manos",
    "parent_code": "189",
-   "category": "crema_corporal"
+   "category": "crema_manos"
   },
   {
    "code": "828",
@@ -2226,7 +2226,7 @@
    "code": "685",
    "name": "Fitoterapia",
    "parent_code": "213",
-   "category": "complementos_alimenticios"
+   "category": "parafarmacia"
   },
   {
    "code": "214",
