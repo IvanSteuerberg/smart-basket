@@ -1,0 +1,29 @@
+{
+  "id": 130,
+  "name": "Agua y refrescos",
+  "categories": [
+    {
+      "id": 440,
+      "name": "Agua mineral",
+      "products": [
+        {
+          "id": "6000",
+          "display_name": "Agua mineral pack 6 x 150 cl",
+          "packaging": "Pack",
+          "share_url": "https://example.test/product/6000",
+          "published": true,
+          "price_instructions": {
+            "unit_price": "3.00",
+            "bulk_price": "0.3333",
+            "reference_format": "L",
+            "unit_size": 150,
+            "size_format": "cl",
+            "is_pack": true,
+            "pack_size": 6,
+            "total_units": 6
+          }
+        }
+      ]
+    }
+  ]
+}

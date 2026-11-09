@@ -1,0 +1,86 @@
+{
+  "id": 112,
+  "name": "Aceite, vinagre y sal",
+  "categories": [
+    {
+      "id": 420,
+      "name": "Aceite de oliva",
+      "products": [
+        {
+          "id": "4241",
+          "display_name": "Aceite de oliva suave 1 l",
+          "packaging": "Botella",
+          "share_url": "https://example.test/product/4241",
+          "published": true,
+          "price_instructions": {
+            "unit_price": " 5.10 ",
+            "bulk_price": "5.10",
+            "reference_format": "L",
+            "unit_size": 1.0,
+            "size_format": "l",
+            "is_pack": false,
+            "pack_size": null,
+            "total_units": null
+          }
+        },
+        {
+          "id": "4242",
+          "display_name": "Aceite de oliva pack 4 x 250 ml",
+          "packaging": "Estuche",
+          "share_url": "https://example.test/product/4242",
+          "published": true,
+          "price_instructions": {
+            "unit_price": "9.00",
+            "bulk_price": "9.00",
+            "reference_format": "L",
+            "unit_size": 250,
+            "size_format": "ml",
+            "is_pack": true,
+            "pack_size": 4,
+            "total_units": 4
+          }
+        }
+      ]
+    },
+    {
+      "id": 421,
+      "name": "Vinagre",
+      "products": [
+        {
+          "id": "4241",
+          "display_name": "Aceite de oliva suave 1 l",
+          "packaging": "Botella",
+          "share_url": "https://example.test/product/4241",
+          "published": true,
+          "price_instructions": {
+            "unit_price": "5.50",
+            "bulk_price": "5.50",
+            "reference_format": "L",
+            "unit_size": 1.0,
+            "size_format": "l",
+            "is_pack": false,
+            "pack_size": null,
+            "total_units": null
+          }
+        },
+        {
+          "id": "4243",
+          "display_name": "Vinagre de vino 750 ml",
+          "packaging": "Botella",
+          "share_url": "https://example.test/product/4243",
+          "published": true,
+          "price_instructions": {
+            "unit_price": "1.20",
+            "bulk_price": "1.60",
+            "reference_format": "L",
+            "unit_size": 750,
+            "size_format": "ml",
+            "is_pack": false,
+            "pack_size": null,
+            "total_units": null
+          }
+        }
+      ]
+    }
+  ]
+}

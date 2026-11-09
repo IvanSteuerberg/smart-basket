@@ -25,7 +25,8 @@ node_modules/
 __pycache__/
 
 # Datos descargados por el scraping (no versionar volcados)
-data/raw/
+/data/
+/backend/data/
 
 # Configuración local de herramientas
 .claude/settings.local.json

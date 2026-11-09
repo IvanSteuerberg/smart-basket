@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "id": 12,
+      "name": "Aceite, especias y salsas",
+      "categories": [
+        {"id": 112, "name": "Aceite, vinagre y sal"},
+        {"id": 113, "name": "Especias"}
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Bebidas",
+      "categories": [
+        {"id": 130, "name": "Agua y refrescos"}
+      ]
+    }
+  ]
+}
