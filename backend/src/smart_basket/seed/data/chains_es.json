@@ -1,0 +1,97 @@
+{
+ "version": 1,
+ "chains": [
+  {
+   "code": "mercadona",
+   "name": "Mercadona",
+   "zones": [
+    {
+     "kind": "warehouse",
+     "code": "3683",
+     "name": "León (almacén 3683)"
+    }
+   ]
+  },
+  {
+   "code": "carrefour",
+   "name": "Carrefour",
+   "zones": [
+    {
+     "kind": "salepoint",
+     "code": "0000GV",
+     "name": "León (punto de venta 0000GV)"
+    }
+   ]
+  },
+  {
+   "code": "dia",
+   "name": "Dia",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
+  },
+  {
+   "code": "alcampo",
+   "name": "Alcampo",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24003",
+     "name": "León 24003"
+    }
+   ]
+  },
+  {
+   "code": "gadis",
+   "name": "Gadis",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
+  },
+  {
+   "code": "lupa",
+   "name": "Lupa",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
+  },
+  {
+   "code": "alimerka",
+   "name": "Alimerka",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
+  },
+  {
+   "code": "aldi",
+   "name": "Aldi",
+   "zones": []
+  },
+  {
+   "code": "lidl",
+   "name": "Lidl",
+   "zones": []
+  },
+  {
+   "code": "eleclerc",
+   "name": "E.Leclerc",
+   "zones": []
+  }
+ ]
+}
