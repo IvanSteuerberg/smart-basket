@@ -1,0 +1,392 @@
+"""Persistence shared by every chain adapter: runs, products and change-only prices (0006, 0007).
+
+The chain and the zone come from the seed loader; the adapter only provides observations. The
+price stays in `price_current` until the next run sees another value, and only then is the old
+interval closed in `price_history`.
+"""
+
+import gzip
+import hashlib
+import json
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+
+from sqlalchemy import bindparam, text
+from sqlalchemy.orm import Session
+
+from smart_basket.db import session_scope
+from smart_basket.ingestion.base import (
+    CategoryObservation,
+    ChainAdapter,
+    CrawlResult,
+    ProductObservation,
+    RawResponse,
+    collect,
+)
+
+
+class IngestSetupError(RuntimeError):
+    """The chain or the zone is missing; the seed loader has to run first."""
+
+
+@dataclass(frozen=True, slots=True)
+class IngestSummary:
+    """What one catalog run did, for the caller to log and for tests to assert."""
+
+    chain_code: str
+    zone_code: str
+    run_id: int
+    status: str
+    complete: bool
+    products_seen: int
+    prices_changed: int
+    errors: tuple[dict[str, str], ...]
+
+
+def ingest_catalog(
+    adapter: ChainAdapter,
+    zone_code: str,
+    *,
+    data_dir: Path,
+    max_categories: int | None = None,
+    now: datetime | None = None,
+    database_url: str | None = None,
+) -> IngestSummary:
+    """Crawl one zone with `adapter` and persist the result, closing the `ingest_run`."""
+    observation_time = now or datetime.now(UTC)
+    started_at = datetime.now(UTC)
+    with session_scope(database_url) as session:
+        chain_id = _lookup_chain(session, adapter.chain_code)
+        zone_id = _lookup_zone(session, chain_id, adapter.chain_code, zone_code)
+
+    result = collect(adapter, zone_code, max_categories=max_categories)
+
+    with session_scope(database_url) as session:
+        run_id, prices_changed = _persist(
+            session,
+            chain_id=chain_id,
+            zone_id=zone_id,
+            chain_code=adapter.chain_code,
+            result=result,
+            data_dir=data_dir,
+            started_at=started_at,
+            observation_time=observation_time,
+        )
+    return IngestSummary(
+        chain_code=adapter.chain_code,
+        zone_code=zone_code,
+        run_id=run_id,
+        status=result.status,
+        complete=result.complete,
+        products_seen=len(result.products),
+        prices_changed=prices_changed,
+        errors=tuple({"url": error.url, "error": error.error} for error in result.errors),
+    )
+
+
+def _lookup_chain(session: Session, chain_code: str) -> int:
+    chain_id = session.execute(
+        text("select id from chain where code = :code"), {"code": chain_code}
+    ).scalar_one_or_none()
+    if chain_id is None:
+        raise IngestSetupError(f"chain '{chain_code}' not found; run `smart-basket-seed` first")
+    return chain_id
+
+
+def _lookup_zone(session: Session, chain_id: int, chain_code: str, zone_code: str) -> int:
+    zone_id = session.execute(
+        text("select id from zone where chain_id = :chain and kind = 'warehouse' and code = :code"),
+        {"chain": chain_id, "code": zone_code},
+    ).scalar_one_or_none()
+    if zone_id is None:
+        raise IngestSetupError(
+            f"warehouse zone '{zone_code}' of chain '{chain_code}' not found; "
+            "run `smart-basket-seed` first"
+        )
+    return zone_id
+
+
+def _persist(
+    session: Session,
+    *,
+    chain_id: int,
+    zone_id: int,
+    chain_code: str,
+    result: CrawlResult,
+    data_dir: Path,
+    started_at: datetime,
+    observation_time: datetime,
+) -> tuple[int, int]:
+    run_id = session.execute(
+        text(
+            "insert into ingest_run (chain_id, zone_id, kind, started_at, status) "
+            "values (:chain, :zone, 'catalog', :started, 'running') returning id"
+        ),
+        {"chain": chain_id, "zone": zone_id, "started": started_at},
+    ).scalar_one()
+
+    _upsert_categories(session, chain_id, result.categories)
+    category_ids = dict(
+        session.execute(
+            text("select code, id from chain_category where chain_id = :chain"),
+            {"chain": chain_id},
+        ).all()
+    )
+    prices_changed = 0
+    seen_ids: list[int] = []
+    for product in result.products:
+        product_id = _upsert_product(
+            session,
+            chain_id=chain_id,
+            zone_id=zone_id,
+            product=product,
+            category_id=category_ids.get(product.category_code),
+            observation_time=observation_time,
+        )
+        seen_ids.append(product_id)
+        prices_changed += _update_price(
+            session,
+            product_id=product_id,
+            zone_id=zone_id,
+            product=product,
+            run_id=run_id,
+            observation_time=observation_time,
+        )
+
+    for raw in result.raw:
+        _store_raw_response(
+            session,
+            run_id=run_id,
+            chain_code=chain_code,
+            raw=raw,
+            data_dir=data_dir,
+            observation_time=observation_time,
+        )
+
+    if result.complete:
+        _mark_unavailable(session, chain_id=chain_id, zone_id=zone_id, seen_ids=seen_ids)
+
+    errors = [{"url": error.url, "error": error.error} for error in result.errors]
+    session.execute(
+        text(
+            "update ingest_run set status = :status, finished_at = now(), "
+            "products_seen = :seen, prices_changed = :changed, "
+            "errors = cast(:errors as jsonb) where id = :run"
+        ),
+        {
+            "status": result.status,
+            "seen": len(result.products),
+            "changed": prices_changed,
+            "errors": json.dumps(errors, ensure_ascii=False),
+            "run": run_id,
+        },
+    )
+    return run_id, prices_changed
+
+
+def _upsert_categories(
+    session: Session, chain_id: int, categories: tuple[CategoryObservation, ...]
+) -> None:
+    for category in categories:
+        session.execute(
+            text(
+                "insert into chain_category (chain_id, code, name, parent_code) "
+                "values (:chain, :code, :name, :parent) "
+                "on conflict (chain_id, code) do update "
+                "set name = excluded.name, parent_code = excluded.parent_code"
+            ),
+            {
+                "chain": chain_id,
+                "code": category.code,
+                "name": category.name,
+                "parent": category.parent_code,
+            },
+        )
+
+
+def _upsert_product(
+    session: Session,
+    *,
+    chain_id: int,
+    zone_id: int,
+    product: ProductObservation,
+    category_id: int | None,
+    observation_time: datetime,
+) -> int:
+    product_id = session.execute(
+        text(
+            "insert into chain_product (chain_id, chain_sku, name, packaging, url, "
+            "base_quantity, base_unit, pack_count, chain_category_id, first_seen, last_seen, "
+            "is_active) values (:chain, :sku, :name, :packaging, :url, :quantity, :unit, "
+            ":pack_count, :category, :now, :now, true) "
+            "on conflict (chain_id, chain_sku) do update set name = excluded.name, "
+            "packaging = excluded.packaging, url = excluded.url, "
+            "base_quantity = excluded.base_quantity, base_unit = excluded.base_unit, "
+            "pack_count = excluded.pack_count, chain_category_id = excluded.chain_category_id, "
+            "last_seen = excluded.last_seen, is_active = true "
+            "returning id"
+        ),
+        {
+            "chain": chain_id,
+            "sku": product.sku,
+            "name": product.name,
+            "packaging": product.packaging,
+            "url": product.url,
+            "quantity": product.base_quantity,
+            "unit": product.base_unit,
+            "pack_count": product.pack_count,
+            "category": category_id,
+            "now": observation_time,
+        },
+    ).scalar_one()
+    session.execute(
+        text(
+            "insert into chain_product_zone "
+            "(chain_product_id, zone_id, first_seen, last_seen, is_available) "
+            "values (:product, :zone, :now, :now, true) "
+            "on conflict (chain_product_id, zone_id) do update "
+            "set last_seen = excluded.last_seen, is_available = true"
+        ),
+        {"product": product_id, "zone": zone_id, "now": observation_time},
+    )
+    return product_id
+
+
+def _update_price(
+    session: Session,
+    *,
+    product_id: int,
+    zone_id: int,
+    product: ProductObservation,
+    run_id: int,
+    observation_time: datetime,
+) -> int:
+    """Keep `price_current` current and close the old interval only when something changed."""
+    current = session.execute(
+        text(
+            "select price, price_per_unit, valid_from from price_current "
+            "where chain_product_id = :product and zone_id = :zone"
+        ),
+        {"product": product_id, "zone": zone_id},
+    ).one_or_none()
+    if current is None:
+        session.execute(
+            text(
+                "insert into price_current (chain_product_id, zone_id, price, price_per_unit, "
+                "valid_from, last_seen_run, last_seen_at) "
+                "values (:product, :zone, :price, :unit_price, :now, :run, :now)"
+            ),
+            {
+                "product": product_id,
+                "zone": zone_id,
+                "price": product.price,
+                "unit_price": product.price_per_unit,
+                "now": observation_time,
+                "run": run_id,
+            },
+        )
+        return 1
+
+    old_price, old_unit_price, old_from = current
+    if old_price == product.price and old_unit_price == product.price_per_unit:
+        session.execute(
+            text(
+                "update price_current set last_seen_run = :run, last_seen_at = :now "
+                "where chain_product_id = :product and zone_id = :zone"
+            ),
+            {"run": run_id, "now": observation_time, "product": product_id, "zone": zone_id},
+        )
+        return 0
+
+    session.execute(
+        text(
+            "insert into price_history (chain_product_id, zone_id, price, price_per_unit, "
+            "valid_from, valid_to, run_id) "
+            "values (:product, :zone, :price, :unit_price, :valid_from, :now, :run)"
+        ),
+        {
+            "product": product_id,
+            "zone": zone_id,
+            "price": old_price,
+            "unit_price": old_unit_price,
+            "valid_from": old_from,
+            "now": observation_time,
+            "run": run_id,
+        },
+    )
+    session.execute(
+        text(
+            "update price_current set price = :price, price_per_unit = :unit_price, "
+            "valid_from = :now, last_seen_run = :run, last_seen_at = :now "
+            "where chain_product_id = :product and zone_id = :zone"
+        ),
+        {
+            "product": product_id,
+            "zone": zone_id,
+            "price": product.price,
+            "unit_price": product.price_per_unit,
+            "now": observation_time,
+            "run": run_id,
+        },
+    )
+    return 1
+
+
+def _store_raw_response(
+    session: Session,
+    *,
+    run_id: int,
+    chain_code: str,
+    raw: RawResponse,
+    data_dir: Path,
+    observation_time: datetime,
+) -> None:
+    digest = hashlib.sha256(raw.body).hexdigest()
+    relative = Path("raw") / chain_code / observation_time.strftime("%Y-%m-%d")
+    relative = relative / f"{digest}.json.gz"
+    target = data_dir / relative
+    if not target.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with gzip.open(target, "wb") as body:
+            body.write(raw.body)
+    session.execute(
+        text(
+            "insert into raw_response (run_id, url, fetched_at, status_code, sha256, path) "
+            "values (:run, :url, :fetched_at, :status, :sha, :path)"
+        ),
+        {
+            "run": run_id,
+            "url": raw.url,
+            "fetched_at": observation_time,
+            "status": raw.status_code,
+            "sha": digest,
+            "path": relative.as_posix(),
+        },
+    )
+
+
+def _mark_unavailable(
+    session: Session, *, chain_id: int, zone_id: int, seen_ids: list[int]
+) -> None:
+    """After a complete run only: mark unseen products unavailable and deactivate them."""
+    if not seen_ids:
+        return
+    session.execute(
+        text(
+            "update chain_product_zone set is_available = false "
+            "where zone_id = :zone and chain_product_id in ("
+            "select id from chain_product where chain_id = :chain) "
+            "and chain_product_id not in :seen"
+        ).bindparams(bindparam("seen", expanding=True)),
+        {"zone": zone_id, "chain": chain_id, "seen": seen_ids},
+    )
+    session.execute(
+        text(
+            "update chain_product p set is_active = false "
+            "where p.chain_id = :chain and p.is_active and not exists ("
+            "select 1 from chain_product_zone z "
+            "where z.chain_product_id = p.id and z.is_available)"
+        ),
+        {"chain": chain_id},
+    )

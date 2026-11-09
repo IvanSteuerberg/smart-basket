@@ -1,6 +1,7 @@
 """Application settings, read from environment variables (and an optional `.env` file)."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field
@@ -28,6 +29,10 @@ class Settings(BaseSettings):
 
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
+
+    data_dir: Path = Path("data")
+    mercadona_warehouses: str = "3683"
+    ingest_delay_seconds: float = 1.5
 
 
 @lru_cache
