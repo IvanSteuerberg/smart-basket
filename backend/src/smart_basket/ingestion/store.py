@@ -3,16 +3,20 @@
 The chain and the zone come from the seed loader; the adapter only provides observations. The
 price stays in `price_current` until the next run sees another value, and only then is the old
 interval closed in `price_history`.
+
+The run is bookkept across three transactions (open, persist, close) so a failure while
+persisting still leaves an `ingest_run` row with a final status.
 """
 
 import gzip
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import bindparam, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from smart_basket.db import session_scope
@@ -20,10 +24,18 @@ from smart_basket.ingestion.base import (
     CategoryObservation,
     ChainAdapter,
     CrawlResult,
+    FinalStatus,
     ProductObservation,
     RawResponse,
+    RunStatus,
     collect,
 )
+
+log = logging.getLogger("smart_basket.ingestion")
+
+# A complete run that sees less than half of the available catalog is not trusted to close
+# price intervals: the missing products were most likely a broken crawl, not a withdrawal.
+MIN_SEEN_SHARE = 0.5
 
 
 class IngestSetupError(RuntimeError):
@@ -37,7 +49,7 @@ class IngestSummary:
     chain_code: str
     zone_code: str
     run_id: int
-    status: str
+    status: FinalStatus
     complete: bool
     products_seen: int
     prices_changed: int
@@ -54,25 +66,59 @@ def ingest_catalog(
     database_url: str | None = None,
 ) -> IngestSummary:
     """Crawl one zone with `adapter` and persist the result, closing the `ingest_run`."""
-    observation_time = now or datetime.now(UTC)
     started_at = datetime.now(UTC)
     with session_scope(database_url) as session:
         chain_id = _lookup_chain(session, adapter.chain_code)
         zone_id = _lookup_zone(session, chain_id, adapter.chain_code, zone_code)
+        run_id = _open_run(session, chain_id=chain_id, zone_id=zone_id, started_at=started_at)
 
-    result = collect(adapter, zone_code, max_categories=max_categories)
-
-    with session_scope(database_url) as session:
-        run_id, prices_changed = _persist(
-            session,
-            chain_id=chain_id,
-            zone_id=zone_id,
-            chain_code=adapter.chain_code,
-            result=result,
-            data_dir=data_dir,
-            started_at=started_at,
-            observation_time=observation_time,
+    try:
+        result = collect(adapter, zone_code, max_categories=max_categories)
+    except Exception as exc:  # a crawl escaping `collect` must still close the run
+        _close_run(
+            database_url,
+            run_id=run_id,
+            status="failed",
+            products_seen=0,
+            prices_changed=0,
+            errors=[{"url": zone_code, "error": str(exc)}],
         )
+        raise
+
+    # The observation is the end of the crawl: what the catalog said when it finished.
+    observation_time = now or datetime.now(UTC)
+    try:
+        with session_scope(database_url) as session:
+            prices_changed, errors = _persist(
+                session,
+                run_id=run_id,
+                chain_id=chain_id,
+                zone_id=zone_id,
+                chain_code=adapter.chain_code,
+                zone_code=zone_code,
+                result=result,
+                data_dir=data_dir,
+                observation_time=observation_time,
+            )
+    except Exception as exc:
+        _close_run(
+            database_url,
+            run_id=run_id,
+            status="failed",
+            products_seen=len(result.products),
+            prices_changed=0,
+            errors=[{"url": zone_code, "error": f"persistence failed: {exc}"}],
+        )
+        raise
+
+    _close_run(
+        database_url,
+        run_id=run_id,
+        status=result.status,
+        products_seen=len(result.products),
+        prices_changed=prices_changed,
+        errors=errors,
+    )
     return IngestSummary(
         chain_code=adapter.chain_code,
         zone_code=zone_code,
@@ -81,7 +127,21 @@ def ingest_catalog(
         complete=result.complete,
         products_seen=len(result.products),
         prices_changed=prices_changed,
-        errors=tuple({"url": error.url, "error": error.error} for error in result.errors),
+        errors=tuple(errors),
+    )
+
+
+def log_ingest_summary(summary: IngestSummary) -> None:
+    """One log line per run, shared by the CLI and the worker."""
+    log.info(
+        "catalog run %s for %s/%s: %s, %s products, %s price changes, %s errors",
+        summary.run_id,
+        summary.chain_code,
+        summary.zone_code,
+        summary.status,
+        summary.products_seen,
+        summary.prices_changed,
+        len(summary.errors),
     )
 
 
@@ -107,24 +167,59 @@ def _lookup_zone(session: Session, chain_id: int, chain_code: str, zone_code: st
     return zone_id
 
 
-def _persist(
-    session: Session,
-    *,
-    chain_id: int,
-    zone_id: int,
-    chain_code: str,
-    result: CrawlResult,
-    data_dir: Path,
-    started_at: datetime,
-    observation_time: datetime,
-) -> tuple[int, int]:
-    run_id = session.execute(
+def _open_run(session: Session, *, chain_id: int, zone_id: int, started_at: datetime) -> int:
+    """Insert the `running` row and commit it with its own transaction."""
+    return session.execute(
         text(
             "insert into ingest_run (chain_id, zone_id, kind, started_at, status) "
             "values (:chain, :zone, 'catalog', :started, 'running') returning id"
         ),
         {"chain": chain_id, "zone": zone_id, "started": started_at},
     ).scalar_one()
+
+
+def _close_run(
+    database_url: str | None,
+    *,
+    run_id: int,
+    status: RunStatus,
+    products_seen: int,
+    prices_changed: int,
+    errors: list[dict[str, str]],
+) -> None:
+    """Write the final status and commit it, whatever happened before."""
+    with session_scope(database_url) as session:
+        session.execute(
+            text(
+                "update ingest_run set status = :status, "
+                "finished_at = greatest(now(), started_at), "
+                "products_seen = :seen, prices_changed = :changed, "
+                "errors = cast(:errors as jsonb) where id = :run"
+            ),
+            {
+                "status": status,
+                "seen": products_seen,
+                "changed": prices_changed,
+                "errors": json.dumps(errors, ensure_ascii=False),
+                "run": run_id,
+            },
+        )
+
+
+def _persist(
+    session: Session,
+    *,
+    run_id: int,
+    chain_id: int,
+    zone_id: int,
+    chain_code: str,
+    zone_code: str,
+    result: CrawlResult,
+    data_dir: Path,
+    observation_time: datetime,
+) -> tuple[int, list[dict[str, str]]]:
+    """Write the crawl in one transaction and say how many prices changed and what failed."""
+    _lock_zone(session, zone_id)
 
     _upsert_categories(session, chain_id, result.categories)
     category_ids = dict(
@@ -134,7 +229,6 @@ def _persist(
         ).all()
     )
     prices_changed = 0
-    seen_ids: list[int] = []
     for product in result.products:
         product_id = _upsert_product(
             session,
@@ -144,7 +238,6 @@ def _persist(
             category_id=category_ids.get(product.category_code),
             observation_time=observation_time,
         )
-        seen_ids.append(product_id)
         prices_changed += _update_price(
             session,
             product_id=product_id,
@@ -164,25 +257,43 @@ def _persist(
             observation_time=observation_time,
         )
 
-    if result.complete:
-        _mark_unavailable(session, chain_id=chain_id, zone_id=zone_id, seen_ids=seen_ids)
-
     errors = [{"url": error.url, "error": error.error} for error in result.errors]
+    if result.complete or (result.status == "succeeded" and not result.products):
+        available = _available_count(session, chain_id=chain_id, zone_id=zone_id)
+        if result.complete and len(result.products) >= available * MIN_SEEN_SHARE:
+            _mark_unavailable(
+                session, chain_id=chain_id, zone_id=zone_id, observation_time=observation_time
+            )
+        elif available:
+            errors.append(
+                {
+                    "url": zone_code,
+                    "error": (
+                        f"only {len(result.products)} of {available} available products seen; "
+                        "kept every product as available"
+                    ),
+                }
+            )
+    return prices_changed, errors
+
+
+def _lock_zone(session: Session, zone_id: int) -> None:
+    """Serialize persistence per zone so two runs cannot close the same interval at once."""
     session.execute(
-        text(
-            "update ingest_run set status = :status, finished_at = now(), "
-            "products_seen = :seen, prices_changed = :changed, "
-            "errors = cast(:errors as jsonb) where id = :run"
-        ),
-        {
-            "status": result.status,
-            "seen": len(result.products),
-            "changed": prices_changed,
-            "errors": json.dumps(errors, ensure_ascii=False),
-            "run": run_id,
-        },
+        text("select pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"smart_basket.ingest:{zone_id}"},
     )
-    return run_id, prices_changed
+
+
+def _available_count(session: Session, *, chain_id: int, zone_id: int) -> int:
+    return session.execute(
+        text(
+            "select count(*) from chain_product_zone z "
+            "join chain_product p on p.id = z.chain_product_id "
+            "where p.chain_id = :chain and z.zone_id = :zone and z.is_available"
+        ),
+        {"chain": chain_id, "zone": zone_id},
+    ).scalar_one()
 
 
 def _upsert_categories(
@@ -299,6 +410,26 @@ def _update_price(
         )
         return 0
 
+    if observation_time <= old_from:
+        # The two observations share an instant: closing the interval would make
+        # valid_to <= valid_from, so only the current row is refreshed.
+        session.execute(
+            text(
+                "update price_current set price = :price, price_per_unit = :unit_price, "
+                "last_seen_run = :run, last_seen_at = :now "
+                "where chain_product_id = :product and zone_id = :zone"
+            ),
+            {
+                "product": product_id,
+                "zone": zone_id,
+                "price": product.price,
+                "unit_price": product.price_per_unit,
+                "now": observation_time,
+                "run": run_id,
+            },
+        )
+        return 1
+
     session.execute(
         text(
             "insert into price_history (chain_product_id, zone_id, price, price_per_unit, "
@@ -367,19 +498,20 @@ def _store_raw_response(
 
 
 def _mark_unavailable(
-    session: Session, *, chain_id: int, zone_id: int, seen_ids: list[int]
+    session: Session, *, chain_id: int, zone_id: int, observation_time: datetime
 ) -> None:
-    """After a complete run only: mark unseen products unavailable and deactivate them."""
-    if not seen_ids:
-        return
+    """After a trusted complete run: mark unseen products unavailable and deactivate them.
+
+    Seen products were just stamped with `observation_time`, so anything older was not seen.
+    """
     session.execute(
         text(
-            "update chain_product_zone set is_available = false "
-            "where zone_id = :zone and chain_product_id in ("
-            "select id from chain_product where chain_id = :chain) "
-            "and chain_product_id not in :seen"
-        ).bindparams(bindparam("seen", expanding=True)),
-        {"zone": zone_id, "chain": chain_id, "seen": seen_ids},
+            "update chain_product_zone z set is_available = false "
+            "from chain_product p "
+            "where p.id = z.chain_product_id and p.chain_id = :chain "
+            "and z.zone_id = :zone and z.is_available and z.last_seen < :observed"
+        ),
+        {"chain": chain_id, "zone": zone_id, "observed": observation_time},
     )
     session.execute(
         text(

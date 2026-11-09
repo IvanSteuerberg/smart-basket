@@ -97,6 +97,57 @@ def test_max_categories_limits_the_level_two_pages(load_fixture):
     assert "/api/categories/130/" not in attempts
 
 
+def test_malformed_level_two_category_is_reported_and_the_crawl_continues(load_fixture):
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/categories/"):
+            return httpx.Response(200, json=load_fixture("tree.json"))
+        if path.endswith("/112/"):
+            return httpx.Response(200, json={"id": 112, "name": "Aceite", "categories": "oops"})
+        code = path.rstrip("/").rsplit("/", 1)[-1]
+        return httpx.Response(200, json=load_fixture(f"category-{code}.json"))
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    adapter = MercadonaAdapter(fetcher=Fetcher(client, delay=0.0, backoff=0.0))
+    result = collect(adapter, "3683")
+
+    assert result.status == "partial"
+    assert result.complete is False
+    assert [error.url for error in result.errors] == [
+        "https://tienda.mercadona.es/api/categories/112/?lang=es&wh=3683"
+    ]
+    assert "malformed category" in result.errors[0].error
+    assert {"5000", "6000"} <= set(product_prices(result))
+
+
+def test_a_product_the_parser_drops_is_reported(load_fixture):
+    payload = load_fixture("category-113.json")
+    payload["categories"][0]["products"].append(
+        {"id": "5001", "display_name": "Sin precio", "published": True}
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/categories/"):
+            return httpx.Response(200, json=load_fixture("tree.json"))
+        if path.endswith("/113/"):
+            return httpx.Response(200, json=payload)
+        code = path.rstrip("/").rsplit("/", 1)[-1]
+        return httpx.Response(200, json=load_fixture(f"category-{code}.json"))
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    adapter = MercadonaAdapter(fetcher=Fetcher(client, delay=0.0, backoff=0.0))
+    result = collect(adapter, "3683")
+
+    assert result.status == "partial"
+    assert result.complete is False
+    assert any(
+        error.url.endswith("/categories/113/?lang=es&wh=3683")
+        and error.error == "product 5001 skipped: missing or invalid price"
+        for error in result.errors
+    )
+
+
 def test_network_error_on_a_subcategory_is_reported(load_fixture):
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/113/"):

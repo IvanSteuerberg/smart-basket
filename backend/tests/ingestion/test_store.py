@@ -25,6 +25,7 @@ from smart_basket.ingestion import (
     ProductObservation,
     RawResponse,
     ingest_catalog,
+    store,
 )
 
 URL = os.environ.get("TEST_DATABASE_URL")
@@ -305,6 +306,141 @@ def test_sizes_are_stored_normalized(db, tmp_path):
     assert stored.base_quantity == D("0.25")
     assert stored.base_unit == "l"
     assert stored.pack_count == 4
+
+
+def test_price_per_unit_change_closes_the_old_interval(db, tmp_path):
+    run(db, (*CATEGORIES, product("100", "1.00", price_per_unit="1.00")), T1, tmp_path)
+    second = run(db, (*CATEGORIES, product("100", "1.00", price_per_unit="1.10")), T2, tmp_path)
+
+    assert second.prices_changed == 1
+    current = rows(db, "select price, price_per_unit, valid_from from price_current")[0]
+    assert current.price == D("1.00")
+    assert current.price_per_unit == D("1.10")
+    assert current.valid_from == T2
+    history = rows(db, "select price, price_per_unit, valid_from, valid_to from price_history")[0]
+    assert history.price_per_unit == D("1.00")
+    assert (history.price, history.valid_from, history.valid_to) == (D("1.00"), T1, T2)
+
+
+def test_product_reappearing_after_unavailable_becomes_available(db, tmp_path):
+    # The price interval stays open while a product is unavailable: a reappearance with the
+    # same price keeps it, and a changed price closes it as any other change would.
+    observations = (*CATEGORIES, product("100", "1.00"), product("200", "2.00"))
+    run(db, observations, T1, tmp_path)
+    run(db, (*CATEGORIES, product("100", "1.00")), T2, tmp_path)
+
+    def availability(sku: str) -> bool:
+        return scalar(
+            db,
+            "select is_available from chain_product_zone z "
+            "join chain_product p on p.id = z.chain_product_id where p.chain_sku = :sku",
+            sku=sku,
+        )
+
+    assert availability("200") is False
+
+    third = run(db, observations, T3, tmp_path)
+
+    assert third.status == "succeeded"
+    assert availability("200") is True
+    assert (
+        scalar(
+            db,
+            "select valid_from from price_current c "
+            "join chain_product p on p.id = c.chain_product_id where p.chain_sku = '200'",
+        )
+        == T1
+    )
+    assert (
+        scalar(
+            db,
+            "select count(*) from price_history h "
+            "join chain_product p on p.id = h.chain_product_id where p.chain_sku = '200'",
+        )
+        == 0
+    )
+
+
+def test_run_whose_tree_request_fails_ends_failed_and_keeps_its_row(db, tmp_path):
+    class BrokenAdapter:
+        chain_code = "mercadona"
+
+        def crawl(self, zone_code, *, max_categories=None):
+            raise RuntimeError("tree request failed")
+
+    summary = ingest_catalog(BrokenAdapter(), "W1", data_dir=tmp_path, now=T1, database_url=db.url)
+
+    assert summary.status == "failed"
+    assert summary.complete is False
+    row = rows(db, "select status, finished_at from ingest_run where id = :id", id=summary.run_id)
+    assert row[0].status == "failed"
+    assert row[0].finished_at is not None
+
+
+def test_persistence_failure_closes_the_run_as_failed(db, tmp_path, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(store, "_persist", boom)
+    with pytest.raises(RuntimeError, match="disk full"):
+        run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
+
+    row = rows(db, "select status, finished_at, errors from ingest_run")[0]
+    assert row.status == "failed"
+    assert row.finished_at is not None
+    assert "disk full" in row.errors[0]["error"]
+
+
+def test_below_threshold_complete_run_marks_nothing_unavailable_and_warns(db, tmp_path):
+    observations = (
+        *CATEGORIES,
+        product("100", "1.00"),
+        product("200", "2.00"),
+        product("300", "3.00"),
+        product("400", "4.00"),
+    )
+    run(db, observations, T1, tmp_path)
+    second = run(db, (*CATEGORIES, product("100", "1.00")), T2, tmp_path)
+
+    assert second.status == "succeeded"
+    assert second.complete is True
+    assert any("available products seen" in error["error"] for error in second.errors)
+    assert scalar(db, "select count(*) from chain_product_zone where is_available") == 4
+    stored = scalar(db, "select errors from ingest_run where id = :id", id=second.run_id)
+    assert any("available products seen" in error["error"] for error in stored)
+
+
+def test_empty_run_marks_nothing_unavailable_and_warns(db, tmp_path):
+    run(db, (*CATEGORIES, product("100", "1.00"), product("200", "2.00")), T1, tmp_path)
+    second = run(db, CATEGORIES, T2, tmp_path)
+
+    assert second.status == "succeeded"
+    assert second.complete is False
+    assert any("available products seen" in error["error"] for error in second.errors)
+    assert scalar(db, "select count(*) from chain_product_zone where is_available") == 2
+
+
+def test_product_listed_in_two_sections_is_stored_once(db, tmp_path):
+    observations = (
+        *CATEGORIES,
+        product("100", "1.00", category="420"),
+        product("100", "1.00", category="421"),
+    )
+    summary = run(db, observations, T1, tmp_path)
+
+    assert summary.products_seen == 1
+    assert scalar(db, "select count(*) from chain_product where chain_sku = '100'") == 1
+
+
+def test_colliding_observation_times_do_not_break_the_interval_check(db, tmp_path):
+    run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
+    second = run(db, (*CATEGORIES, product("100", "1.20")), T1, tmp_path)
+
+    assert second.prices_changed == 1
+    current = rows(db, "select price, valid_from from price_current")[0]
+    assert current.price == D("1.20")
+    assert current.valid_from == T1
+    assert scalar(db, "select count(*) from price_history") == 0
 
 
 def test_missing_chain_or_zone_asks_for_the_seed_loader(tmp_path):

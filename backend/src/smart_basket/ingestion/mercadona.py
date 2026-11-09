@@ -51,18 +51,33 @@ def normalize_size(size: object, size_format: str | None) -> tuple[Decimal | Non
 
 def parse_product(raw: Mapping[str, Any], category_code: str) -> ProductObservation | None:
     """Turn one API product into an observation, or None when it is unpublished or unusable."""
+    return parse_product_or_reason(raw, category_code)[0]
+
+
+def parse_product_or_reason(
+    raw: Mapping[str, Any], category_code: str
+) -> tuple[ProductObservation | None, str | None]:
+    """Parse one product and, when it is skipped, say why.
+
+    An unpublished product is skipped without a reason: it is not an error. A product missing
+    its id, its name or a valid price is a parser error the crawl has to report.
+    """
     if raw.get("published") is False:
-        return None
+        return (None, None)
     sku = raw.get("id")
     name = raw.get("display_name") or raw.get("name")
     instructions = raw.get("price_instructions") or {}
     price = _decimal(instructions.get("unit_price"), PRICE_STEP)
-    if sku is None or not name or price is None:
-        return None
+    if sku is None:
+        return (None, "missing id")
+    if not name:
+        return (None, "missing name")
+    if price is None:
+        return (None, "missing or invalid price")
     base_quantity, base_unit = normalize_size(
         instructions.get("unit_size"), instructions.get("size_format")
     )
-    return ProductObservation(
+    observation = ProductObservation(
         sku=str(sku),
         name=str(name),
         packaging=raw.get("packaging"),
@@ -74,6 +89,7 @@ def parse_product(raw: Mapping[str, Any], category_code: str) -> ProductObservat
         price=price,
         price_per_unit=_decimal(instructions.get("bulk_price"), PER_UNIT_STEP),
     )
+    return (observation, None)
 
 
 def parse_tree(payload: Mapping[str, Any]) -> Iterator[CategoryObservation]:
@@ -92,9 +108,13 @@ def parse_tree(payload: Mapping[str, Any]) -> Iterator[CategoryObservation]:
 
 
 def parse_section(
-    payload: Mapping[str, Any], parent_code: str
-) -> Iterator[CategoryObservation | ProductObservation]:
-    """Yield the level 3 sections of a level 2 page and their products."""
+    payload: Mapping[str, Any], parent_code: str, *, page_url: str | None = None
+) -> Iterator[CategoryObservation | ProductObservation | CrawlError]:
+    """Yield the level 3 sections of a level 2 page and their products.
+
+    With `page_url`, products the parser has to drop are reported as `CrawlError` so the run is
+    not complete; unpublished products are skipped silently.
+    """
     for section in payload.get("categories") or []:
         code = section.get("id")
         if code is None or not section.get("name"):
@@ -102,9 +122,15 @@ def parse_section(
         code = str(code)
         yield CategoryObservation(code=code, name=str(section["name"]), parent_code=parent_code)
         for raw in section.get("products") or []:
-            product = parse_product(raw, code)
+            product, reason = parse_product_or_reason(raw, code)
             if product is not None:
                 yield product
+            elif reason is not None and page_url is not None:
+                sku = raw.get("id") if isinstance(raw, Mapping) else None
+                yield CrawlError(
+                    url=page_url,
+                    error=f"product {sku if sku is not None else '?'} skipped: {reason}",
+                )
 
 
 class MercadonaAdapter:
@@ -133,7 +159,6 @@ class MercadonaAdapter:
         if max_categories is not None:
             level_two = level_two[:max_categories]
 
-        seen: set[str] = set()
         for category in level_two:
             url = _url(f"/categories/{category.code}/", zone_code)
             try:
@@ -144,15 +169,11 @@ class MercadonaAdapter:
             yield RawResponse(url, response.status_code, response.content)
             try:
                 payload = _json(response, url)
+                yield from parse_section(payload, parent_code=category.code, page_url=url)
             except FetchError as exc:
                 yield CrawlError(url=url, error=exc.error)
-                continue
-            for observation in parse_section(payload, parent_code=category.code):
-                if isinstance(observation, ProductObservation):
-                    if observation.sku in seen:
-                        continue
-                    seen.add(observation.sku)
-                yield observation
+            except (AttributeError, KeyError, TypeError, ValueError) as exc:
+                yield CrawlError(url=url, error=f"malformed category: {exc}")
 
 
 def _url(path: str, warehouse: str) -> str:

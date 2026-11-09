@@ -8,6 +8,7 @@ from sqlalchemy import text
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
 from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
+from smart_basket.ingestion.store import log_ingest_summary
 
 log = logging.getLogger(__name__)
 
@@ -18,21 +19,11 @@ def ingest_catalogs() -> None:
     A failing warehouse is logged and skipped so the scheduled chain jobs keep running (NFR-09).
     """
     settings = get_settings()
-    warehouses = [code.strip() for code in settings.mercadona_warehouses.split(",") if code.strip()]
-    for warehouse in warehouses:
+    for warehouse in settings.mercadona_warehouse_codes:
         adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
         try:
             summary = ingest_catalog(adapter, warehouse, data_dir=settings.data_dir)
-            log.info(
-                "catalog run %s for %s/%s: %s, %s products, %s price changes, %s errors",
-                summary.run_id,
-                summary.chain_code,
-                summary.zone_code,
-                summary.status,
-                summary.products_seen,
-                summary.prices_changed,
-                len(summary.errors),
-            )
+            log_ingest_summary(summary)
         except Exception:
             log.exception(
                 "catalog ingestion failed for warehouse %s; other chains keep running", warehouse

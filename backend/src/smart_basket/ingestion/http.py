@@ -10,6 +10,10 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
+# A rate-limited request waits longer than a failing one, and never more than this.
+RATE_LIMIT_BACKOFF_FACTOR = 4
+RETRY_AFTER_CAP_SECONDS = 60.0
+
 
 class FetchError(RuntimeError):
     """A request failed after the retries allowed for it; `url` is the failing page."""
@@ -59,7 +63,12 @@ class Fetcher:
                 continue
             except httpx.HTTPError as exc:
                 raise FetchError(url, str(exc)) from exc
-            if response.status_code == 429 or response.status_code >= 500:
+            if response.status_code == 429:
+                if attempt == self._retries:
+                    raise FetchError(url, "HTTP 429")
+                self._wait(attempt, rate_limited=True, retry_after=_retry_after(response))
+                continue
+            if response.status_code >= 500:
                 if attempt == self._retries:
                     raise FetchError(url, f"HTTP {response.status_code}")
                 self._wait(attempt)
@@ -74,6 +83,23 @@ class Fetcher:
             self._sleep(self._delay)
         self._requests += 1
 
-    def _wait(self, attempt: int) -> None:
-        if self._backoff:
-            self._sleep(self._backoff * 2**attempt)
+    def _wait(
+        self, attempt: int, *, rate_limited: bool = False, retry_after: float | None = None
+    ) -> None:
+        if rate_limited and retry_after is not None:
+            self._sleep(min(retry_after, RETRY_AFTER_CAP_SECONDS))
+        elif self._backoff:
+            factor = RATE_LIMIT_BACKOFF_FACTOR if rate_limited else 1
+            self._sleep(self._backoff * factor * 2**attempt)
+
+
+def _retry_after(response: httpx.Response) -> float | None:
+    """Seconds from a numeric `Retry-After` header, or None when it is absent or not numeric."""
+    value = response.headers.get("Retry-After")
+    if value is None:
+        return None
+    try:
+        seconds = float(value)
+    except ValueError:
+        return None
+    return seconds if seconds >= 0 else None

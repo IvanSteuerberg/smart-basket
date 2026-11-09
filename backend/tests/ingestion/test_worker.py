@@ -16,6 +16,11 @@ def test_ingestion_settings_defaults(monkeypatch):
     assert settings.ingest_delay_seconds == 1.5
 
 
+def test_warehouse_codes_are_split_and_stripped():
+    settings = Settings(_env_file=None, mercadona_warehouses=" W1, ,W2 ")
+    assert settings.mercadona_warehouse_codes == ["W1", "W2"]
+
+
 def test_ingest_catalogs_swallows_a_failing_warehouse(monkeypatch):
     settings = Settings(_env_file=None, mercadona_warehouses="W1, W2", ingest_delay_seconds=0)
     monkeypatch.setattr(jobs, "get_settings", lambda: settings)

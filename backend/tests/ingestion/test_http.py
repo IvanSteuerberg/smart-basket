@@ -34,7 +34,7 @@ def test_pause_between_requests():
     assert sleeps == [1.5]
 
 
-def test_429_is_retried_with_backoff():
+def test_429_is_retried_with_a_longer_backoff_than_a_server_error():
     attempts = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -44,7 +44,49 @@ def test_429_is_retried_with_backoff():
     fetcher, sleeps = make_fetcher(handler, backoff=0.5)
     assert fetcher.get(URL).status_code == 200
     assert len(attempts) == 2
-    assert sleeps == [0.5]
+    assert sleeps == [2.0]  # four times the 5xx base
+
+
+def test_429_honours_a_numeric_retry_after():
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request.url)
+        if len(attempts) == 1:
+            return httpx.Response(429, headers={"Retry-After": "7"})
+        return httpx.Response(200)
+
+    fetcher, sleeps = make_fetcher(handler, backoff=0.5)
+    assert fetcher.get(URL).status_code == 200
+    assert sleeps == [7.0]
+
+
+def test_retry_after_is_capped_at_one_minute():
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request.url)
+        if len(attempts) == 1:
+            return httpx.Response(429, headers={"Retry-After": "120"})
+        return httpx.Response(200)
+
+    fetcher, sleeps = make_fetcher(handler)
+    fetcher.get(URL)
+    assert sleeps == [60.0]
+
+
+def test_non_numeric_retry_after_falls_back_to_the_backoff():
+    attempts = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(request.url)
+        if len(attempts) == 1:
+            return httpx.Response(429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})
+        return httpx.Response(200)
+
+    fetcher, sleeps = make_fetcher(handler, backoff=0.5)
+    fetcher.get(URL)
+    assert sleeps == [2.0]
 
 
 def test_server_errors_are_retried_three_times_then_fail():

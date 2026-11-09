@@ -10,6 +10,8 @@ from decimal import Decimal
 from typing import Literal, Protocol
 
 type BaseUnit = Literal["kg", "l", "ud"]
+type RunStatus = Literal["running", "succeeded", "partial", "failed"]
+type FinalStatus = Literal["succeeded", "partial", "failed"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +67,7 @@ class CrawlResult:
     products: tuple[ProductObservation, ...]
     raw: tuple[RawResponse, ...]
     errors: tuple[CrawlError, ...]
-    status: str
+    status: FinalStatus
     complete: bool
 
 
@@ -111,6 +113,7 @@ def collect(
         url = getattr(exc, "url", None) or zone_code
         errors.append(CrawlError(url=str(url), error=str(exc)))
 
+    status: FinalStatus
     if failed:
         status = "failed"
     elif errors:

@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     mercadona_warehouses: str = "3683"
     ingest_delay_seconds: float = 1.5
 
+    @property
+    def mercadona_warehouse_codes(self) -> list[str]:
+        """The configured warehouse codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.mercadona_warehouses.split(",") if code.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:
