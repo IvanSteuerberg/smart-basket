@@ -84,8 +84,12 @@ class MissingReason(StrEnum):
 
     #: No candidate store sells a product that satisfies the line.
     NOT_AVAILABLE = "not_available"
-    #: Some candidate store sells it, but none of the chosen stores does (max stores limit).
-    STORE_LIMIT = "store_limit"
+    #: Some candidate store sells it, but adding that store costs more than the coverage
+    #: margin, or exceeds max stores: reported with a separate stop (decision 0013, point 11).
+    SEPARATE_STOP = "separate_stop"
+    #: Some candidate store sells it, but none can be added to today's route (the routing
+    #: engine marks a leg unreachable).
+    UNREACHABLE = "unreachable"
 
 
 class CoverRule(StrEnum):
@@ -291,6 +295,9 @@ class BasketRequest:
     priority_mode: PriorityMode = PriorityMode.BALANCED
     #: Explicit lambda in €/min; when None the preset of `priority_mode` is used.
     lambda_per_minute: Decimal | None = None
+    #: Coverage margin in € per line left out that some candidate store sells (decision 0013,
+    #: point 11): a plan that covers more lines wins unless it costs more than this per line.
+    coverage_margin: Decimal = Decimal("3.00")
     loyalty_chain_ids: frozenset[int] = frozenset()
     coupon_codes: frozenset[str] = frozenset()
     return_to_origin: bool = True
@@ -301,6 +308,8 @@ class BasketRequest:
             raise ValueError("max_stores must be between 1 and 3 (FR-08)")
         if self.lambda_per_minute is not None and self.lambda_per_minute < 0:
             raise ValueError("lambda must be >= 0")
+        if self.coverage_margin < 0:
+            raise ValueError("coverage_margin must be >= 0")
         if len({line.line_id for line in self.lines}) != len(self.lines):
             raise ValueError("duplicate line_id")
         if len({s.store_id for s in self.stores}) != len(self.stores):
@@ -351,9 +360,30 @@ class StorePurchase:
 
 
 @dataclass(frozen=True, slots=True)
+class SeparateStop:
+    """Where to buy a line left out of today's route (decision 0013, point 11).
+
+    The store is re-routed together with the chosen stores (every permutation), so the shopper
+    can make the detour today or buy the line another day.
+    """
+
+    store_id: int
+    chain_id: int
+    purchase: LinePurchase
+    #: Minutes the route gains when this store is added to it.
+    extra_minutes: Decimal
+    #: What the stop adds to the objective: comparable cost + lambda x extra minutes.
+    extra_objective: Decimal
+    #: Adding this store would visit more stores than `max_stores`.
+    exceeds_max_stores: bool
+
+
+@dataclass(frozen=True, slots=True)
 class MissingLine:
     line_id: str
     reason: MissingReason
+    #: Set when the reason is `separate_stop`.
+    stop: SeparateStop | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -364,6 +394,7 @@ class BasketResult:
     comparable_cost: Decimal
     minutes: Decimal
     lambda_per_minute: Decimal
+    coverage_margin: Decimal
     objective: Decimal
     priority_mode: PriorityMode
     max_stores: int

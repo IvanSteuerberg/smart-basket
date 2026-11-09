@@ -97,6 +97,6 @@ The rule-based preprocessor of [0014](/decisions/0014-rule-based-preprocessor.md
 
 On the real household list of the first pass (kept local), the same rules with the fixture lexicon reach F1 0.9, above the three leading LLMs (0.7-0.8), and resolve 4 of its 10 lines; the other 6 (a product missing from the fixture, vague lines such as fruit or meat, and personal shorthand) would go to the LLM.
 
-A second real list (17 lines, 2026-11-09, also kept local) reaches F1 0.82 with rules only and resolves 8 lines. It exposed the two known issues of [0014](/decisions/0014-rule-based-preprocessor.md): numbers inside product names and alternatives separated by a slash.
+A second real list (17 lines, 2026-11-09, also kept local) reaches F1 0.82 with rules only and resolves 8 lines. It exposed two issues, numbers inside product names and alternatives separated by a slash, fixed the same day ([0014](/decisions/0014-rule-based-preprocessor.md)): the list then reaches F1 0.88 with 10 lines resolved, while the example lists keep their figures.
 
 Provisional ranking for the next pass: Qwen3.5 0.8B, Qwen3.5 2B and Gemma 4 E4B on the Arc. The next pass adds the rule-based preprocessor, the 30 real lists and scoring for clarification questions.

@@ -24,6 +24,8 @@ class Token:
     kind: str  # "word", "num" or "sym"
     #: How the token was changed: "", "abbreviation", "segmented", "typo", "synonym".
     changed: str = ""
+    #: Written right after the previous token, with no space ("A3", "omega3", "0%").
+    glued: bool = False
 
     def with_text(self, text: str, changed: str) -> Token:
         return replace(self, text=text, key=fold(text), changed=changed)
@@ -31,11 +33,25 @@ class Token:
 
 def tokenize(line: str) -> list[Token]:
     tokens = []
+    end = None
     for match in TOKEN_RE.finditer(line.lower()):
         raw = match.group()
         kind = "num" if raw[0].isdigit() else ("word" if raw[0].isalpha() else "sym")
-        tokens.append(Token(raw, fold(raw), kind))
+        tokens.append(Token(raw, fold(raw), kind, glued=match.start() == end))
+        end = match.end()
     return tokens
+
+
+def join(tokens: list[Token]) -> str:
+    """Tokens as display text: a number glued to its word stays glued ("a3"), and "%"
+    always follows its number ("0 %" -> "0%")."""
+    out = ""
+    prev: Token | None = None
+    for t in tokens:
+        tight = t.key == "%" or (t.glued and t.kind == "num" and prev and prev.kind == "word")
+        out += t.text if tight or not out else " " + t.text
+        prev = t
+    return out
 
 
 def same_word(a: str, b: str) -> bool:

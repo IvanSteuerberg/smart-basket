@@ -1,4 +1,5 @@
-"""Basket optimizer: brute force, determinism, lambda sweep, missing lines, routes, timing."""
+"""Basket optimizer: brute force, determinism, lambda sweep, coverage margin and separate stops,
+missing lines, routes, timing."""
 
 import itertools
 import random
@@ -45,11 +46,25 @@ def test_matches_independent_brute_force(seed):
         max_stores=rng.randint(1, 3),
         lambda_per_minute=D(rng.choice(["0", "0.05", "0.15", "0.40", "2"])),
         return_to_origin=rng.random() < 0.8,
+        coverage_margin=D(rng.choice(["0", "0.50", "3.00", "1000000"])),
     )
     result = optimize(req)
     uncovered, objective = bruteforce.solve(req)
-    assert sum(m.reason is MissingReason.STORE_LIMIT for m in result.missing) == uncovered
+    assert sum(m.reason is MissingReason.SEPARATE_STOP for m in result.missing) == uncovered
     assert Fraction(result.objective) == objective
+    # Each separate stop is the cheapest store to add to the chosen route.
+    for m in result.missing:
+        if m.reason is MissingReason.SEPARATE_STOP:
+            store_id, extra_minutes, extra = bruteforce.separate_stop(
+                req, result.visiting_order, m.line_id
+            )
+            assert m.stop.store_id == store_id
+            assert Fraction(m.stop.extra_minutes) == extra_minutes
+            assert Fraction(m.stop.extra_objective) == extra
+            assert m.stop.exceeds_max_stores == (len(result.stores) == req.max_stores)
+        else:
+            assert m.reason is MissingReason.NOT_AVAILABLE
+            assert m.stop is None
     # Internal consistency of the result.
     assert result.total_cost == sum(s.subtotal for s in result.stores)
     assert len(result.stores) <= req.max_stores
@@ -69,6 +84,34 @@ def test_same_input_gives_byte_identical_output(seed):
         random_instance(random.Random(seed), n_lines=8, n_stores=6, max_products=3)
     ).to_json()
     assert first == again == rebuilt
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_separate_stops_are_deterministic(seed):
+    req = random_instance(
+        random.Random(seed), n_lines=8, n_stores=6, max_products=3, availability=0.4, max_stores=1
+    )
+    first = optimize(req)
+    assert any(m.reason is MissingReason.SEPARATE_STOP for m in first.missing)
+    rng = random.Random(seed + 2000)
+    stores = []
+    for s in req.stores:
+        products, promos = list(s.products), list(s.promotions)
+        rng.shuffle(products)
+        rng.shuffle(promos)
+        stores.append(replace(s, products=tuple(products), promotions=tuple(promos)))
+    rng.shuffle(stores)
+    # The same matrix with its stores in another order.
+    tt = req.travel_times
+    perm = list(range(len(tt.store_ids)))
+    rng.shuffle(perm)
+    nodes = [0, *(i + 1 for i in perm)]
+    matrix = TravelTimes(
+        tuple(tt.store_ids[i] for i in perm),
+        tuple(tuple(tt.minutes[a][b] for b in nodes) for a in nodes),
+    )
+    shuffled = replace(req, stores=tuple(stores), travel_times=matrix)
+    assert first.to_json() == optimize(req).to_json() == optimize(shuffled).to_json()
 
 
 @pytest.mark.parametrize("seed", range(10))
@@ -102,6 +145,35 @@ def test_lambda_sweep_minutes_never_increase_and_cost_never_decreases(seed):
     for a, b in itertools.pairwise(results):
         assert b.minutes <= a.minutes
         assert b.comparable_cost >= a.comparable_cost
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_lambda_sweep_with_lines_left_out(seed):
+    """With lines left out the exchange argument still holds for the ranked value: minutes never
+    increase and comparable cost + price of the lines left out never decreases. Comparable cost
+    alone never decreases between two lambdas that leave out the same lines."""
+    base = random_instance(
+        random.Random(seed), n_lines=6, n_stores=6, max_products=2, availability=0.5
+    )
+    table = bruteforce.option_table(base)
+    margin = Fraction(base.coverage_margin)
+
+    def ranked_cost(res):
+        return Fraction(res.comparable_cost) + sum(
+            (
+                min(table[m.line_id].values()) + margin
+                for m in res.missing
+                if m.reason is MissingReason.SEPARATE_STOP
+            ),
+            Fraction(0),
+        )
+
+    results = [optimize(replace(base, lambda_per_minute=lam)) for lam in LAMBDAS]
+    for a, b in itertools.pairwise(results):
+        assert b.minutes <= a.minutes
+        assert ranked_cost(b) >= ranked_cost(a)
+        if [m.line_id for m in a.missing] == [m.line_id for m in b.missing]:
+            assert b.comparable_cost >= a.comparable_cost
 
 
 @pytest.mark.parametrize("seed", range(40))
@@ -201,23 +273,161 @@ def test_missing_lines_are_reported_with_their_reason():
     assert res.visiting_order == (1,)
     assert {(m.line_id, m.reason) for m in res.missing} == {
         ("saffron", MissingReason.NOT_AVAILABLE),
-        ("tofu", MissingReason.STORE_LIMIT),
+        ("tofu", MissingReason.SEPARATE_STOP),
     }
+    tofu = next(m.stop for m in res.missing if m.line_id == "tofu")
+    # 0->1->2->0 = 1+10+9 = 20 instead of 0->1->0 = 2.
+    assert (tofu.store_id, tofu.extra_minutes, tofu.exceeds_max_stores) == (2, D(18), True)
     both = optimize(request(lines, [a, b], {1: (1, 0), 2: (0, 9)}, max_stores=2))
     assert [m.line_id for m in both.missing] == ["saffron"]
 
 
-def test_coverage_comes_before_cost_and_time():
+# Coverage margin and separate stops (decision 0013, point 11) ----------------
+
+MILK_AT_A = Store(1, 1, (product(11, 1, "1.00", "1", unit="l"),))
+MILK_AND_OIL = [Line("milk", 1, D(1), Unit.L), Line("oil", 2, D(1), Unit.UD)]
+
+
+def oil_store(store_id, price):
+    return Store(store_id, store_id, (product(10 * store_id + 2, 2, price, "1", unit="ud"),))
+
+
+def detour(points, *extra_stores, **kw):
+    """Milk at store 1 next to the origin; oil only at store 3 (4.00) and `extra_stores`."""
+    kw.setdefault("lambda_per_minute", D("0.15"))
+    stores = [MILK_AT_A, oil_store(3, "4.00"), *extra_stores]
+    return optimize(request(MILK_AND_OIL, stores, points, **kw))
+
+
+def test_store_nearly_on_the_way_is_added():
+    # 2 extra minutes x 0.15 = 0.30 < 3.00: the full plan wins.
+    res = detour({1: (1, 0), 3: (2, 0)})
+    assert res.visiting_order == (1, 3)
+    assert res.missing == ()
+    assert (res.minutes, res.objective) == (D(4), D("5.60"))
+
+
+def test_far_store_becomes_a_separate_stop():
+    # 40 extra minutes x 0.15 = 6.00 > 3.00: the shorter plan wins.
+    res = detour({1: (1, 0), 3: (0, 20)})
+    assert res.visiting_order == (1,)
+    assert (res.minutes, res.total_cost) == (D(2), D("1.00"))
+    [oil] = res.missing
+    assert (oil.line_id, oil.reason) == ("oil", MissingReason.SEPARATE_STOP)
+    stop = oil.stop
+    # 0->1->3->0 = 1+21+20 = 42 instead of 2.
+    assert (stop.store_id, stop.chain_id, stop.extra_minutes) == (3, 3, D(40))
+    assert stop.extra_objective == D("10.00")
+    assert (stop.purchase.cost, stop.purchase.comparable_cost) == (D("4.00"), D("4.00"))
+    assert stop.purchase.quantity_bought == D(1)
+    assert stop.exceeds_max_stores is False
+
+
+def test_separate_stop_goes_to_the_cheapest_store_to_add():
+    points = {1: (1, 0), 3: (0, 20), 4: (0, -21)}
+    # Store 4: 3.50 + 0.15 x 42 = 9.80 beats store 3: 4.00 + 0.15 x 40 = 10.00.
+    res = detour(points, oil_store(4, "3.50"))
+    assert res.visiting_order == (1,)
+    assert (res.missing[0].stop.store_id, res.missing[0].stop.extra_minutes) == (4, D(42))
+    # 3.70 + 6.30 = 10.00: a tie, to the lowest store id.
+    tie = detour(points, oil_store(4, "3.70"))
+    assert tie.missing[0].stop.store_id == 3
+
+
+def test_a_tie_at_the_margin_goes_to_the_plan_covering_more_lines():
+    # Margin 6.00 = 0.15 x 40 extra minutes: equal ranked value, fewer lines left out wins.
+    res = detour({1: (1, 0), 3: (0, 20)}, coverage_margin=D("6.00"))
+    assert res.visiting_order == (1, 3)
+    assert res.missing == ()
+
+
+def test_zero_margin_ranks_on_the_objective_alone():
+    # Without a margin even 0.30 of detour is too much: the line is left for another day.
+    res = detour({1: (1, 0), 3: (2, 0)}, coverage_margin=D(0))
+    assert res.visiting_order == (1,)
+    assert res.missing[0].stop.extra_minutes == D(2)
+    assert res.missing[0].stop.extra_objective == D("4.30")
+
+
+def test_large_margin_puts_coverage_first():
     lines = [Line("x", 1, D(1), Unit.UD), Line("y", 2, D(1), Unit.UD)]
     near = Store(1, 1, (product(11, 1, "1.00", "1", unit="ud"),))
     far = Store(
         2, 2, (product(21, 1, "9.00", "1", unit="ud"), product(22, 2, "9.00", "1", unit="ud"))
     )
-    res = optimize(
-        request(lines, [near, far], {1: (1, 0), 2: (50, 0)}, max_stores=1, lambda_per_minute=D(10))
-    )
+    points = {1: (1, 0), 2: (50, 0)}
+    kw = {"max_stores": 1, "lambda_per_minute": D(10)}
+    res = optimize(request(lines, [near, far], points, coverage_margin=D(1000000), **kw))
     assert res.visiting_order == (2,)
     assert res.missing == ()
+    # With the default margin the near store wins and y is a stop beyond max stores.
+    default = optimize(request(lines, [near, far], points, **kw))
+    assert default.visiting_order == (1,)
+    [y] = default.missing
+    assert (y.reason, y.stop.store_id, y.stop.exceeds_max_stores) == (
+        MissingReason.SEPARATE_STOP,
+        2,
+        True,
+    )
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_large_margin_leaves_out_the_fewest_lines(seed):
+    rng = random.Random(seed)
+    req = random_instance(
+        rng,
+        n_lines=6,
+        n_stores=5,
+        availability=0.4,
+        max_stores=rng.randint(1, 3),
+        coverage_margin=D(1000000),
+    )
+    table = bruteforce.option_table(req)
+    coverable = [lid for lid, row in table.items() if row]
+    fewest = min(
+        sum(1 for lid in coverable if not set(table[lid]) & set(subset))
+        for size in range(1, req.max_stores + 1)
+        for subset in itertools.combinations([s.store_id for s in req.stores], size)
+    )
+    res = optimize(req)
+    assert sum(m.reason is MissingReason.SEPARATE_STOP for m in res.missing) == fewest
+
+
+def test_lines_nobody_sells_do_not_change_the_plan():
+    saffron = Line("saffron", 9, D(1), Unit.UD)
+    stores = [MILK_AT_A, oil_store(3, "4.00")]
+    for points in ({1: (1, 0), 3: (2, 0)}, {1: (1, 0), 3: (0, 20)}):
+        for margin in (D(0), D(3), D(1000000)):
+            kw = {"lambda_per_minute": D("0.15"), "coverage_margin": margin}
+            without = optimize(request(MILK_AND_OIL, stores, points, **kw)).to_dict()
+            with_it = optimize(request([*MILK_AND_OIL, saffron], stores, points, **kw)).to_dict()
+            extra = with_it["missing"].pop()
+            assert extra == {"line_id": "saffron", "reason": "not_available", "stop": None}
+            assert with_it == without
+
+
+def test_line_only_in_an_unreachable_store():
+    lines = [Line("a", 1, D(1), Unit.UD), Line("b", 2, D(1), Unit.UD)]
+    s1 = Store(1, 1, (product(11, 1, "1.00", "1", unit="ud"),))
+    s2 = Store(2, 2, (product(22, 2, "1.00", "1", unit="ud"),))
+    matrix = TravelTimes(
+        (1, 2),
+        (
+            (D(0), D(1), None),
+            (D(1), D(0), None),
+            (None, None, D(0)),
+        ),
+    )
+    res = optimize(BasketRequest(tuple(lines), (s1, s2), matrix, DAY))
+    assert res.visiting_order == (1,)
+    assert [(m.line_id, m.reason, m.stop) for m in res.missing] == [
+        ("b", MissingReason.UNREACHABLE, None)
+    ]
+
+
+def test_negative_margin_is_rejected():
+    with pytest.raises(ValueError, match="coverage_margin"):
+        request([], [], {}, coverage_margin=D("-1"))
 
 
 def test_nothing_available():

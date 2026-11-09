@@ -194,6 +194,43 @@ def test_number_words_inside_a_phrase_are_not_quantities(one):
     assert item.item == "algo para una cena"
 
 
+# Numbers in product names -----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("text", "expected", "qty", "unit"),
+    [
+        ("pastillas omega 3", "pastillas omega 3", "1", "ud"),
+        ("omega 3 x2", "omega 3", "2", "ud"),
+        ("carpetas A3", "carpetas a3", "1", "ud"),
+        ("leche 0%", "leche 0%", "1", "ud"),
+        ("leche 0 %", "leche 0%", "1", "ud"),
+        ("pan 7 cereales", "pan 7 cereales", "1", "ud"),
+        ("pan 7 cereales 2 paquetes", "pan 7 cereales", "2", "ud"),
+        ("yogur 0% materia grasa", "yogur 0%", "1", "ud"),
+        ("3 yogures", "yogures", "3", "ud"),
+        ("3x yogures", "yogures", "3", "ud"),
+        ("yogur x4", "yogur", "4", "ud"),
+        ("2 l de leche", "leche", "2", "l"),
+        ("huevos 12", "huevos", "12", "ud"),
+    ],
+)
+def test_numbers_that_belong_to_the_name_are_not_quantities(one, text, expected, qty, unit):
+    item = one(text)
+    assert (item.item, item.quantity, item.unit) == (expected, D(qty), unit), item
+
+
+def test_product_names_with_numbers_resolve(one):
+    assert one("pastillas omega 3").generic_key == "omega_3"
+    assert one("omega 3 x2").resolved
+    item = one("pan 7 cereales")
+    assert (item.generic_key, item.attributes) == ("pan", ("7 cereales",))
+    assert item.resolved
+    item = one("leche 0%")
+    assert item.generic_key == "leche"
+    assert item.resolved
+
+
 # Brands --------------------------------------------------------------------------
 
 
@@ -266,6 +303,74 @@ def test_and_splits_only_when_both_halves_resolve(pp):
     assert [i.item for i in pp.preprocess("fruta, y algo para picar").items] == [
         "fruta",
         "algo para picar",
+    ]
+
+
+# Alternatives ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("text", ["pasta/espaguetis", "Pasta / espaguetis", "pasta o espaguetis"])
+def test_alternatives_are_one_item(one, text):
+    item = one(text)
+    assert item.item == "pasta o espaguetis"
+    assert item.generic_key == "pasta"  # both are specific: the first one
+    assert item.alternatives == ("espaguetis",)
+    assert item.resolved
+
+
+def test_alternatives_prefer_a_specific_product(one):
+    item = one("leche/bebida de avena")
+    assert (item.item, item.generic_key) == ("leche o bebida de avena", "leche")
+    assert item.alternatives == ("bebida de avena",)
+    item = one("fruta/plátanos")  # "fruta" is vague
+    assert (item.generic_key, item.alternatives) == ("platano", ("fruta",))
+    assert item.resolved
+    assert not item.ambiguous
+
+
+def test_alternatives_keep_quantity_and_context(one):
+    item = one("2 l de leche/bebida de avena")
+    assert (item.item, item.quantity, item.unit) == ("leche o bebida de avena", D(2), "l")
+    item = one("pan/tostadas para el desayuno")
+    assert (item.generic_key, item.context) == ("pan", "para el desayuno")
+
+
+def test_unknown_alternative_does_not_block(one):
+    item = one("pasta/tallarines")
+    assert (item.generic_key, item.alternatives) == ("pasta", ("tallarines",))
+    assert item.resolved
+
+
+def test_slash_between_digits_is_still_a_fraction(one):
+    item = one("1/2 kg de queso")
+    assert (item.item, item.quantity, item.unit, item.alternatives) == (
+        "queso",
+        D("0.5"),
+        "kg",
+        (),
+    )
+
+
+def test_alternatives_stay_out_of_the_item_schema(pp):
+    schema = pp.preprocess("pasta/espaguetis").to_schema()
+    assert set(schema["items"][0]) == {
+        "item",
+        "quantity",
+        "unit",
+        "brand",
+        "attributes",
+        "ambiguous",
+    }
+
+
+def test_or_and_and_together(pp):
+    assert [i.item for i in pp.preprocess("pan y leche o zumo").items] == [
+        "pan",
+        "leche o zumo",
+    ]
+    assert [i.item for i in pp.preprocess("leche/zumo y huevos").items] == [
+        "leche o zumo",
+        "huevos",
     ]
 
 

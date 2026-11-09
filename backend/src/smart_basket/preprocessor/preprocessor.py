@@ -16,7 +16,7 @@ from rapidfuzz.distance import DamerauLevenshtein
 
 from smart_basket.preprocessor import rules_es as R
 from smart_basket.preprocessor.lexicon import BrandTerm, GenericTerm, Lexicon, UnitTerm
-from smart_basket.preprocessor.text import Token, fold, same_word, tokenize, words
+from smart_basket.preprocessor.text import Token, fold, join, same_word, tokenize, words
 
 UNITS = ("ud", "kg", "g", "l", "ml")
 SPLIT_RE = re.compile(r"\r?\n|;|(?<!\d),|,(?!\d)|\s\+\s|•|·")
@@ -39,6 +39,9 @@ class PreprocessedItem:
     canonical_id: int | None = None
     corrections: tuple[str, ...] = ()
     context: str | None = None
+    #: The other alternatives of "pasta/espaguetis" or "pasta o espaguetis" (any will do);
+    #: `item` names them all and the match uses the most specific one.
+    alternatives: tuple[str, ...] = ()
 
     @property
     def needs_llm(self) -> bool:
@@ -116,6 +119,16 @@ class Preprocessor:
             ((self._compact(words(a)), b) for b in lexicon.brands() for a in (b.name, *b.aliases)),
             key=lambda ab: -len(ab[0]),
         )
+        #: Lexicon forms with a number in their name ("omega 3", "7 cereales"): there the
+        #: number is part of the product, not a quantity.
+        all_forms = (
+            *(f for g in self.generic for f in (g.name, *g.forms)),
+            *(f for v in lexicon.variants() for f in (v.name, *v.forms)),
+            *(a for b in lexicon.brands() for a in (b.name, *b.aliases)),
+        )
+        self.numbered_forms = sorted(
+            {words(f) for f in all_forms if any(t.kind == "num" for t in tokenize(f))}
+        )
 
         lexical = set()
         self.display: dict[str, str] = {}
@@ -185,10 +198,12 @@ class Preprocessor:
         return PreprocessResult(tuple(items))
 
     def _split_on_and(self, part: str) -> list[str]:
-        """Split "pan y leche" when both halves resolve on their own ("kilo y medio" stays)."""
+        """Split "pan y leche" when both halves resolve on their own ("kilo y medio" stays).
+        A line with alternatives resolves on one of them, so it is tried as well
+        ("leche/zumo y huevos")."""
         whole = self._line(part, 0)
         halves = re.split(r"\s+y\s+", part, maxsplit=1)
-        if whole.resolved or len(halves) != 2:
+        if (whole.resolved and not whole.alternatives) or len(halves) != 2:
             return [part]
         a, b = self._line(halves[0], 0), self._line(halves[1], 0)
         return halves if a.resolved and b.resolved else [part]
@@ -208,12 +223,19 @@ class Preprocessor:
 
         qty, rest = self._extract_quantity(tokens)
         brand, rest = self._find_brand(rest)
-        seq = rest
-        generic, span, rest_after = self._match_generic(seq)
+        # "pasta/espaguetis", "pasta o espaguetis": either will do. Match the first one
+        # that names a specific product, else the first one found, else the first.
+        groups = _alternatives(rest)
+        matches = [self._match_generic(g) for g in groups]
+        pick = next((k for k, m in enumerate(matches) if m[0] and not m[0].vague), None)
+        if pick is None:
+            pick = next((k for k, m in enumerate(matches) if m[0]), 0)
+        seq = groups[pick]
+        generic, span, rest_after = matches[pick]
         if generic is None and qty.container:
             # "2 bolsas de basura": the container word belongs to the product.
-            generic2, span2, rest2 = self._match_generic(qty.container + rest)
-            seq = qty.container + rest
+            generic2, span2, rest2 = self._match_generic(qty.container + seq)
+            seq = groups[pick] = qty.container + seq
             if generic2 is not None:
                 generic, span, rest_after = generic2, span2, rest2
                 qty.container = []
@@ -222,6 +244,20 @@ class Preprocessor:
 
         attributes, rest_after = self._match_variants(rest_after)
         unknown, context = self._leftovers(rest_after)
+        # The other alternatives are shown, not resolved: their unknown words do not block.
+        texts: list[str] = []
+        alternatives: list[str] = []
+        for k, group in enumerate(groups):
+            if k == pick:
+                texts.append(self._item_text(generic, span, seq, attributes))
+                continue
+            other, other_span, other_rest = matches[k]
+            other_attributes, other_rest = self._match_variants(other_rest)
+            context = context or self._leftovers(other_rest)[1]
+            text = self._item_text(other, other_span, group, other_attributes)
+            if text:
+                texts.append(text)
+                alternatives.append(text)
 
         reasons = []
         if ambiguous:
@@ -234,11 +270,10 @@ class Preprocessor:
         if unknown:
             reasons.append("unknown_words:" + " ".join(unknown))
 
-        item_text = self._item_text(generic, span, seq, attributes)
         return PreprocessedItem(
             line=index,
             raw=raw,
-            item=item_text,
+            item=" o ".join(texts),
             quantity=qty.value,
             unit=qty.unit,
             brand=brand.name if brand else None,
@@ -250,6 +285,7 @@ class Preprocessor:
             canonical_id=generic.canonical_id if generic else None,
             corrections=tuple(corrections),
             context=context,
+            alternatives=tuple(alternatives),
         )
 
     # Normalization ------------------------------------------------------------
@@ -414,6 +450,16 @@ class Preprocessor:
             n = self._number(tokens, i + 1, words_ok=False)
             if n is not None:
                 return _Quantity(n, "ud"), i + 2
+        # "3x", "3 x yogures".
+        n = self._number(tokens, i, words_ok=(i == 0))
+        if (
+            n is not None
+            and i + 1 < len(tokens)
+            and tokens[i + 1].key in R.MULTIPLIERS
+            and tokens[i + 1].key != "por"
+            and self._number(tokens, i + 2, words_ok=False) is None
+        ):
+            return _Quantity(n, "ud"), i + 2
         # [number] [fraction] [de] unit [y medio]: "2 l", "medio kilo", "un cuarto de kilo",
         # "kilo y medio", "una docena", "6 bricks".
         value = self._number(tokens, i, words_ok=(i == 0))
@@ -439,9 +485,41 @@ class Preprocessor:
             if unit.container:
                 qty.container = [tokens[j]]
             return qty, end
-        if value is not None and j == i + 1 and (tokens[i].kind == "num" or i == 0):
+        if (
+            value is not None
+            and j == i + 1
+            and (tokens[i].kind == "num" or i == 0)
+            and self._bare_count(tokens, i)
+        ):
             return _Quantity(value, "ud"), i + 1
         return None
+
+    def _bare_count(self, tokens: list[Token], i: int) -> bool:
+        """Whether a number without unit or multiplier counts units: "3 yogures" at the start
+        and "huevos 12" at the end do; "omega 3" (a lexicon name), "A3" (glued to its word),
+        "leche 0%" and "pan 7 cereales" (followed by a word that is not a unit) do not."""
+        after = tokens[i + 1] if i + 1 < len(tokens) else None
+        if after is not None and after.key == "%":
+            return False
+        if self._in_name(tokens, i):
+            return False
+        if i == 0:
+            return True
+        if tokens[i].glued and tokens[i - 1].kind == "word":
+            return False
+        return after is None or (after.kind == "word" and after.key in R.FILLERS)
+
+    def _in_name(self, tokens: list[Token], i: int) -> bool:
+        """The number at `i` is inside a lexicon form ("omega 3", "7 cereales")."""
+        keys = [t.key for t in tokens]
+        for form in self.numbered_forms:
+            for k, word in enumerate(form):
+                start = i - k
+                if word != keys[i] or start < 0 or start + len(form) > len(keys):
+                    continue
+                if all(same_word(keys[start + m], form[m]) for m in range(len(form))):
+                    return True
+        return False
 
     # Brands, generic terms, variants ------------------------------------------
 
@@ -457,8 +535,11 @@ class Preprocessor:
     def _match_generic(
         self, tokens: list[Token]
     ) -> tuple[GenericTerm | None, list[Token], list[Token]]:
+        # Numbers left after the quantity belong to the name ("omega 3").
         content = [
-            i for i, t in enumerate(tokens) if t.kind == "word" and t.key not in R.CONNECTORS
+            i
+            for i, t in enumerate(tokens)
+            if t.kind in ("word", "num") and t.key not in R.CONNECTORS
         ]
         keys = [tokens[i].key for i in content]
         best = None
@@ -518,34 +599,60 @@ class Preprocessor:
         attributes: list[tuple[str, list[Token]]],
     ) -> str:
         """The user's own words for the item, corrected: the product and its variants, with
-        the connectors between them ("helado de chocolate"), without quantity or brand."""
+        the connectors between them ("helado de chocolate") and the numbers of its name
+        ("leche 0%"), without quantity or brand."""
         if generic is None:
-            texts = [t for t in seq if t.kind == "word"]
+            texts = [t for t in seq if t.kind == "word" or _name_number(t)]
             while texts and texts[0].key in R.FILLERS:
                 texts.pop(0)
             while texts and texts[-1].key in R.FILLERS:
                 texts.pop()
-            return " ".join(t.text for t in texts)
+            return join(texts)
         if not span:
             head = [generic.name]
             return " ".join([*head, *(t.text for _, toks in attributes for t in toks)])
         if generic.vague:
-            return " ".join(t.text for t in span)
+            return join(span)
         variant_ids = {id(t) for _, toks in attributes for t in toks}
         position = {id(t): i for i, t in enumerate(seq)}
         start, end = position[id(span[0])], position[id(span[-1])]
         after = [i for i, t in enumerate(seq) if id(t) in variant_ids and i > end]
         last = max(after, default=end)
-        # Head first, then the variants written after it with their connectors
+        while last + 1 < len(seq) and _name_number(seq[last + 1]):
+            last += 1
+        # Head first, then the variants and numbers written after it with their connectors
         # ("helado de chocolate"), then any variant written before it ("s/lactosa yogures").
-        out = [t.text for i, t in enumerate(seq) if start <= i <= end]
+        out = [t for i, t in enumerate(seq) if start <= i <= end]
         out += [
-            t.text
+            t
             for i, t in enumerate(seq)
-            if end < i <= last and (id(t) in variant_ids or t.key in R.CONNECTORS)
+            if end < i <= last
+            and (id(t) in variant_ids or t.key in R.CONNECTORS or _name_number(t))
         ]
-        out += [t.text for i, t in enumerate(seq) if i < start and id(t) in variant_ids]
-        return " ".join(out)
+        out += [t for i, t in enumerate(seq) if i < start and id(t) in variant_ids]
+        return join(out)
+
+
+def _name_number(t: Token) -> bool:
+    """A number (or "%") left after the quantity: part of the name ("0%", "A3")."""
+    return t.kind == "num" or t.key == "%"
+
+
+def _alternatives(tokens: list[Token]) -> list[list[Token]]:
+    """Split "pasta/espaguetis" and "pasta o espaguetis" into alternatives. A slash between
+    numbers is a fraction ("1/2", merged before) and "o" only separates two words."""
+    groups: list[list[Token]] = [[]]
+    for i, t in enumerate(tokens):
+        before = tokens[i - 1] if i > 0 else None
+        after = tokens[i + 1] if i + 1 < len(tokens) else None
+        if before is not None and after is not None and groups[-1]:
+            slash = t.key == "/" and "word" in (before.kind, after.kind)
+            either = t.key == "o" and before.kind == after.kind == "word"
+            if slash or either:
+                groups.append([])
+                continue
+        groups[-1].append(t)
+    return [g for g in groups if g] or [[]]
 
 
 _UNACCENT = str.maketrans("áéíóú", "aeiou")

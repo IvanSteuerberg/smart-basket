@@ -210,14 +210,22 @@ def route_minutes(req: BasketRequest, used: tuple[int, ...]) -> Fraction | None:
     return best
 
 
-def solve(req: BasketRequest) -> tuple[int, Fraction]:
-    """(uncovered lines, objective) of the best basket over every line-to-store assignment."""
-    lam = Fraction(req.effective_lambda)
+def option_table(req: BasketRequest) -> dict[str, dict[int, Fraction]]:
+    """Comparable cost of every line in every store that sells it."""
     table = {
         line.line_id: {s.store_id: line_option(line, s, req) for s in req.stores}
         for line in req.lines
     }
-    table = {lid: {s: c for s, c in row.items() if c is not None} for lid, row in table.items()}
+    return {lid: {s: c for s, c in row.items() if c is not None} for lid, row in table.items()}
+
+
+def solve(req: BasketRequest) -> tuple[int, Fraction]:
+    """(uncovered lines, objective) of the best basket over every line-to-store
+    assignment, ranked by objective + (cheapest comparable cost anywhere + margin) per line left
+    out (decision 0013, point 11). A line is left out only if no visited store sells it."""
+    lam = Fraction(req.effective_lambda)
+    margin = Fraction(req.coverage_margin)
+    table = option_table(req)
     coverable = [lid for lid, row in table.items() if row]
     choices = [[*sorted(table[lid]), None] for lid in coverable]
     best = None
@@ -225,14 +233,40 @@ def solve(req: BasketRequest) -> tuple[int, Fraction]:
         used = tuple(sorted({s for s in assignment if s is not None}))
         if not used or len(used) > req.max_stores:
             continue
+        if any(
+            s is None and any(u in table[lid] for u in used)
+            for lid, s in zip(coverable, assignment, strict=True)
+        ):
+            continue
         minutes = route_minutes(req, used)
         if minutes is None:
             continue
-        cost = sum(
-            (table[lid][s] for lid, s in zip(coverable, assignment, strict=True) if s is not None),
-            Fraction(0),
-        )
+        cost = penalty = Fraction(0)
+        for lid, s in zip(coverable, assignment, strict=True):
+            if s is None:
+                penalty += min(table[lid].values()) + margin
+            else:
+                cost += table[lid][s]
         uncovered = sum(1 for s in assignment if s is None)
-        key = (uncovered, cost + lam * minutes)
+        objective = cost + lam * minutes
+        key = (objective + penalty, uncovered, objective)
         best = key if best is None or key < best else best
-    return best if best is not None else (0, Fraction(0))
+    return best[1:] if best is not None else (0, Fraction(0))
+
+
+def separate_stop(
+    req: BasketRequest, used: tuple[int, ...], line_id: str
+) -> tuple[int, Fraction, Fraction] | None:
+    """(store, extra minutes, comparable cost + lambda x extra minutes) of the cheapest store to
+    add to the route of `used` for a line left out, ties to the lowest store id."""
+    lam = Fraction(req.effective_lambda)
+    base = route_minutes(req, used) if used else Fraction(0)
+    best = None
+    for store_id, cost in sorted(option_table(req)[line_id].items()):
+        minutes = route_minutes(req, (*used, store_id))
+        if minutes is None:
+            continue
+        extra = cost + lam * (minutes - base)
+        if best is None or (extra, store_id) < (best[2], best[0]):
+            best = (store_id, minutes - base, extra)
+    return best
