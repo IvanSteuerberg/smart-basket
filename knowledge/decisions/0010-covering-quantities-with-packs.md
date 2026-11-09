@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0010 Covering quantities with packs"
 description: Pack combinations between 80 % and 150 % of the requested quantity compete on price per base unit; near ties go to the one that reaches the quantity with the least excess.
 tags: [decision, optimizer, pricing]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-03T12:00:00+01:00

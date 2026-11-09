@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0014 Rule-based preprocessor v1"
 description: Pipeline, output and resolution criteria of the rule-based list preprocessor, the lexicon interface and the LLM provider protocol.
 tags: [decision, recommender, llm, preprocessor, implementation]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-03T02:30:00+01:00

@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0016 Ingestion adapters"
 description: One adapter per chain that only crawls and parses, shared persistence with change-only prices, run bookkeeping that survives failures, and safeguards before marking products unavailable.
 tags: [decision, ingestion, data]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-09T21:00:00+01:00

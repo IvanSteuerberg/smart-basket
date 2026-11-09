@@ -56,6 +56,8 @@ Decisions [0002](/decisions/0002-routing-in-three-layers.md), [0007](/decisions/
 
 # Revisit when
 
+* The coverage margin (3 € per line) is calibrated with real baskets in the [recommender evaluation](/evaluation/recommender-evaluation.md); the author does not consider it final (2026-11-09).
+* The interface lets a shopper end the trip somewhere other than the origin (one-way routes, point 13).
 * Mixed-product promotions ("3x2 across the range") appear in the collected data.
 * Users find the comparable cost or the quantities surprising.
 * More than 3 stores or more than about 10 candidates are needed (mixed-integer programming, 0002).
