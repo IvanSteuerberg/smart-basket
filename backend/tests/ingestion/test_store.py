@@ -267,7 +267,10 @@ def test_raw_responses_are_gzipped_and_recorded(db, tmp_path):
 def test_categories_are_upserted_without_overwriting_category_id(db, tmp_path):
     with db.engine.begin() as conn:
         category_id = conn.execute(
-            text("insert into category (name, level) values ('Aceite', 3) returning id")
+            text(
+                "insert into category (key, name, level) values ('aceite', 'Aceite', 3)"
+                " returning id"
+            )
         ).scalar_one()
         conn.execute(
             text(
