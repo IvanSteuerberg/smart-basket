@@ -48,31 +48,31 @@
    "code": "425",
    "name": "Hierbas",
    "parent_code": "115",
-   "category": "especias"
+   "category": "hierbas_secas"
   },
   {
    "code": "840",
    "name": "Colorante y pimentón",
    "parent_code": "115",
-   "category": "especias"
+   "category": "pimenton"
   },
   {
    "code": "841",
    "name": "Pimienta",
    "parent_code": "115",
-   "category": "especias"
+   "category": "pimienta"
   },
   {
    "code": "431",
    "name": "Otras especias",
    "parent_code": "115",
-   "category": "especias"
+   "category": "aceite_condimentos"
   },
   {
    "code": "430",
    "name": "Sazonadores",
    "parent_code": "115",
-   "category": "especias"
+   "category": "sazonador"
   },
   {
    "code": "116",
@@ -462,13 +462,13 @@
    "code": "389",
    "name": "Chicles",
    "parent_code": "95",
-   "category": "chicles_caramelos"
+   "category": "chicles"
   },
   {
    "code": "394",
    "name": "Caramelos",
    "parent_code": "95",
-   "category": "chicles_caramelos"
+   "category": "caramelos"
   },
   {
    "code": "92",
@@ -504,7 +504,7 @@
    "code": "804",
    "name": "Bombones",
    "parent_code": "92",
-   "category": "chocolatinas"
+   "category": "bombones"
   },
   {
    "code": "388",
@@ -654,7 +654,7 @@
    "code": "706",
    "name": "Accesorios",
    "parent_code": "218",
-   "category": "biberon_chupete"
+   "category": "higiene_bebe"
   },
   {
    "code": "217",
@@ -786,7 +786,7 @@
    "code": "590",
    "name": "Anís",
    "parent_code": "181",
-   "category": "licor_crema"
+   "category": "anis_aguardiente"
   },
   {
    "code": "592",
@@ -966,25 +966,25 @@
    "code": "364",
    "name": "Cápsulas compatibles Nespresso",
    "parent_code": "81",
-   "category": "cafe_capsulas"
+   "category": "capsulas_nespresso"
   },
   {
    "code": "365",
    "name": "Cápsulas compatibles Dolce gusto",
    "parent_code": "81",
-   "category": "cafe_capsulas"
+   "category": "capsulas_dolce_gusto"
   },
   {
    "code": "366",
    "name": "Cápsulas compatibles Tassimo",
    "parent_code": "81",
-   "category": "cafe_capsulas"
+   "category": "capsulas_tassimo"
   },
   {
    "code": "367",
    "name": "Monodosis",
    "parent_code": "81",
-   "category": "cafe_capsulas"
+   "category": "cafe_monodosis"
   },
   {
    "code": "83",
@@ -1176,7 +1176,7 @@
    "code": "291",
    "name": "Empanados y rebozados congelados",
    "parent_code": "45",
-   "category": "carne_elaborada"
+   "category": "rebozados"
   },
   {
    "code": "288",
@@ -1644,19 +1644,19 @@
    "code": "518",
    "name": "Tartas",
    "parent_code": "152",
-   "category": "tartas_churros"
+   "category": "tartas_congeladas"
   },
   {
    "code": "859",
    "name": "Tartas infantiles",
    "parent_code": "152",
-   "category": "tartas_churros"
+   "category": "tartas_congeladas"
   },
   {
    "code": "860",
    "name": "Churros",
    "parent_code": "152",
-   "category": "tartas_churros"
+   "category": "churros"
   },
   {
    "code": "14",
@@ -1950,7 +1950,7 @@
    "code": "625",
    "name": "Crema y gel de cara",
    "parent_code": "192",
-   "category": "espuma_afeitar"
+   "category": "crema_facial"
   },
   {
    "code": "189",
@@ -2262,31 +2262,31 @@
    "code": "853",
    "name": "Plátano y uva",
    "parent_code": "27",
-   "category": "platano"
+   "category": "fruta"
   },
   {
    "code": "251",
    "name": "Manzana y pera",
    "parent_code": "27",
-   "category": "manzana"
+   "category": "fruta"
   },
   {
    "code": "249",
    "name": "Melón y sandía",
    "parent_code": "27",
-   "category": "melon_sandia"
+   "category": "fruta"
   },
   {
    "code": "247",
    "name": "Cítricos",
    "parent_code": "27",
-   "category": "naranja_mandarina"
+   "category": "fruta"
   },
   {
    "code": "250",
    "name": "Fruta tropical",
    "parent_code": "27",
-   "category": "aguacate_tropical"
+   "category": "fruta"
   },
   {
    "code": "253",
@@ -2328,7 +2328,7 @@
    "code": "256",
    "name": "Cebolla y ajo",
    "parent_code": "29",
-   "category": "cebolla_ajo"
+   "category": "verdura"
   },
   {
    "code": "855",
@@ -2340,19 +2340,19 @@
    "code": "257",
    "name": "Pepino y zanahoria",
    "parent_code": "29",
-   "category": "pepino_zanahoria"
+   "category": "verdura"
   },
   {
    "code": "857",
    "name": "Calabacín y pimiento",
    "parent_code": "29",
-   "category": "calabacin_pimiento"
+   "category": "verdura"
   },
   {
    "code": "856",
    "name": "Repollo y col",
    "parent_code": "29",
-   "category": "col_brocoli"
+   "category": "verdura"
   },
   {
    "code": "262",
@@ -2484,19 +2484,19 @@
    "code": "722",
    "name": "Detergente líquido y gel",
    "parent_code": "226",
-   "category": "detergente"
+   "category": "detergente_liquido"
   },
   {
    "code": "723",
    "name": "Detergente en polvo y monodosis",
    "parent_code": "226",
-   "category": "detergente"
+   "category": "detergente_capsulas"
   },
   {
    "code": "725",
    "name": "Detergente lavado a mano",
    "parent_code": "226",
-   "category": "detergente"
+   "category": "detergente_liquido"
   },
   {
    "code": "730",

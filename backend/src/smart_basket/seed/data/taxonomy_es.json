@@ -53,32 +53,74 @@
        "base_unit": "kg",
        "forms": [
         "naranja",
+        "naranjas de zumo",
         "mandarina",
-        "clementina",
-        "limón",
-        "lima",
-        "pomelo",
-        "cítricos"
+        "clementina"
        ]
       },
       {
-       "key": "melon_sandia",
-       "name": "Melón y sandía",
+       "key": "limon",
+       "name": "Limón y lima",
        "base_unit": "kg",
        "forms": [
-        "melón",
+        "limón",
+        "lima"
+       ]
+      },
+      {
+       "key": "pomelo",
+       "name": "Pomelo",
+       "base_unit": "kg",
+       "forms": [
+        "pomelo"
+       ]
+      },
+      {
+       "key": "melon",
+       "name": "Melón",
+       "base_unit": "kg",
+       "forms": [
+        "melón"
+       ]
+      },
+      {
+       "key": "sandia",
+       "name": "Sandía",
+       "base_unit": "kg",
+       "forms": [
         "sandía"
        ]
       },
       {
-       "key": "aguacate_tropical",
-       "name": "Aguacate y fruta tropical",
+       "key": "aguacate",
+       "name": "Aguacate",
        "base_unit": "kg",
        "forms": [
-        "aguacate",
-        "piña",
+        "aguacate"
+       ]
+      },
+      {
+       "key": "pina",
+       "name": "Piña",
+       "base_unit": "ud",
+       "forms": [
+        "piña"
+       ]
+      },
+      {
+       "key": "kiwi",
+       "name": "Kiwi",
+       "base_unit": "kg",
+       "forms": [
+        "kiwi"
+       ]
+      },
+      {
+       "key": "mango_papaya",
+       "name": "Mango y papaya",
+       "base_unit": "kg",
+       "forms": [
         "mango",
-        "kiwi",
         "papaya",
         "fruta tropical"
        ]
@@ -129,13 +171,29 @@
        ]
       },
       {
-       "key": "cebolla_ajo",
-       "name": "Cebolla y ajo",
+       "key": "cebolla",
+       "name": "Cebolla",
        "base_unit": "kg",
        "forms": [
         "cebolla",
-        "ajo",
         "cebolleta",
+        "cebolla morada"
+       ]
+      },
+      {
+       "key": "ajo",
+       "name": "Ajo",
+       "base_unit": "kg",
+       "forms": [
+        "ajo",
+        "cabeza de ajo"
+       ]
+      },
+      {
+       "key": "puerro",
+       "name": "Puerro",
+       "base_unit": "kg",
+       "forms": [
         "puerro"
        ]
       },
@@ -150,34 +208,72 @@
        ]
       },
       {
-       "key": "pepino_zanahoria",
-       "name": "Pepino y zanahoria",
+       "key": "pepino",
+       "name": "Pepino",
        "base_unit": "kg",
        "forms": [
-        "pepino",
+        "pepino"
+       ]
+      },
+      {
+       "key": "zanahoria",
+       "name": "Zanahoria",
+       "base_unit": "kg",
+       "forms": [
         "zanahoria"
        ]
       },
       {
-       "key": "calabacin_pimiento",
-       "name": "Calabacín, pimiento y berenjena",
+       "key": "calabacin",
+       "name": "Calabacín",
        "base_unit": "kg",
        "forms": [
-        "calabacín",
+        "calabacín"
+       ]
+      },
+      {
+       "key": "pimiento",
+       "name": "Pimiento",
+       "base_unit": "kg",
+       "forms": [
         "pimiento",
+        "pimiento rojo",
+        "pimiento verde",
+        "pimiento italiano"
+       ]
+      },
+      {
+       "key": "berenjena",
+       "name": "Berenjena",
+       "base_unit": "kg",
+       "forms": [
         "berenjena"
        ]
       },
       {
-       "key": "col_brocoli",
-       "name": "Col, brócoli y coliflor",
+       "key": "col",
+       "name": "Col y repollo",
        "base_unit": "kg",
        "forms": [
         "repollo",
         "col",
-        "brócoli",
-        "coliflor",
         "lombarda"
+       ]
+      },
+      {
+       "key": "brocoli",
+       "name": "Brócoli",
+       "base_unit": "kg",
+       "forms": [
+        "brócoli"
+       ]
+      },
+      {
+       "key": "coliflor",
+       "name": "Coliflor",
+       "base_unit": "kg",
+       "forms": [
+        "coliflor"
        ]
       },
       {
@@ -217,8 +313,8 @@
         "lechuga",
         "cogollo",
         "escarola",
-        "rúcula",
-        "canónigos"
+        "lechuga iceberg",
+        "lechuga romana"
        ]
       },
       {
@@ -228,7 +324,10 @@
        "forms": [
         "ensalada",
         "ensalada preparada",
-        "bolsa de ensalada"
+        "bolsa de ensalada",
+        "rúcula",
+        "canónigos",
+        "brotes tiernos"
        ]
       }
      ]
@@ -1076,8 +1175,7 @@
         "barra",
         "baguette",
         "pan de barra",
-        "chapata",
-        "hogaza"
+        "chapata"
        ]
       },
       {
@@ -1119,7 +1217,8 @@
         "pan sin gluten",
         "pan de pita",
         "pan naan",
-        "pan de centeno"
+        "pan de centeno",
+        "hogaza"
        ]
       },
       {
@@ -1301,6 +1400,9 @@
      "key": "aceite_condimentos",
      "name": "Aceite, vinagre y condimentos",
      "vague": true,
+     "forms": [
+      "especias"
+     ],
      "children": [
       {
        "key": "aceite_oliva",
@@ -1349,19 +1451,47 @@
        ]
       },
       {
-       "key": "especias",
-       "name": "Especias y hierbas secas",
+       "key": "hierbas_secas",
+       "name": "Hierbas secas",
        "base_unit": "kg",
        "forms": [
-        "especias",
         "orégano",
-        "pimentón",
-        "comino",
-        "pimienta",
-        "canela",
-        "colorante",
         "perejil seco",
-        "avecrem en polvo"
+        "albahaca seca",
+        "tomillo",
+        "laurel",
+        "romero"
+       ]
+      },
+      {
+       "key": "pimenton",
+       "name": "Pimentón y colorante",
+       "base_unit": "kg",
+       "forms": [
+        "pimentón",
+        "pimentón dulce",
+        "pimentón picante",
+        "colorante"
+       ]
+      },
+      {
+       "key": "pimienta",
+       "name": "Pimienta",
+       "base_unit": "kg",
+       "forms": [
+        "pimienta",
+        "pimienta negra",
+        "pimienta molida"
+       ]
+      },
+      {
+       "key": "sazonador",
+       "name": "Sazonadores",
+       "base_unit": "kg",
+       "forms": [
+        "sazonador",
+        "sazonador para carne",
+        "ajo en polvo"
        ]
       }
      ]
@@ -1838,13 +1968,21 @@
       },
       {
        "key": "chocolatinas",
-       "name": "Chocolatinas y bombones",
+       "name": "Chocolatinas",
        "base_unit": "kg",
        "forms": [
         "chocolatinas",
-        "bombones",
         "kitkat",
         "huevo kinder"
+       ]
+      },
+      {
+       "key": "bombones",
+       "name": "Bombones",
+       "base_unit": "kg",
+       "forms": [
+        "bombones",
+        "caja de bombones"
        ]
       },
       {
@@ -1859,11 +1997,18 @@
        ]
       },
       {
-       "key": "chicles_caramelos",
-       "name": "Chicles y caramelos",
+       "key": "chicles",
+       "name": "Chicles",
        "base_unit": "kg",
        "forms": [
-        "chicles",
+        "chicles"
+       ]
+      },
+      {
+       "key": "caramelos",
+       "name": "Caramelos",
+       "base_unit": "kg",
+       "forms": [
         "caramelos"
        ]
       },
@@ -1964,6 +2109,10 @@
      "key": "cafe_infusiones",
      "name": "Café, cacao e infusiones",
      "vague": true,
+     "forms": [
+      "cápsulas de café",
+      "cápsulas"
+     ],
      "children": [
       {
        "key": "cafe_molido",
@@ -1978,15 +2127,36 @@
        ]
       },
       {
-       "key": "cafe_capsulas",
-       "name": "Café en cápsulas y monodosis",
+       "key": "capsulas_nespresso",
+       "name": "Cápsulas compatibles Nespresso",
        "base_unit": "ud",
        "forms": [
-        "cápsulas de café",
         "cápsulas nespresso",
-        "cápsulas dolce gusto",
-        "cápsulas tassimo",
-        "monodosis"
+        "cápsulas de café nespresso"
+       ]
+      },
+      {
+       "key": "capsulas_dolce_gusto",
+       "name": "Cápsulas compatibles Dolce Gusto",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas dolce gusto"
+       ]
+      },
+      {
+       "key": "capsulas_tassimo",
+       "name": "Cápsulas compatibles Tassimo",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas tassimo"
+       ]
+      },
+      {
+       "key": "cafe_monodosis",
+       "name": "Café en monodosis",
+       "base_unit": "ud",
+       "forms": [
+        "monodosis de café"
        ]
       },
       {
@@ -2425,14 +2595,23 @@
       },
       {
        "key": "licor_crema",
-       "name": "Cremas de licor y anís",
+       "name": "Cremas de licor",
        "base_unit": "l",
        "forms": [
         "crema de orujo",
         "baileys",
+        "crema de licor"
+       ]
+      },
+      {
+       "key": "anis_aguardiente",
+       "name": "Anís, orujo y pacharán",
+       "base_unit": "l",
+       "forms": [
         "anís",
+        "orujo",
         "pacharán",
-        "orujo"
+        "aguardiente"
        ]
       },
       {
@@ -2532,12 +2711,20 @@
        ]
       },
       {
-       "key": "tartas_churros",
-       "name": "Tartas y churros congelados",
+       "key": "tartas_congeladas",
+       "name": "Tartas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "tarta helada",
+        "tarta congelada"
+       ]
+      },
+      {
+       "key": "churros",
+       "name": "Churros y porras",
        "base_unit": "kg",
        "forms": [
         "churros",
-        "tarta helada",
         "porras"
        ]
       }
@@ -2812,12 +2999,13 @@
         "champú de bebé",
         "crema del pañal",
         "colonia de bebé",
-        "aceite de bebé"
+        "aceite de bebé",
+        "peine de bebé"
        ]
       },
       {
        "key": "biberon_chupete",
-       "name": "Biberones, chupetes y accesorios",
+       "name": "Biberones y chupetes",
        "base_unit": "ud",
        "forms": [
         "biberón",
@@ -3019,7 +3207,8 @@
         "crema de cara",
         "crema facial",
         "contorno de ojos",
-        "sérum facial"
+        "sérum facial",
+        "crema para hombre"
        ]
       }
      ]
@@ -3047,8 +3236,7 @@
        "forms": [
         "espuma de afeitar",
         "gel de afeitar",
-        "after shave",
-        "crema para hombre"
+        "after shave"
        ]
       },
       {
@@ -3252,15 +3440,23 @@
      "vague": true,
      "children": [
       {
-       "key": "detergente",
-       "name": "Detergente para la ropa",
-       "base_unit": "ud",
+       "key": "detergente_liquido",
+       "name": "Detergente líquido",
+       "base_unit": "l",
        "forms": [
         "detergente",
         "detergente líquido",
+        "jabón para la ropa"
+       ]
+      },
+      {
+       "key": "detergente_capsulas",
+       "name": "Detergente en polvo y cápsulas",
+       "base_unit": "ud",
+       "forms": [
         "detergente en polvo",
         "cápsulas de detergente",
-        "jabón para la ropa"
+        "cápsulas de lavadora"
        ]
       },
       {
