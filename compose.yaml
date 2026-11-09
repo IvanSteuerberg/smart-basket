@@ -49,7 +49,7 @@ services:
   migrate:
     <<: *backend
     restart: "no"
-    command: ["smart-basket-migrate", "upgrade", "head"]
+    command: ["sh", "-c", "smart-basket-migrate upgrade head && smart-basket-seed"]
     healthcheck:
       disable: true
     depends_on:

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "chains": [
+    {
+      "code": "mercadona",
+      "name": "Mercadona",
+      "zones": [
+        {"kind": "warehouse", "code": "3683", "name": "León (almacén 3683)"}
+      ]
+    },
+    {"code": "carrefour", "name": "Carrefour", "zones": []}
+  ]
+}
