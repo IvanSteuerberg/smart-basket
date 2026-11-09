@@ -13,7 +13,7 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import text
@@ -36,6 +36,9 @@ log = logging.getLogger("smart_basket.ingestion")
 # A complete run that sees less than half of the available catalog is not trusted to close
 # price intervals: the missing products were most likely a broken crawl, not a withdrawal.
 MIN_SEEN_SHARE = 0.5
+
+# A `running` row this old belongs to a process that died and will never close it.
+ABANDONED_RUN_AFTER = timedelta(hours=6)
 
 
 class IngestSetupError(RuntimeError):
@@ -74,13 +77,11 @@ def ingest_catalog(
 
     try:
         result = collect(adapter, zone_code, max_categories=max_categories)
-    except Exception as exc:  # a crawl escaping `collect` must still close the run
-        _close_run(
+    except BaseException as exc:  # an interrupted crawl must still close the run
+        _close_failed_run(
             database_url,
             run_id=run_id,
-            status="failed",
             products_seen=0,
-            prices_changed=0,
             errors=[{"url": zone_code, "error": str(exc)}],
         )
         raise
@@ -89,7 +90,7 @@ def ingest_catalog(
     observation_time = now or datetime.now(UTC)
     try:
         with session_scope(database_url) as session:
-            prices_changed, errors = _persist(
+            prices_changed, errors, status = _persist(
                 session,
                 run_id=run_id,
                 chain_id=chain_id,
@@ -100,13 +101,11 @@ def ingest_catalog(
                 data_dir=data_dir,
                 observation_time=observation_time,
             )
-    except Exception as exc:
-        _close_run(
+    except BaseException as exc:  # an interrupted persistence must still close the run
+        _close_failed_run(
             database_url,
             run_id=run_id,
-            status="failed",
             products_seen=len(result.products),
-            prices_changed=0,
             errors=[{"url": zone_code, "error": f"persistence failed: {exc}"}],
         )
         raise
@@ -114,7 +113,7 @@ def ingest_catalog(
     _close_run(
         database_url,
         run_id=run_id,
-        status=result.status,
+        status=status,
         products_seen=len(result.products),
         prices_changed=prices_changed,
         errors=errors,
@@ -123,12 +122,33 @@ def ingest_catalog(
         chain_code=adapter.chain_code,
         zone_code=zone_code,
         run_id=run_id,
-        status=result.status,
-        complete=result.complete,
+        status=status,
+        complete=result.complete and status == "succeeded",
         products_seen=len(result.products),
         prices_changed=prices_changed,
         errors=tuple(errors),
     )
+
+
+def _close_failed_run(
+    database_url: str | None,
+    *,
+    run_id: int,
+    products_seen: int,
+    errors: list[dict[str, str]],
+) -> None:
+    """Close a run as failed after an error without masking that original error."""
+    try:
+        _close_run(
+            database_url,
+            run_id=run_id,
+            status="failed",
+            products_seen=products_seen,
+            prices_changed=0,
+            errors=errors,
+        )
+    except Exception:
+        log.exception("could not close run %s after a failure", run_id)
 
 
 def log_ingest_summary(summary: IngestSummary) -> None:
@@ -168,7 +188,8 @@ def _lookup_zone(session: Session, chain_id: int, chain_code: str, zone_code: st
 
 
 def _open_run(session: Session, *, chain_id: int, zone_id: int, started_at: datetime) -> int:
-    """Insert the `running` row and commit it with its own transaction."""
+    """Mark abandoned runs failed, then insert the `running` row with its own transaction."""
+    _close_abandoned_runs(session, chain_id=chain_id, zone_id=zone_id)
     return session.execute(
         text(
             "insert into ingest_run (chain_id, zone_id, kind, started_at, status) "
@@ -176,6 +197,25 @@ def _open_run(session: Session, *, chain_id: int, zone_id: int, started_at: date
         ),
         {"chain": chain_id, "zone": zone_id, "started": started_at},
     ).scalar_one()
+
+
+def _close_abandoned_runs(session: Session, *, chain_id: int, zone_id: int) -> None:
+    """A run of the same chain and zone still `running` after six hours will never close itself."""
+    session.execute(
+        text(
+            "update ingest_run set status = 'failed', "
+            "finished_at = greatest(now(), started_at), "
+            "errors = cast(:errors as jsonb) "
+            "where chain_id = :chain and zone_id = :zone and status = 'running' "
+            "and started_at < now() - :age"
+        ),
+        {
+            "chain": chain_id,
+            "zone": zone_id,
+            "age": ABANDONED_RUN_AFTER,
+            "errors": json.dumps([{"url": None, "error": "abandoned run"}]),
+        },
+    )
 
 
 def _close_run(
@@ -217,8 +257,8 @@ def _persist(
     result: CrawlResult,
     data_dir: Path,
     observation_time: datetime,
-) -> tuple[int, list[dict[str, str]]]:
-    """Write the crawl in one transaction and say how many prices changed and what failed."""
+) -> tuple[int, list[dict[str, str]], FinalStatus]:
+    """Write the crawl in one transaction: prices changed, errors and the final status."""
     _lock_zone(session, zone_id)
 
     _upsert_categories(session, chain_id, result.categories)
@@ -258,6 +298,7 @@ def _persist(
         )
 
     errors = [{"url": error.url, "error": error.error} for error in result.errors]
+    status = result.status
     if result.complete or (result.status == "succeeded" and not result.products):
         available = _available_count(session, chain_id=chain_id, zone_id=zone_id)
         if result.complete and len(result.products) >= available * MIN_SEEN_SHARE:
@@ -274,7 +315,8 @@ def _persist(
                     ),
                 }
             )
-    return prices_changed, errors
+            status = "partial"
+    return prices_changed, errors, status
 
 
 def _lock_zone(session: Session, zone_id: int) -> None:
@@ -411,24 +453,17 @@ def _update_price(
         return 0
 
     if observation_time <= old_from:
-        # The two observations share an instant: closing the interval would make
-        # valid_to <= valid_from, so only the current row is refreshed.
+        # An observation that is not newer than the current interval cannot replace it: closing
+        # the interval would make valid_to <= valid_from, and an older price would travel back in
+        # time. Only the sighting is refreshed.
         session.execute(
             text(
-                "update price_current set price = :price, price_per_unit = :unit_price, "
-                "last_seen_run = :run, last_seen_at = :now "
+                "update price_current set last_seen_run = :run, last_seen_at = :now "
                 "where chain_product_id = :product and zone_id = :zone"
             ),
-            {
-                "product": product_id,
-                "zone": zone_id,
-                "price": product.price,
-                "unit_price": product.price_per_unit,
-                "now": observation_time,
-                "run": run_id,
-            },
+            {"run": run_id, "now": observation_time, "product": product_id, "zone": zone_id},
         )
-        return 1
+        return 0
 
     session.execute(
         text(

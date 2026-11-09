@@ -56,6 +56,11 @@ class CrawlError:
     error: str
 
 
+@dataclass(frozen=True, slots=True)
+class SkippedProduct(CrawlError):
+    """A product the parser dropped; a small share of them does not spoil the run."""
+
+
 type Observation = CategoryObservation | ProductObservation | RawResponse | CrawlError
 
 
@@ -87,19 +92,26 @@ def collect(
     """Consume an adapter once, keeping the first sighting of every category and product.
 
     A failure that escapes the adapter (for example the category tree request) ends the run as
-    `failed`; errors the adapter reports per request make it `partial`. A run is complete only
-    when it was not limited and ended without errors and with at least one product, so a broken
-    or empty crawl can never mark products unavailable.
+    `failed`; errors the adapter reports per request make it `partial`. Products the parser had
+    to drop are recorded but tolerated at 1 % of those seen (at least one), so a single broken
+    item does not spoil a whole catalog. A run is complete only when it was not limited and ended
+    without hard errors and with at least one product, so a broken or empty crawl can never mark
+    products unavailable.
     """
 
     categories: dict[str, CategoryObservation] = {}
     products: dict[str, ProductObservation] = {}
     raw: list[RawResponse] = []
     errors: list[CrawlError] = []
+    skipped = 0
+    hard_error = False
     failed = False
     try:
         for observation in adapter.crawl(zone_code, max_categories=max_categories):
             match observation:
+                case SkippedProduct():
+                    errors.append(observation)
+                    skipped += 1
                 case CategoryObservation():
                     categories.setdefault(observation.code, observation)
                 case ProductObservation():
@@ -108,6 +120,7 @@ def collect(
                     raw.append(observation)
                 case CrawlError():
                     errors.append(observation)
+                    hard_error = True
     except Exception as exc:  # a chain failure must not stop the run bookkeeping
         failed = True
         url = getattr(exc, "url", None) or zone_code
@@ -116,7 +129,7 @@ def collect(
     status: FinalStatus
     if failed:
         status = "failed"
-    elif errors:
+    elif hard_error or skipped > _allowed_skips(len(products)):
         status = "partial"
     else:
         status = "succeeded"
@@ -129,3 +142,8 @@ def collect(
         status=status,
         complete=complete,
     )
+
+
+def _allowed_skips(products_seen: int) -> int:
+    """Tolerate 1 % of the products seen as parser drops, and at least one in small catalogs."""
+    return max(1, products_seen // 100)

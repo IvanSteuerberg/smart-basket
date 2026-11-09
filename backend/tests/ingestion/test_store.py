@@ -391,7 +391,70 @@ def test_persistence_failure_closes_the_run_as_failed(db, tmp_path, monkeypatch)
     assert "disk full" in row.errors[0]["error"]
 
 
-def test_below_threshold_complete_run_marks_nothing_unavailable_and_warns(db, tmp_path):
+def test_interrupted_crawl_closes_the_run_as_failed(db, tmp_path):
+    class InterruptedAdapter:
+        chain_code = "mercadona"
+
+        def crawl(self, zone_code, *, max_categories=None):
+            raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        ingest_catalog(InterruptedAdapter(), "W1", data_dir=tmp_path, now=T1, database_url=db.url)
+
+    row = rows(db, "select status, finished_at from ingest_run")[0]
+    assert row.status == "failed"
+    assert row.finished_at is not None
+
+
+def test_a_failing_close_does_not_hide_the_original_error(db, tmp_path, monkeypatch, caplog):
+    def broken_persist(*args, **kwargs):
+        raise RuntimeError("disk full")
+
+    def broken_close(*args, **kwargs):
+        raise RuntimeError("database gone")
+
+    caplog.set_level("ERROR", logger="smart_basket.ingestion")
+    monkeypatch.setattr(store, "_persist", broken_persist)
+    monkeypatch.setattr(store, "_close_run", broken_close)
+
+    with pytest.raises(RuntimeError, match="disk full"):
+        run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
+
+    assert "could not close run" in caplog.text
+
+
+def test_abandoned_running_run_is_closed_when_the_next_one_starts(db, tmp_path):
+    with db.engine.begin() as conn:
+        old_id = conn.execute(
+            text(
+                "insert into ingest_run (chain_id, zone_id, kind, started_at, status) "
+                "values (:chain, :zone, 'catalog', now() - interval '7 hours', 'running') "
+                "returning id"
+            ),
+            {"chain": db.chain_id, "zone": db.zone_id},
+        ).scalar_one()
+        recent_id = conn.execute(
+            text(
+                "insert into ingest_run (chain_id, zone_id, kind, started_at, status) "
+                "values (:chain, :zone, 'catalog', now() - interval '1 hour', 'running') "
+                "returning id"
+            ),
+            {"chain": db.chain_id, "zone": db.zone_id},
+        ).scalar_one()
+
+    summary = run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
+
+    statuses = dict(rows(db, "select id, status from ingest_run"))
+    assert statuses[old_id] == "failed"
+    assert statuses[recent_id] == "running"
+    assert statuses[summary.run_id] == "succeeded"
+    assert scalar(db, "select errors from ingest_run where id = :id", id=old_id) == [
+        {"url": None, "error": "abandoned run"}
+    ]
+    assert scalar(db, "select finished_at from ingest_run where id = :id", id=old_id) is not None
+
+
+def test_below_threshold_run_ends_partial_and_marks_nothing_unavailable(db, tmp_path):
     observations = (
         *CATEGORIES,
         product("100", "1.00"),
@@ -402,19 +465,20 @@ def test_below_threshold_complete_run_marks_nothing_unavailable_and_warns(db, tm
     run(db, observations, T1, tmp_path)
     second = run(db, (*CATEGORIES, product("100", "1.00")), T2, tmp_path)
 
-    assert second.status == "succeeded"
-    assert second.complete is True
+    assert second.status == "partial"
+    assert second.complete is False
     assert any("available products seen" in error["error"] for error in second.errors)
     assert scalar(db, "select count(*) from chain_product_zone where is_available") == 4
-    stored = scalar(db, "select errors from ingest_run where id = :id", id=second.run_id)
-    assert any("available products seen" in error["error"] for error in stored)
+    stored = rows(db, "select status, errors from ingest_run where id = :id", id=second.run_id)[0]
+    assert stored.status == "partial"
+    assert any("available products seen" in error["error"] for error in stored.errors)
 
 
-def test_empty_run_marks_nothing_unavailable_and_warns(db, tmp_path):
+def test_empty_run_ends_partial_and_marks_nothing_unavailable(db, tmp_path):
     run(db, (*CATEGORIES, product("100", "1.00"), product("200", "2.00")), T1, tmp_path)
     second = run(db, CATEGORIES, T2, tmp_path)
 
-    assert second.status == "succeeded"
+    assert second.status == "partial"
     assert second.complete is False
     assert any("available products seen" in error["error"] for error in second.errors)
     assert scalar(db, "select count(*) from chain_product_zone where is_available") == 2
@@ -432,14 +496,29 @@ def test_product_listed_in_two_sections_is_stored_once(db, tmp_path):
     assert scalar(db, "select count(*) from chain_product where chain_sku = '100'") == 1
 
 
-def test_colliding_observation_times_do_not_break_the_interval_check(db, tmp_path):
+def test_observation_at_the_interval_start_does_not_replace_the_price(db, tmp_path):
     run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
     second = run(db, (*CATEGORIES, product("100", "1.20")), T1, tmp_path)
 
-    assert second.prices_changed == 1
+    assert second.prices_changed == 0
     current = rows(db, "select price, valid_from from price_current")[0]
-    assert current.price == D("1.20")
+    assert current.price == D("1.00")
     assert current.valid_from == T1
+    assert scalar(db, "select count(*) from price_history") == 0
+
+
+def test_older_observation_refreshes_last_seen_without_replacing_the_price(db, tmp_path):
+    run(db, (*CATEGORIES, product("100", "1.00")), T2, tmp_path)
+    older = run(db, (*CATEGORIES, product("100", "1.20")), T1, tmp_path)
+
+    assert older.prices_changed == 0
+    current = rows(
+        db,
+        "select price, valid_from, last_seen_run from price_current",
+    )[0]
+    assert current.price == D("1.00")
+    assert current.valid_from == T2
+    assert current.last_seen_run == older.run_id
     assert scalar(db, "select count(*) from price_history") == 0
 
 

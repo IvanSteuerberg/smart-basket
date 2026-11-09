@@ -18,6 +18,7 @@ from smart_basket.ingestion.base import (
     Observation,
     ProductObservation,
     RawResponse,
+    SkippedProduct,
 )
 from smart_basket.ingestion.http import Fetcher, FetchError
 
@@ -112,8 +113,9 @@ def parse_section(
 ) -> Iterator[CategoryObservation | ProductObservation | CrawlError]:
     """Yield the level 3 sections of a level 2 page and their products.
 
-    With `page_url`, products the parser has to drop are reported as `CrawlError` so the run is
-    not complete; unpublished products are skipped silently.
+    With `page_url`, products the parser has to drop are reported as `SkippedProduct` so the run
+    records them without becoming partial unless there are too many; unpublished products are
+    skipped silently.
     """
     for section in payload.get("categories") or []:
         code = section.get("id")
@@ -127,7 +129,7 @@ def parse_section(
                 yield product
             elif reason is not None and page_url is not None:
                 sku = raw.get("id") if isinstance(raw, Mapping) else None
-                yield CrawlError(
+                yield SkippedProduct(
                     url=page_url,
                     error=f"product {sku if sku is not None else '?'} skipped: {reason}",
                 )
