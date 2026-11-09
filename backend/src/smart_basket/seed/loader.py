@@ -123,7 +123,27 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
         )
 
     rows = taxonomy.rows()
+    incoming_keys = {category.key for category in rows}
+
+    # `category` is unique on (parent_id, name) besides `key`. A key renamed in the file while
+    # keeping its name and parent would collide with the old row, which is stale: detach the
+    # stale row first so the upsert goes through.
+    category_ids: dict[str, int] = {}
+    stale_at: dict[tuple[int | None, str], list[tuple[int, str]]] = {}
+    for existing in session.execute(text("select id, key, name, parent_id from category")):
+        category_ids[existing.key] = existing.id
+        if existing.key not in incoming_keys:
+            stale_at.setdefault((existing.parent_id, existing.name), []).append(
+                (existing.id, existing.key)
+            )
+
     for category in rows:
+        parent_id = category_ids.get(category.parent_key)
+        for stale_id, stale_key in stale_at.pop((parent_id, category.name), []):
+            session.execute(
+                text("update category set name = :name where id = :id"),
+                {"name": f"{category.name} (obsoleta {stale_key})", "id": stale_id},
+            )
         row = session.execute(
             text(
                 "insert into category "
@@ -135,7 +155,7 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
                 "base_unit = excluded.base_unit, "
                 "default_quantity = excluded.default_quantity, forms = excluded.forms, "
                 "is_vague = excluded.is_vague "
-                "returning (xmax = 0) as inserted"
+                "returning id, (xmax = 0) as inserted"
             ),
             {
                 "key": category.key,
@@ -148,10 +168,18 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
                 "is_vague": category.is_vague,
             },
         ).one()
+        category_ids[category.key] = row.id
         _count(report.category, row.inserted)
 
     existing = set(session.execute(text("select key from category")).scalars())
-    report.stale_categories = sorted(existing - {category.key for category in rows})
+    report.stale_categories = sorted(existing - incoming_keys)
+    # Stale categories are kept (canonical products may reference them) but must not feed the
+    # preprocessor lexicon, which uses every category with forms.
+    if report.stale_categories:
+        session.execute(
+            text("update category set forms = '{}' where key = any(:keys)"),
+            {"keys": report.stale_categories},
+        )
 
     # The closure is derived data: drop it and rebuild every (ancestor, descendant, depth).
     session.execute(text("delete from category_closure"))

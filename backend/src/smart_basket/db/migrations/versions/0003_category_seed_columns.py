@@ -12,14 +12,22 @@ down_revision = "0002"
 branch_labels = None
 depends_on = None
 
-# `category` is empty in every deployment, so `key` can be `not null` without a default.
+# `category` may already have rows (downgrade with a seed loaded), so `key` is added nullable,
+# filled from `id`, and only then made `not null` with its unique and check constraints.
 UPGRADE = r"""
 alter table category
-    add column key text not null unique check (key ~ '^[a-z0-9_]+$'),
+    add column key text,
     add column base_unit text check (base_unit in ('kg', 'l', 'ud')),
     add column default_quantity numeric(12, 4) check (default_quantity > 0),
     add column forms text[] not null default '{}',
     add column is_vague boolean not null default false;
+
+update category set key = 'legacy_' || id where key is null;
+
+alter table category
+    alter column key set not null,
+    add constraint category_key_key unique (key),
+    add constraint category_key_check check (key ~ '^[a-z0-9_]+$');
 """
 
 DOWNGRADE = r"""

@@ -174,6 +174,29 @@ def test_category_removed_from_the_file_stays_and_is_reported_stale(session, see
     assert closure_of(session, "agua") == [("agua", 0), ("bebidas", 1)]
 
 
+def test_renamed_key_with_same_name_and_parent_reloads(session, seed_dir, tmp_path):
+    data_dir = copy_seed(seed_dir, tmp_path)
+    load(session, data_dir)
+
+    def rename(data: dict) -> None:
+        for root in data["categories"]:
+            for child in root.get("children", []):
+                if child["key"] == "agua":
+                    child["key"] = "agua_mineral"
+
+    update_json(data_dir / "taxonomy_es.json", rename)
+    report = load(session, data_dir)
+
+    assert report.stale_categories == ["agua"]
+    stale = session.execute(text("select name, forms from category where key = 'agua'")).one()
+    assert stale.name == "Agua (obsoleta agua)"
+    assert stale.forms == []
+    forms = session.execute(
+        text("select forms from category where key = 'agua_mineral'")
+    ).scalar_one()
+    assert forms == ["agua"]
+
+
 def test_chain_wide_zone_exists_once_per_chain(session, seed_dir):
     load(session, seed_dir)
     load(session, seed_dir)
