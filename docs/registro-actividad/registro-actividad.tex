@@ -150,6 +150,7 @@
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
 		\actividad{Clase}{Énfasis en seguir las noticias del sector a través de perfiles de referencia en X, como fuente de actualización continua.}{Orientación para el encargo del TOP 10 de enlaces de seguimiento.}
 		\actividad{Clase}{El profesor encarga preparar una guía breve para personas no técnicas, y/o una exposición en clase, sobre cómo configurar y automatizar OSF como en este proyecto.}{Nuevo encargo pendiente.}
+		\actividad{Clase}{Recomendaciones: la película \textit{Senderos de gloria} y REA (\textit{Reverse Engineer Anything}), el repositorio de GitHub de moda en octubre que conecta agentes de programación como Claude con herramientas de ingeniería inversa.}{Notas de clase del 28 de octubre en OSF.}
 		\actividad{Investigación}{Selección del TOP 10 de enlaces de seguimiento: revisión de los perfiles de X que ya se seguían y comprobación de que las fuentes candidatas de fuera de X siguen activas en 2026, eligiendo blogs, newsletters y un canal de YouTube relacionados con el proyecto y la asignatura.}{Documento TOP 10 de Enlaces de Seguimiento.}
 		\actividad{Documentación}{Guía para no técnicos sobre cómo automatizar OSF con un asistente de IA (token con permisos mínimos, guardado seguro e identificador del proyecto), con capturas de OSF, un prompt maestro reutilizable y una presentación en HTML para exponerla en clase.}{Guía, prompt maestro y presentación en \texttt{docs/guia-osf}.}
 		\actividad{Tarea}{Entrega en OSF del TOP 10 (carpeta de lecturas) y de la guía con su presentación (nueva carpeta de guías), con el índice de la wiki actualizado.}{Encargos del TOP 10 y de la guía entregados.}
@@ -176,7 +177,7 @@
 	\end{description}
 
 	\section*{Semana 9: 2 -- 8 de noviembre}
-	\textit{Resumen:} Semana en curso.
+	\textit{Resumen:} Estructura de la aplicación (decisión 0008), motor de rutas y regla de envases (0009 y 0010), paso a la implementación con las tres primeras entregas (esqueleto, optimizador y preprocesador) revisadas en el portátil, y explicación en clase de la evaluación del proyecto.
 
 	\subsection*{Lunes 2 de noviembre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
@@ -191,17 +192,33 @@
 		\actividad{Análisis}{Revisión de las entregas en el portátil: pruebas automáticas y migraciones, arranque completo del sistema y cálculo de tiempos andando y en coche con el mapa real de León. Se corrige un fallo del primer arranque en Windows por los finales de línea de un script. Con una lista real, las reglas solas superan a los modelos de IA probados (F1 0,9 frente a 0,7-0,8).}{Entregas integradas en la rama principal.}
 	\end{description}
 
+	\subsection*{Miércoles 4 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Clase}{Explicación de la evaluación del proyecto: aprendizaje basado en proyectos, con el contenido en el README de GitHub, una memoria, una presentación de 15 a 20 diapositivas y un vídeo enlazado en el README. La memoria recoge las herramientas usadas, la oportunidad que resuelve el proyecto frente al statu quo, una guía de usuario con al menos dos casos de estudio extremos, un DAFO con auditoría adversarial y las lecciones aprendidas.}{Criterios recogidos en \texttt{knowledge/requirements/course-evaluation.md}.}
+	\end{description}
+
+	\section*{Semana 10: 9 -- 15 de noviembre}
+	\textit{Resumen:} Semana en curso.
+
+	\subsection*{Lunes 9 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Análisis}{Revisión de las decisiones de detalle de las primeras entregas. En el optimizador, una línea que solo vende una tienda incómoda ya no obliga a ir a ella: si cubrirla cuesta mucho más en dinero y tiempo, se propone como parada aparte, con su precio y el desvío que supondría. Una segunda lista real da F1 0,82 con las reglas solas y descubre dos fallos del preprocesador (números que forman parte del nombre, como «omega 3», y alternativas separadas por una barra).}{Decisiones 0013 y 0014 y prueba de modelos actualizadas.}
+		\actividad{Investigación}{Análisis de la competencia: QuéFalta (listas por supermercado con 20 cadenas y 40.000 usuarios, que compara precios solo producto a producto), Soysuper, Carritus, Tiendeo y OkLista. Ninguna reparte la compra entre varias tiendas físicas teniendo en cuenta el tiempo y la ruta, que es el hueco del proyecto.}{Documento de competidores en \texttt{knowledge/product}, base para el DAFO.}
+	\end{description}
+
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Segunda pasada de la prueba de modelos de IA con el preprocesador de reglas y unas 30 listas reales.
+		\item Corregir el optimizador (parada aparte) y el preprocesador (números en los nombres y alternativas con barra).
 		\item Taxonomía semilla del producto canónico (decisión 0007).
+		\item Primer adaptador de recogida de datos (Mercadona) y vocabulario del preprocesador a partir del catálogo.
+		\item Reunir listas reales para la segunda pasada de la prueba de modelos de IA.
 		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
 	
 	% ======================= PENDIENTES =======================
 	\section*{Encargos pendientes}
-	Encargos recogidos en las notas de clase que siguen sin hacer a 1 de noviembre de 2026:
+	Encargos recogidos en las notas de clase que siguen sin hacer a 9 de noviembre de 2026:
 	\begin{itemize}
 		\item Análisis o crítica de los cuatro libros asignados y de dos de libre elección (encargado el 23 de septiembre).
 	\end{itemize}

@@ -9,12 +9,14 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 
 * [Vision](/product/vision.md) - Problem, value proposition and users of Smart Basket.
 * [Glossary](/product/glossary.md) - Domain and technical terms used across the project.
+* [Competitors](/product/competitors.md) - Grocery list and price-comparison apps in Spain and the gap Smart Basket fills.
 
 ## Requirements
 
 * [MVP scope](/requirements/scope.md) - What the MVP covers and excludes, constraints and assumptions agreed with the author.
 * [Functional requirements](/requirements/functional.md) - Functional requirements of the MVP with MoSCoW priorities.
 * [Non-functional requirements](/requirements/non-functional.md) - Quality targets for the MVP; numeric values are proposals to confirm.
+* [Course evaluation](/requirements/course-evaluation.md) - Deliverables and report structure of the course project (class of 2026-11-04).
 
 ## Architecture
 

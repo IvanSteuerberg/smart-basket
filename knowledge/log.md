@@ -1,5 +1,10 @@
 # Log
 
+## 2026-11-09
+
+* **Create** Course evaluation (deliverables and report structure from the class of 2026-11-04) and Competitors (QuéFalta, Soysuper, Carritus, Tiendeo, OkLista; gap and SWOT inputs).
+* **Update** Decision 0013 after the author's review: coverage with a separate-stop option and a configurable coverage margin replaces strict coverage first (code still pending). Decision 0014: known issues with numbers inside product names and slash alternatives, found with a second real list (F1 0.82 rules only, added to the AI model benchmark).
+
 ## 2026-11-03
 
 * **Fix** Local review of the three deliveries on the author's laptop: `.gitattributes` forces LF for shell scripts, since a CRLF checkout broke the database's first start (0011). Verified there: 601 tests and migrations, the whole Compose stack, `bi_reader` limited to `bi`, Metabase, and Valhalla with the real Castilla y León extract (walking and driving matrices). Rules-only result on the local real list added to the AI model benchmark.

@@ -28,6 +28,8 @@ Decision [0005](/decisions/0005-local-first-ai-models.md) (point 3) makes a rule
 * With the LLM only seeing ambiguous lines, its output shrinks to a few dozen tokens, which is what 0005 needs to meet the 5 s target.
 * The segmentation and typo correction depend on the lexicon's vocabulary: a richer lexicon corrects more but also risks wrong corrections, so both have thresholds and every correction is reported.
 
+* **Known issues** (second real list, 2026-11-09): numbers that belong to the product name are taken as quantities ("pastillas omega 3" becomes 3 units of "pastillas omega"; the same would happen with "carpetas A3", "leche 0 %" or "pan 7 cereales"), and a slash between alternatives keeps only the first ("pasta/espaguetis" becomes "pasta") instead of reading it as either. Both are to be fixed.
+
 # Revisit when
 
 * The catalog lexicon exists (measure on real lists, tune thresholds and stop words).
