@@ -25,6 +25,9 @@ x-backend: &backend
     INGEST_DELAY_SECONDS: ${INGEST_DELAY_SECONDS:-1.5}
   extra_hosts:
     - "host.docker.internal:host-gateway"
+  # Raw responses of each ingestion run, compressed (decision 0016); never in the repository.
+  volumes:
+    - ingest-data:/data
 
 services:
   db:
@@ -71,9 +74,6 @@ services:
   worker:
     <<: *backend
     command: ["smart-basket-worker"]
-    # Raw responses of each ingestion run, compressed (decision 0007); never in the repository.
-    volumes:
-      - ingest-data:/data
     healthcheck:
       disable: true
     depends_on:

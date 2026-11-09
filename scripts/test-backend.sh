@@ -12,7 +12,7 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
-main="$(cd "$(git -C "$root" rev-parse --git-common-dir)/.." && pwd)"
+main="$(dirname "$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)")"
 mount="$root"
 command -v cygpath >/dev/null && mount="$(cygpath -w "$root")"
 
