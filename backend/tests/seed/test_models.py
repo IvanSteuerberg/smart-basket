@@ -105,6 +105,14 @@ def test_duplicate_sibling_name_is_rejected():
         )
 
 
+def test_a_form_cannot_belong_to_two_categories():
+    with pytest.raises(ValidationError, match="form 'yogur' belongs to both categories"):
+        taxonomy_file(
+            node("yogur_griego", name="Yogur griego", base_unit="kg", forms=[" Yogur "]),
+            node("yogur_natural", name="Yogur natural", base_unit="kg", forms=["yogur"]),
+        )
+
+
 def test_invalid_base_unit_and_quantity_are_rejected():
     with pytest.raises(ValidationError, match="base_unit"):
         taxonomy_file(node("a", base_unit="g"))

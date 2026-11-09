@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.db.migrate import alembic_config
 from smart_basket.preprocessor import InMemoryLexicon, Preprocessor
-from smart_basket.seed.__main__ import DEFAULT_DATA_DIR
+from smart_basket.seed import DEFAULT_DATA_DIR
 from smart_basket.seed.loader import load_seed
 from smart_basket.vocabulary import build_lexicon
 

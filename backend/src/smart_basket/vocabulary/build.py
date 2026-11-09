@@ -20,9 +20,10 @@ from smart_basket.preprocessor import (
     InMemoryLexicon,
     VariantTerm,
 )
+from smart_basket.seed import DEFAULT_DATA_DIR
 
 #: General Spanish variants shipped with the seed; they are not personal vocabulary.
-VARIANTS_FILE = Path(__file__).resolve().parents[1] / "seed" / "data" / "variants_es.json"
+VARIANTS_FILE = DEFAULT_DATA_DIR / "variants_es.json"
 
 _CATEGORIES_SQL = text(
     "select c.key, c.name, c.forms, c.base_unit, c.default_quantity, c.is_vague, "

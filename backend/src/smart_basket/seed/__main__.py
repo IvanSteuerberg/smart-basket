@@ -4,10 +4,8 @@ import argparse
 from pathlib import Path
 
 from smart_basket.db import session_scope
+from smart_basket.seed import DEFAULT_DATA_DIR
 from smart_basket.seed.loader import load_seed
-
-#: The real seed files are written by the seed data task and shipped inside the package.
-DEFAULT_DATA_DIR = Path(__file__).parent / "data"
 
 
 def main(argv: list[str] | None = None) -> None:

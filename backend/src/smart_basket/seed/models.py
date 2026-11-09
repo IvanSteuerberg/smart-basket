@@ -13,19 +13,13 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field, model_validator
 
+from smart_basket.optimizer.models import BaseUnit
+
 #: Same shape as the `category.key` and `chain.code` checks of migration 0001/0003.
 KEY_PATTERN = r"^[a-z0-9_]+$"
 
 #: Deepest level of the canonical taxonomy.
 MAX_DEPTH = 3
-
-
-class BaseUnit(StrEnum):
-    """Base units allowed by the data model (`base_unit`)."""
-
-    KG = "kg"
-    L = "l"
-    UD = "ud"
 
 
 class ZoneKind(StrEnum):
@@ -121,6 +115,16 @@ class TaxonomyFile(BaseModel):
                     f"duplicate category name {node.name!r} under parent {parent_key!r}"
                 )
             names.add((parent_key, node.name))
+
+        owners: dict[str, str] = {}
+        for row in self.rows():
+            for form in row.forms:
+                normalized = form.strip().lower()
+                owner = owners.setdefault(normalized, row.key)
+                if owner != row.key:
+                    raise ValueError(
+                        f"form {normalized!r} belongs to both categories {owner!r} and {row.key!r}"
+                    )
         return self
 
 

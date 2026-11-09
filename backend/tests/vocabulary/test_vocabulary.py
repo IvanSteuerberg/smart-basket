@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import shutil
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,8 +11,9 @@ import pytest
 from sqlalchemy import text
 
 from smart_basket.preprocessor import InMemoryLexicon, Preprocessor
-from smart_basket.seed.__main__ import DEFAULT_DATA_DIR
-from smart_basket.vocabulary import export_lexicon
+from smart_basket.seed import DEFAULT_DATA_DIR
+from smart_basket.seed.loader import load_seed
+from smart_basket.vocabulary import build_lexicon, export_lexicon
 
 URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = [pytest.mark.db, pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL not set")]
@@ -70,6 +72,32 @@ def test_brands_and_variants_come_from_their_sources(session, lexicon):
     assert len(lexicon.brands()) == expected_brands
     assert len(lexicon.variants()) == len(variants["variants"])
     assert {v.key for v in lexicon.variants()} == {v["key"] for v in variants["variants"]}
+
+
+def test_a_category_removed_from_the_file_leaves_the_lexicon(session, tmp_path):
+    data_dir = tmp_path / "seed"
+    shutil.copytree(DEFAULT_DATA_DIR, data_dir)
+
+    def without_platano(nodes: list[dict]) -> list[dict]:
+        kept = []
+        for node in nodes:
+            if node["key"] == "platano":
+                continue
+            node["children"] = without_platano(node.get("children", []))
+            kept.append(node)
+        return kept
+
+    path = data_dir / "taxonomy_es.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+    data["categories"] = without_platano(data["categories"])
+    path.write_text(json.dumps(data), encoding="utf-8")
+    report = load_seed(session, data_dir)
+    session.commit()
+
+    assert "platano" in report.stale_categories
+    forms = session.execute(text("select forms from category where key = 'platano'")).scalar_one()
+    assert forms == []
+    assert "platano" not in {term.key for term in build_lexicon(session).generic_terms()}
 
 
 def test_export_round_trips(lexicon, tmp_path):
