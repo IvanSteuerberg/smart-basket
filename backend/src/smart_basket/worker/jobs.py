@@ -5,14 +5,31 @@ from datetime import date
 
 from sqlalchemy import text
 
+from smart_basket.config import get_settings
 from smart_basket.db import session_scope
+from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
+from smart_basket.ingestion.store import log_ingest_summary
 
 log = logging.getLogger(__name__)
 
 
 def ingest_catalogs() -> None:
-    """Placeholder: collect catalogs, prices and promotions per chain (decision 0006)."""
-    log.info("ingest_catalogs: no chain adapters yet, nothing to do")
+    """Collect the Mercadona catalog for every configured warehouse (decision 0006).
+
+    A failing warehouse is logged and skipped so the scheduled chain jobs keep running (NFR-09).
+    """
+    settings = get_settings()
+    for warehouse in settings.mercadona_warehouse_codes:
+        adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
+        try:
+            summary = ingest_catalog(adapter, warehouse, data_dir=settings.data_dir)
+            log_ingest_summary(summary)
+        except Exception:
+            log.exception(
+                "catalog ingestion failed for warehouse %s; other chains keep running", warehouse
+            )
+        finally:
+            adapter.close()
 
 
 def match_products() -> None:

@@ -53,7 +53,8 @@ def seed(conn: Connection) -> dict[str, int]:
         c=ids["chain"],
     )
     ids["category"] = scalar(
-        conn, "insert into category (name, level) values ('Lácteos', 1) returning id"
+        conn,
+        "insert into category (key, name, level) values ('lacteos', 'Lácteos', 1) returning id",
     )
     ids["canonical"] = scalar(
         conn,
@@ -268,6 +269,41 @@ def test_bi_reader_reads_bi_only(conn):
     assert scalar(conn, "select count(*) from bi.v_price_asof") >= 0
 
 
+def test_category_seed_columns_downgrade_and_upgrade(engine):
+    cfg = alembic_config(URL)
+    columns_sql = "select column_name from information_schema.columns where table_name = 'category'"
+    command.downgrade(cfg, "0002")
+    with engine.connect() as c:
+        columns = set(c.execute(text(columns_sql)).scalars())
+    assert "key" not in columns
+    assert "forms" not in columns
+    command.upgrade(cfg, "head")
+    with engine.connect() as c:
+        columns = set(c.execute(text(columns_sql)).scalars())
+        assert {"key", "base_unit", "default_quantity", "forms", "is_vague"} <= columns
+        assert scalar(c, "select version_num from alembic_version") == "0003"
+
+
+def test_category_seed_columns_downgrade_and_upgrade_with_rows(engine):
+    cfg = alembic_config(URL)
+    with engine.begin() as c:
+        cat = c.execute(
+            text(
+                "insert into category (key, name, level, base_unit, forms, is_vague) "
+                "values ('seeded', 'Seeded', 1, 'kg', array['semilla'], true) returning id"
+            )
+        ).scalar_one()
+    command.downgrade(cfg, "0002")
+    command.upgrade(cfg, "head")
+    with engine.connect() as c:
+        row = c.execute(
+            text("select key, forms, is_vague from category where id = :id"), {"id": cat}
+        ).one()
+    assert row.key == f"legacy_{cat}"
+    assert row.forms == []
+    assert row.is_vague is False
+
+
 def test_downgrade_and_upgrade_again(engine):
     cfg = alembic_config(URL)
     command.downgrade(cfg, "base")
@@ -276,4 +312,4 @@ def test_downgrade_and_upgrade_again(engine):
         assert scalar(c, "select to_regnamespace('bi') is null")
     command.upgrade(cfg, "head")
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0002"
+        assert scalar(c, "select version_num from alembic_version") == "0003"

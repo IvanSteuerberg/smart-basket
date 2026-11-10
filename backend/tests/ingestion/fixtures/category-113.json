@@ -1,0 +1,29 @@
+{
+  "id": 113,
+  "name": "Especias",
+  "categories": [
+    {
+      "id": 430,
+      "name": "Sal",
+      "products": [
+        {
+          "id": "5000",
+          "display_name": "Sal fina 1 kg",
+          "packaging": "Bolsa",
+          "share_url": "https://example.test/product/5000",
+          "published": true,
+          "price_instructions": {
+            "unit_price": "0.80",
+            "bulk_price": "0.80",
+            "reference_format": "kg",
+            "unit_size": 1.0,
+            "size_format": "kg",
+            "is_pack": false,
+            "pack_size": null,
+            "total_units": null
+          }
+        }
+      ]
+    }
+  ]
+}

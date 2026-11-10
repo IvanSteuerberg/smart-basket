@@ -43,6 +43,8 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0012 Schema implementation details](/decisions/0012-schema-implementation-details.md) - Columns added to the logical model, yearly partition management, validity types, the as-of price view and embeddings without a fixed dimension.
 * [0013 Basket optimizer rules](/decisions/0013-basket-optimizer-rules.md) - Stores compared by comparable cost, coverage first, round trips, missing lines with a reason, promotion details and tie-breaks; the store count can rise with lambda.
 * [0014 Rule-based preprocessor v1](/decisions/0014-rule-based-preprocessor.md) - Normalization pipeline, resolution criteria, the lexicon interface with a synthetic fixture, and the LLM provider protocol for unresolved lines.
+* [0015 Seed taxonomy](/decisions/0015-seed-taxonomy.md) - Three levels of interchangeable product types covering the whole Mercadona catalog, with forms for the preprocessor, loaded idempotently after every migration.
+* [0016 Ingestion adapters](/decisions/0016-ingestion-adapters.md) - One adapter per chain, shared persistence with change-only prices, run bookkeeping that survives failures and safeguards before marking products unavailable.
 
 ## Evaluation
 

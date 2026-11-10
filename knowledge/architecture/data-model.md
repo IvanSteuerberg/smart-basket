@@ -19,7 +19,7 @@ Logical model behind [0007](/decisions/0007-data-model.md). Column lists name th
 | `chain` | id, code, name | Mercadona, Carrefour, Dia, Alcampo, Gadis, Lupa, Alimerka, Aldi, Lidl, E.Leclerc |
 | `zone` | id, chain_id, kind (`chain`, `postal_code`, `warehouse`, `salepoint`), code | Every chain has a chain-wide zone; real zones such as Mercadona warehouse `3683` or Carrefour salepoint `0000GV` are added as needed |
 | `store` | id, chain_id, zone_id, osm_id, name, format, geom (PostGIS point), opening_hours, is_active | From OpenStreetMap; format feeds [FR-40](/requirements/functional.md) |
-| `category` | id, parent_id, name, level | Own seed taxonomy, 120-200 leaves; a closure table lists ancestors |
+| `category` | id, key, parent_id, name, level, base_unit, default_quantity, forms, is_vague | Own seed taxonomy ([0015](/decisions/0015-seed-taxonomy.md)): 3 levels, 338 leaves; a closure table lists ancestors |
 | `chain_category` | chain_id, code, name, category_id | Maps each chain's tree to the seed taxonomy |
 | `brand` | id, name, is_private_label, owner_chain_id | Hacendado, Carrefour, Dia, Auchan… marked as private labels |
 

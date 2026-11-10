@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0008 Application structure and stack"
 description: One repository with a Python backend and a React web app, run as Docker Compose services on the laptop, with Ollama native on the host and the HTTP API as the only contract for clients.
 tags: [decision, architecture, deployment, stack]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-02T13:00:00+01:00

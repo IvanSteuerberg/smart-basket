@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0012 Schema implementation details"
 description: Choices made when turning the logical data model into DDL - extra columns, partition management, validity types, the as-of rule of the price view and pending embedding dimensions.
 tags: [decision, data, persistence, bi, implementation]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-03T01:10:00+01:00

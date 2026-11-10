@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "key": "lacteos_huevos",
+      "name": "Lácteos y huevos",
+      "children": [
+        {
+          "key": "yogures",
+          "name": "Yogures",
+          "vague": true,
+          "forms": ["yogur", "yogures"],
+          "children": [
+            {
+              "key": "yogur_griego",
+              "name": "Yogur griego",
+              "base_unit": "kg",
+              "default_quantity": 0.5,
+              "forms": ["yogur griego", "griego"]
+            },
+            {
+              "key": "yogur_natural",
+              "name": "Yogur natural",
+              "base_unit": "kg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "bebidas",
+      "name": "Bebidas",
+      "children": [
+        {
+          "key": "agua",
+          "name": "Agua",
+          "base_unit": "l"
+        }
+      ]
+    }
+  ]
+}

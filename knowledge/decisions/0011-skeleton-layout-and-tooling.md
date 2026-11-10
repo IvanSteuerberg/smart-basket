@@ -3,7 +3,7 @@ type: Architecture Decision
 title: "0011 Skeleton layout and tooling"
 description: Repository layout, pinned versions, database image, migrations, Compose services and CI of the first implementation delivery.
 tags: [decision, architecture, deployment, stack, implementation]
-status: draft
+status: stable
 generated:
   by: claude-code/claude-opus-5-5
   at: 2026-11-03T01:10:00+01:00

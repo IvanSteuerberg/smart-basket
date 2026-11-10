@@ -1,0 +1,3732 @@
+{
+ "version": 1,
+ "chain": "mercadona",
+ "categories": [
+  {
+   "code": "12",
+   "name": "Aceite, especias y salsas",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "112",
+   "name": "Aceite, vinagre y sal",
+   "parent_code": "12",
+   "category": null
+  },
+  {
+   "code": "420",
+   "name": "Aceite de oliva",
+   "parent_code": "112",
+   "category": "aceite_oliva"
+  },
+  {
+   "code": "422",
+   "name": "Vinagre y otros aderezos",
+   "parent_code": "112",
+   "category": "vinagre"
+  },
+  {
+   "code": "421",
+   "name": "Otros aceites",
+   "parent_code": "112",
+   "category": "aceite_otros"
+  },
+  {
+   "code": "424",
+   "name": "Sal y bicarbonato",
+   "parent_code": "112",
+   "category": "sal"
+  },
+  {
+   "code": "115",
+   "name": "Especias",
+   "parent_code": "12",
+   "category": null
+  },
+  {
+   "code": "425",
+   "name": "Hierbas",
+   "parent_code": "115",
+   "category": "hierbas_secas"
+  },
+  {
+   "code": "840",
+   "name": "Colorante y pimentón",
+   "parent_code": "115",
+   "category": "pimenton"
+  },
+  {
+   "code": "841",
+   "name": "Pimienta",
+   "parent_code": "115",
+   "category": "pimienta"
+  },
+  {
+   "code": "431",
+   "name": "Otras especias",
+   "parent_code": "115",
+   "category": "aceite_condimentos"
+  },
+  {
+   "code": "430",
+   "name": "Sazonadores",
+   "parent_code": "115",
+   "category": "sazonador"
+  },
+  {
+   "code": "116",
+   "name": "Mayonesa, ketchup y mostaza",
+   "parent_code": "12",
+   "category": null
+  },
+  {
+   "code": "432",
+   "name": "Mayonesa",
+   "parent_code": "116",
+   "category": "mayonesa"
+  },
+  {
+   "code": "433",
+   "name": "Ketchup",
+   "parent_code": "116",
+   "category": "ketchup"
+  },
+  {
+   "code": "793",
+   "name": "Mostaza",
+   "parent_code": "116",
+   "category": "mostaza"
+  },
+  {
+   "code": "792",
+   "name": "Allioli",
+   "parent_code": "116",
+   "category": "allioli"
+  },
+  {
+   "code": "117",
+   "name": "Otras salsas",
+   "parent_code": "12",
+   "category": null
+  },
+  {
+   "code": "435",
+   "name": "Tomate frito",
+   "parent_code": "117",
+   "category": "tomate_frito"
+  },
+  {
+   "code": "843",
+   "name": "Salsas para carnes",
+   "parent_code": "117",
+   "category": "salsa_carne"
+  },
+  {
+   "code": "842",
+   "name": "Salsas para pasta",
+   "parent_code": "117",
+   "category": "salsa_pasta"
+  },
+  {
+   "code": "844",
+   "name": "Salsas orientales",
+   "parent_code": "117",
+   "category": "salsa_oriental"
+  },
+  {
+   "code": "440",
+   "name": "Otras salsas",
+   "parent_code": "117",
+   "category": "salsas"
+  },
+  {
+   "code": "18",
+   "name": "Agua y refrescos",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "156",
+   "name": "Agua",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "525",
+   "name": "Agua sin gas",
+   "parent_code": "156",
+   "category": "agua_sin_gas"
+  },
+  {
+   "code": "528",
+   "name": "Agua con gas",
+   "parent_code": "156",
+   "category": "agua_con_gas"
+  },
+  {
+   "code": "529",
+   "name": "Gaseosa",
+   "parent_code": "156",
+   "category": "agua_con_gas"
+  },
+  {
+   "code": "163",
+   "name": "Isotónico y energético",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "548",
+   "name": "Isotónico",
+   "parent_code": "163",
+   "category": "isotonica"
+  },
+  {
+   "code": "540",
+   "name": "Energético",
+   "parent_code": "163",
+   "category": "energetica"
+  },
+  {
+   "code": "158",
+   "name": "Refresco de cola",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "530",
+   "name": "Cola clásica",
+   "parent_code": "158",
+   "category": "refresco_cola"
+  },
+  {
+   "code": "535",
+   "name": "Cola zero",
+   "parent_code": "158",
+   "category": "refresco_cola"
+  },
+  {
+   "code": "534",
+   "name": "Cola sin cafeína",
+   "parent_code": "158",
+   "category": "refresco_cola"
+  },
+  {
+   "code": "159",
+   "name": "Refresco de naranja y de limón",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "539",
+   "name": "Limón",
+   "parent_code": "159",
+   "category": "refresco_naranja_limon"
+  },
+  {
+   "code": "794",
+   "name": "Lima limón",
+   "parent_code": "159",
+   "category": "refresco_naranja_limon"
+  },
+  {
+   "code": "537",
+   "name": "Naranja",
+   "parent_code": "159",
+   "category": "refresco_naranja_limon"
+  },
+  {
+   "code": "161",
+   "name": "Tónica y bitter",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "541",
+   "name": "Tónica y bitter",
+   "parent_code": "161",
+   "category": "tonica"
+  },
+  {
+   "code": "162",
+   "name": "Refresco de té y sin gas",
+   "parent_code": "18",
+   "category": null
+  },
+  {
+   "code": "544",
+   "name": "Té",
+   "parent_code": "162",
+   "category": "refresco_te"
+  },
+  {
+   "code": "546",
+   "name": "Otros refrescos sin gas",
+   "parent_code": "162",
+   "category": "refrescos"
+  },
+  {
+   "code": "15",
+   "name": "Aperitivos",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "135",
+   "name": "Aceitunas y encurtidos",
+   "parent_code": "15",
+   "category": null
+  },
+  {
+   "code": "484",
+   "name": "Aceitunas verdes",
+   "parent_code": "135",
+   "category": "aceitunas"
+  },
+  {
+   "code": "486",
+   "name": "Aceitunas negras",
+   "parent_code": "135",
+   "category": "aceitunas"
+  },
+  {
+   "code": "488",
+   "name": "Cóctel y banderillas",
+   "parent_code": "135",
+   "category": "aceitunas"
+  },
+  {
+   "code": "489",
+   "name": "Pepinillos y otros encurtidos",
+   "parent_code": "135",
+   "category": "encurtidos"
+  },
+  {
+   "code": "133",
+   "name": "Frutos secos y fruta desecada",
+   "parent_code": "15",
+   "category": null
+  },
+  {
+   "code": "479",
+   "name": "Frutos secos",
+   "parent_code": "133",
+   "category": "frutos_secos"
+  },
+  {
+   "code": "846",
+   "name": "Cocktails",
+   "parent_code": "133",
+   "category": "frutos_secos"
+  },
+  {
+   "code": "483",
+   "name": "Fruta desecada",
+   "parent_code": "133",
+   "category": "fruta_desecada"
+  },
+  {
+   "code": "132",
+   "name": "Patatas fritas y snacks",
+   "parent_code": "15",
+   "category": null
+  },
+  {
+   "code": "474",
+   "name": "Patatas fritas",
+   "parent_code": "132",
+   "category": "patatas_fritas"
+  },
+  {
+   "code": "475",
+   "name": "Snacks",
+   "parent_code": "132",
+   "category": "snacks"
+  },
+  {
+   "code": "13",
+   "name": "Arroz, legumbres y pasta",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "118",
+   "name": "Arroz",
+   "parent_code": "13",
+   "category": null
+  },
+  {
+   "code": "441",
+   "name": "Arroz",
+   "parent_code": "118",
+   "category": "arroz"
+  },
+  {
+   "code": "121",
+   "name": "Legumbres",
+   "parent_code": "13",
+   "category": null
+  },
+  {
+   "code": "801",
+   "name": "Garbanzos",
+   "parent_code": "121",
+   "category": "garbanzos"
+  },
+  {
+   "code": "802",
+   "name": "Alubias",
+   "parent_code": "121",
+   "category": "alubias"
+  },
+  {
+   "code": "803",
+   "name": "Lentejas y otros",
+   "parent_code": "121",
+   "category": "lentejas"
+  },
+  {
+   "code": "120",
+   "name": "Pasta y fideos",
+   "parent_code": "13",
+   "category": null
+  },
+  {
+   "code": "442",
+   "name": "Fideos",
+   "parent_code": "120",
+   "category": "fideos"
+  },
+  {
+   "code": "443",
+   "name": "Macarrones, pajaritas y hélices",
+   "parent_code": "120",
+   "category": "pasta_corta"
+  },
+  {
+   "code": "444",
+   "name": "Spaghetti y tallarines",
+   "parent_code": "120",
+   "category": "pasta_larga"
+  },
+  {
+   "code": "446",
+   "name": "Pasta rellena",
+   "parent_code": "120",
+   "category": "pasta_rellena"
+  },
+  {
+   "code": "800",
+   "name": "Fideos orientales",
+   "parent_code": "120",
+   "category": "pasta_oriental"
+  },
+  {
+   "code": "447",
+   "name": "Lasaña y canelones",
+   "parent_code": "120",
+   "category": "lasana_canelones"
+  },
+  {
+   "code": "9",
+   "name": "Azúcar, caramelos y chocolate",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "89",
+   "name": "Azúcar y edulcorante",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "378",
+   "name": "Azúcar",
+   "parent_code": "89",
+   "category": "azucar"
+  },
+  {
+   "code": "819",
+   "name": "Edulcorante y otros",
+   "parent_code": "89",
+   "category": "edulcorante"
+  },
+  {
+   "code": "95",
+   "name": "Chicles y caramelos",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "389",
+   "name": "Chicles",
+   "parent_code": "95",
+   "category": "chicles"
+  },
+  {
+   "code": "394",
+   "name": "Caramelos",
+   "parent_code": "95",
+   "category": "caramelos"
+  },
+  {
+   "code": "92",
+   "name": "Chocolate",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "382",
+   "name": "Chocolate negro",
+   "parent_code": "92",
+   "category": "chocolate"
+  },
+  {
+   "code": "381",
+   "name": "Chocolate con leche",
+   "parent_code": "92",
+   "category": "chocolate"
+  },
+  {
+   "code": "383",
+   "name": "Chocolate blanco",
+   "parent_code": "92",
+   "category": "chocolate"
+  },
+  {
+   "code": "386",
+   "name": "Chocolatinas",
+   "parent_code": "92",
+   "category": "chocolatinas"
+  },
+  {
+   "code": "804",
+   "name": "Bombones",
+   "parent_code": "92",
+   "category": "bombones"
+  },
+  {
+   "code": "388",
+   "name": "Cremas de untar",
+   "parent_code": "92",
+   "category": "crema_untar"
+  },
+  {
+   "code": "97",
+   "name": "Golosinas",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "395",
+   "name": "Golosinas",
+   "parent_code": "97",
+   "category": "golosinas"
+  },
+  {
+   "code": "90",
+   "name": "Mermelada y miel",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "379",
+   "name": "Mermelada",
+   "parent_code": "90",
+   "category": "mermelada"
+  },
+  {
+   "code": "380",
+   "name": "Miel",
+   "parent_code": "90",
+   "category": "miel"
+  },
+  {
+   "code": "818",
+   "name": "Confitura y otros",
+   "parent_code": "90",
+   "category": "mermelada"
+  },
+  {
+   "code": "833",
+   "name": "Turrones",
+   "parent_code": "9",
+   "category": null
+  },
+  {
+   "code": "830",
+   "name": "Turrones",
+   "parent_code": "833",
+   "category": "dulces_navidad"
+  },
+  {
+   "code": "24",
+   "name": "Bebé",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "216",
+   "name": "Alimentación infantil",
+   "parent_code": "24",
+   "category": null
+  },
+  {
+   "code": "691",
+   "name": "Tarritos salados",
+   "parent_code": "216",
+   "category": "tarritos"
+  },
+  {
+   "code": "693",
+   "name": "Tarritos de fruta",
+   "parent_code": "216",
+   "category": "tarritos"
+  },
+  {
+   "code": "805",
+   "name": "Yogures y postres",
+   "parent_code": "216",
+   "category": "postre_bebe"
+  },
+  {
+   "code": "689",
+   "name": "Leche",
+   "parent_code": "216",
+   "category": "leche_bebe"
+  },
+  {
+   "code": "820",
+   "name": "Leche en polvo",
+   "parent_code": "216",
+   "category": "leche_bebe"
+  },
+  {
+   "code": "690",
+   "name": "Papillas",
+   "parent_code": "216",
+   "category": "papillas"
+  },
+  {
+   "code": "219",
+   "name": "Biberón y chupete",
+   "parent_code": "24",
+   "category": null
+  },
+  {
+   "code": "707",
+   "name": "Biberón",
+   "parent_code": "219",
+   "category": "biberon_chupete"
+  },
+  {
+   "code": "708",
+   "name": "Chupete",
+   "parent_code": "219",
+   "category": "biberon_chupete"
+  },
+  {
+   "code": "218",
+   "name": "Higiene y cuidado",
+   "parent_code": "24",
+   "category": null
+  },
+  {
+   "code": "703",
+   "name": "Champú y jabón",
+   "parent_code": "218",
+   "category": "higiene_bebe"
+  },
+  {
+   "code": "704",
+   "name": "Aceite y crema",
+   "parent_code": "218",
+   "category": "higiene_bebe"
+  },
+  {
+   "code": "705",
+   "name": "Colonia",
+   "parent_code": "218",
+   "category": "higiene_bebe"
+  },
+  {
+   "code": "706",
+   "name": "Accesorios",
+   "parent_code": "218",
+   "category": "higiene_bebe"
+  },
+  {
+   "code": "217",
+   "name": "Toallitas y pañales",
+   "parent_code": "24",
+   "category": null
+  },
+  {
+   "code": "695",
+   "name": "Toallitas",
+   "parent_code": "217",
+   "category": "toallitas_bebe"
+  },
+  {
+   "code": "702",
+   "name": "Braguita y otros",
+   "parent_code": "217",
+   "category": "panales"
+  },
+  {
+   "code": "698",
+   "name": "Pañal talla de 0 a 3",
+   "parent_code": "217",
+   "category": "panales"
+  },
+  {
+   "code": "699",
+   "name": "Pañal talla de 4 a XL",
+   "parent_code": "217",
+   "category": "panales"
+  },
+  {
+   "code": "19",
+   "name": "Bodega",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "164",
+   "name": "Cerveza",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "549",
+   "name": "Cerveza lata",
+   "parent_code": "164",
+   "category": "cerveza_alcohol"
+  },
+  {
+   "code": "550",
+   "name": "Cerveza botella y botellín",
+   "parent_code": "164",
+   "category": "cerveza_alcohol"
+  },
+  {
+   "code": "552",
+   "name": "Combinado de cerveza",
+   "parent_code": "164",
+   "category": "cerveza_combinada"
+  },
+  {
+   "code": "166",
+   "name": "Cerveza sin alcohol",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "556",
+   "name": "Cerveza botella y botellín",
+   "parent_code": "166",
+   "category": "cerveza_sin"
+  },
+  {
+   "code": "555",
+   "name": "Cerveza lata",
+   "parent_code": "166",
+   "category": "cerveza_sin"
+  },
+  {
+   "code": "181",
+   "name": "Licores",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "589",
+   "name": "Vermouth y aperitivos",
+   "parent_code": "181",
+   "category": "vermut"
+  },
+  {
+   "code": "586",
+   "name": "Ginebra",
+   "parent_code": "181",
+   "category": "ginebra"
+  },
+  {
+   "code": "798",
+   "name": "Brandy",
+   "parent_code": "181",
+   "category": "brandy"
+  },
+  {
+   "code": "584",
+   "name": "Whisky",
+   "parent_code": "181",
+   "category": "whisky"
+  },
+  {
+   "code": "588",
+   "name": "Ron",
+   "parent_code": "181",
+   "category": "ron"
+  },
+  {
+   "code": "593",
+   "name": "Cremas",
+   "parent_code": "181",
+   "category": "licor_crema"
+  },
+  {
+   "code": "797",
+   "name": "Vodka",
+   "parent_code": "181",
+   "category": "vodka"
+  },
+  {
+   "code": "590",
+   "name": "Anís",
+   "parent_code": "181",
+   "category": "anis_aguardiente"
+  },
+  {
+   "code": "592",
+   "name": "Otros licores",
+   "parent_code": "181",
+   "category": "licores"
+  },
+  {
+   "code": "594",
+   "name": "Licores sin alcohol",
+   "parent_code": "181",
+   "category": "licor_sin"
+  },
+  {
+   "code": "174",
+   "name": "Sidra y cava",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "583",
+   "name": "Sidra",
+   "parent_code": "174",
+   "category": "sidra"
+  },
+  {
+   "code": "795",
+   "name": "Cava brut",
+   "parent_code": "174",
+   "category": "espumoso"
+  },
+  {
+   "code": "580",
+   "name": "Cava semi seco",
+   "parent_code": "174",
+   "category": "espumoso"
+  },
+  {
+   "code": "168",
+   "name": "Tinto de verano y sangría",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "561",
+   "name": "Tinto de verano y sangría",
+   "parent_code": "168",
+   "category": "tinto_verano"
+  },
+  {
+   "code": "170",
+   "name": "Vino blanco",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "558",
+   "name": "Vino blanco de mesa",
+   "parent_code": "170",
+   "category": "vino_blanco"
+  },
+  {
+   "code": "571",
+   "name": "Rioja y otras denominaciones",
+   "parent_code": "170",
+   "category": "vino_blanco"
+  },
+  {
+   "code": "570",
+   "name": "Rueda",
+   "parent_code": "170",
+   "category": "vino_blanco"
+  },
+  {
+   "code": "791",
+   "name": "Vinos semidulces",
+   "parent_code": "170",
+   "category": "vino_blanco"
+  },
+  {
+   "code": "578",
+   "name": "Vinos dulces y mosto",
+   "parent_code": "170",
+   "category": "vino_dulce"
+  },
+  {
+   "code": "173",
+   "name": "Vino lambrusco y espumoso",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "579",
+   "name": "Vino lambrusco y espumoso",
+   "parent_code": "173",
+   "category": "espumoso"
+  },
+  {
+   "code": "171",
+   "name": "Vino rosado",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "577",
+   "name": "Vino rosado",
+   "parent_code": "171",
+   "category": "vino_rosado"
+  },
+  {
+   "code": "169",
+   "name": "Vino tinto",
+   "parent_code": "19",
+   "category": null
+  },
+  {
+   "code": "557",
+   "name": "Vino tinto de mesa",
+   "parent_code": "169",
+   "category": "vino_tinto"
+  },
+  {
+   "code": "563",
+   "name": "Rioja",
+   "parent_code": "169",
+   "category": "vino_tinto"
+  },
+  {
+   "code": "566",
+   "name": "Castilla la Mancha",
+   "parent_code": "169",
+   "category": "vino_tinto"
+  },
+  {
+   "code": "564",
+   "name": "Ribera del Duero",
+   "parent_code": "169",
+   "category": "vino_tinto"
+  },
+  {
+   "code": "569",
+   "name": "Otros vinos tintos",
+   "parent_code": "169",
+   "category": "vino_tinto"
+  },
+  {
+   "code": "8",
+   "name": "Cacao, café e infusiones",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "86",
+   "name": "Cacao soluble y chocolate a la taza",
+   "parent_code": "8",
+   "category": null
+  },
+  {
+   "code": "373",
+   "name": "Cacao soluble",
+   "parent_code": "86",
+   "category": "cacao_soluble"
+  },
+  {
+   "code": "374",
+   "name": "Chocolate a la taza",
+   "parent_code": "86",
+   "category": "chocolate_taza"
+  },
+  {
+   "code": "81",
+   "name": "Café cápsula y monodosis",
+   "parent_code": "8",
+   "category": null
+  },
+  {
+   "code": "364",
+   "name": "Cápsulas compatibles Nespresso",
+   "parent_code": "81",
+   "category": "capsulas_nespresso"
+  },
+  {
+   "code": "365",
+   "name": "Cápsulas compatibles Dolce gusto",
+   "parent_code": "81",
+   "category": "capsulas_dolce_gusto"
+  },
+  {
+   "code": "366",
+   "name": "Cápsulas compatibles Tassimo",
+   "parent_code": "81",
+   "category": "capsulas_tassimo"
+  },
+  {
+   "code": "367",
+   "name": "Monodosis",
+   "parent_code": "81",
+   "category": "cafe_monodosis"
+  },
+  {
+   "code": "83",
+   "name": "Café molido y en grano",
+   "parent_code": "8",
+   "category": null
+  },
+  {
+   "code": "368",
+   "name": "Café molido",
+   "parent_code": "83",
+   "category": "cafe_molido"
+  },
+  {
+   "code": "369",
+   "name": "Café en grano",
+   "parent_code": "83",
+   "category": "cafe_grano"
+  },
+  {
+   "code": "84",
+   "name": "Café soluble y otras bebidas",
+   "parent_code": "8",
+   "category": null
+  },
+  {
+   "code": "370",
+   "name": "Café soluble",
+   "parent_code": "84",
+   "category": "cafe_soluble"
+  },
+  {
+   "code": "372",
+   "name": "Bebidas frías",
+   "parent_code": "84",
+   "category": "bebida_cafe"
+  },
+  {
+   "code": "371",
+   "name": "Otros",
+   "parent_code": "84",
+   "category": "bebida_cafe"
+  },
+  {
+   "code": "88",
+   "name": "Té e infusiones",
+   "parent_code": "8",
+   "category": null
+  },
+  {
+   "code": "376",
+   "name": "Té",
+   "parent_code": "88",
+   "category": "te"
+  },
+  {
+   "code": "377",
+   "name": "Infusiones",
+   "parent_code": "88",
+   "category": "infusiones"
+  },
+  {
+   "code": "3",
+   "name": "Carne",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "46",
+   "name": "Arreglos",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "289",
+   "name": "Arreglos",
+   "parent_code": "46",
+   "category": "arreglos"
+  },
+  {
+   "code": "38",
+   "name": "Aves y pollo",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "282",
+   "name": "Pavo y otras aves",
+   "parent_code": "38",
+   "category": "carne_fresca"
+  },
+  {
+   "code": "281",
+   "name": "Pollo",
+   "parent_code": "38",
+   "category": "pollo"
+  },
+  {
+   "code": "47",
+   "name": "Carne congelada",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "290",
+   "name": "Carne congelada",
+   "parent_code": "47",
+   "category": "carne_congelada"
+  },
+  {
+   "code": "37",
+   "name": "Cerdo",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "280",
+   "name": "Cerdo",
+   "parent_code": "37",
+   "category": "cerdo"
+  },
+  {
+   "code": "42",
+   "name": "Conejo y cordero",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "285",
+   "name": "Conejo",
+   "parent_code": "42",
+   "category": "conejo"
+  },
+  {
+   "code": "284",
+   "name": "Cordero",
+   "parent_code": "42",
+   "category": "cordero"
+  },
+  {
+   "code": "43",
+   "name": "Embutido",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "286",
+   "name": "Embutido",
+   "parent_code": "43",
+   "category": "carne_fresca"
+  },
+  {
+   "code": "44",
+   "name": "Hamburguesas y picadas",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "287",
+   "name": "Hamburguesas",
+   "parent_code": "44",
+   "category": "hamburguesa"
+  },
+  {
+   "code": "783",
+   "name": "Picadas y otros",
+   "parent_code": "44",
+   "category": "carne_picada"
+  },
+  {
+   "code": "40",
+   "name": "Vacuno",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "283",
+   "name": "Vacuno",
+   "parent_code": "40",
+   "category": "vacuno"
+  },
+  {
+   "code": "45",
+   "name": "Empanados y elaborados",
+   "parent_code": "3",
+   "category": null
+  },
+  {
+   "code": "291",
+   "name": "Empanados y rebozados congelados",
+   "parent_code": "45",
+   "category": "rebozados"
+  },
+  {
+   "code": "288",
+   "name": "Empanados y elaborados",
+   "parent_code": "45",
+   "category": "carne_elaborada"
+  },
+  {
+   "code": "7",
+   "name": "Cereales y galletas",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "78",
+   "name": "Cereales",
+   "parent_code": "7",
+   "category": null
+  },
+  {
+   "code": "355",
+   "name": "Cereales",
+   "parent_code": "78",
+   "category": "cereales"
+  },
+  {
+   "code": "356",
+   "name": "Cereales integrales y muesli",
+   "parent_code": "78",
+   "category": "cereales_integrales"
+  },
+  {
+   "code": "357",
+   "name": "Barritas de cereales",
+   "parent_code": "78",
+   "category": "barritas"
+  },
+  {
+   "code": "80",
+   "name": "Galletas",
+   "parent_code": "7",
+   "category": null
+  },
+  {
+   "code": "821",
+   "name": "Galletas desayuno",
+   "parent_code": "80",
+   "category": "galletas_desayuno"
+  },
+  {
+   "code": "361",
+   "name": "Galletas integrales y digestive",
+   "parent_code": "80",
+   "category": "galletas_integrales"
+  },
+  {
+   "code": "360",
+   "name": "Con chocolate y rellenas",
+   "parent_code": "80",
+   "category": "galletas_chocolate"
+  },
+  {
+   "code": "822",
+   "name": "Galletas surtidas",
+   "parent_code": "80",
+   "category": "galletas_surtidas"
+  },
+  {
+   "code": "79",
+   "name": "Tortitas",
+   "parent_code": "7",
+   "category": null
+  },
+  {
+   "code": "358",
+   "name": "Tortitas",
+   "parent_code": "79",
+   "category": "tortitas"
+  },
+  {
+   "code": "4",
+   "name": "Charcutería y quesos",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "48",
+   "name": "Aves y jamón cocido",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "292",
+   "name": "Pavo y otros",
+   "parent_code": "48",
+   "category": "pavo_fiambre"
+  },
+  {
+   "code": "293",
+   "name": "Jamón cocido",
+   "parent_code": "48",
+   "category": "jamon_cocido"
+  },
+  {
+   "code": "52",
+   "name": "Bacón y salchichas",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "303",
+   "name": "Bacón",
+   "parent_code": "52",
+   "category": "bacon"
+  },
+  {
+   "code": "304",
+   "name": "Salchichas",
+   "parent_code": "52",
+   "category": "salchichas"
+  },
+  {
+   "code": "49",
+   "name": "Chopped y mortadela",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "823",
+   "name": "Chopped",
+   "parent_code": "49",
+   "category": "chopped_mortadela"
+  },
+  {
+   "code": "296",
+   "name": "Mortadela",
+   "parent_code": "49",
+   "category": "chopped_mortadela"
+  },
+  {
+   "code": "51",
+   "name": "Embutido curado",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "301",
+   "name": "Salchichón",
+   "parent_code": "51",
+   "category": "salchichon"
+  },
+  {
+   "code": "824",
+   "name": "Chorizo",
+   "parent_code": "51",
+   "category": "chorizo"
+  },
+  {
+   "code": "302",
+   "name": "Lomo y otros",
+   "parent_code": "51",
+   "category": "lomo_embuchado"
+  },
+  {
+   "code": "50",
+   "name": "Jamón serrano",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "298",
+   "name": "Jamón serrano",
+   "parent_code": "50",
+   "category": "jamon_serrano"
+  },
+  {
+   "code": "58",
+   "name": "Paté y sobrasada",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "314",
+   "name": "Paté",
+   "parent_code": "58",
+   "category": "pate"
+  },
+  {
+   "code": "315",
+   "name": "Sobrasada",
+   "parent_code": "58",
+   "category": "sobrasada"
+  },
+  {
+   "code": "54",
+   "name": "Queso curado, semicurado y tierno",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "309",
+   "name": "Queso curado",
+   "parent_code": "54",
+   "category": "queso_curado"
+  },
+  {
+   "code": "825",
+   "name": "Queso semicurado",
+   "parent_code": "54",
+   "category": "queso_curado"
+  },
+  {
+   "code": "307",
+   "name": "Queso tierno",
+   "parent_code": "54",
+   "category": "queso_tierno"
+  },
+  {
+   "code": "56",
+   "name": "Queso lonchas, rallado y en porciones",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "310",
+   "name": "Queso lonchas",
+   "parent_code": "56",
+   "category": "queso_lonchas"
+  },
+  {
+   "code": "312",
+   "name": "Queso rallado",
+   "parent_code": "56",
+   "category": "queso_rallado"
+  },
+  {
+   "code": "311",
+   "name": "Queso en porciones",
+   "parent_code": "56",
+   "category": "queso_porciones"
+  },
+  {
+   "code": "53",
+   "name": "Queso untable, fresco y especialidades",
+   "parent_code": "4",
+   "category": null
+  },
+  {
+   "code": "306",
+   "name": "Queso untable",
+   "parent_code": "53",
+   "category": "queso_untable"
+  },
+  {
+   "code": "305",
+   "name": "Queso fresco",
+   "parent_code": "53",
+   "category": "queso_fresco"
+  },
+  {
+   "code": "313",
+   "name": "Queso especialidades",
+   "parent_code": "53",
+   "category": "queso_especialidades"
+  },
+  {
+   "code": "17",
+   "name": "Congelados",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "147",
+   "name": "Arroz y pasta",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "509",
+   "name": "Arroz",
+   "parent_code": "147",
+   "category": "arroz_pasta_congelados"
+  },
+  {
+   "code": "510",
+   "name": "Pasta",
+   "parent_code": "147",
+   "category": "arroz_pasta_congelados"
+  },
+  {
+   "code": "148",
+   "name": "Carne",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "511",
+   "name": "Carne",
+   "parent_code": "148",
+   "category": "carne_congelada"
+  },
+  {
+   "code": "145",
+   "name": "Fruta y verdura",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "826",
+   "name": "Fruta",
+   "parent_code": "145",
+   "category": "fruta_congelada"
+  },
+  {
+   "code": "504",
+   "name": "Verdura",
+   "parent_code": "145",
+   "category": "verdura_congelada"
+  },
+  {
+   "code": "507",
+   "name": "Patatas",
+   "parent_code": "145",
+   "category": "patatas_congeladas"
+  },
+  {
+   "code": "154",
+   "name": "Helados",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "894",
+   "name": "Bombones",
+   "parent_code": "154",
+   "category": "helado_individual"
+  },
+  {
+   "code": "893",
+   "name": "Cucuruchos",
+   "parent_code": "154",
+   "category": "helado_individual"
+  },
+  {
+   "code": "869",
+   "name": "Granizados y helados de hielo",
+   "parent_code": "154",
+   "category": "granizado"
+  },
+  {
+   "code": "904",
+   "name": "Otros Helados",
+   "parent_code": "154",
+   "category": "helados"
+  },
+  {
+   "code": "521",
+   "name": "Sándwiches",
+   "parent_code": "154",
+   "category": "helado_individual"
+  },
+  {
+   "code": "522",
+   "name": "Tarrinas",
+   "parent_code": "154",
+   "category": "helado_tarrina"
+  },
+  {
+   "code": "863",
+   "name": "Barras de helado y barquillos",
+   "parent_code": "154",
+   "category": "helado_individual"
+  },
+  {
+   "code": "155",
+   "name": "Hielo",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "524",
+   "name": "Hielo",
+   "parent_code": "155",
+   "category": "hielo"
+  },
+  {
+   "code": "150",
+   "name": "Marisco",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "516",
+   "name": "Marisco",
+   "parent_code": "150",
+   "category": "marisco_congelado"
+  },
+  {
+   "code": "887",
+   "name": "Marisco de concha y otros",
+   "parent_code": "150",
+   "category": "marisco_congelado"
+  },
+  {
+   "code": "149",
+   "name": "Pescado",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "513",
+   "name": "Pescado",
+   "parent_code": "149",
+   "category": "pescado_congelado_natural"
+  },
+  {
+   "code": "151",
+   "name": "Pizzas",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "517",
+   "name": "Pizzas",
+   "parent_code": "151",
+   "category": "pizza_congelada"
+  },
+  {
+   "code": "861",
+   "name": "Base de pizza",
+   "parent_code": "151",
+   "category": "base_pizza"
+  },
+  {
+   "code": "884",
+   "name": "Rebozados",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "512",
+   "name": "Carne rebozada",
+   "parent_code": "884",
+   "category": "rebozados"
+  },
+  {
+   "code": "514",
+   "name": "Pescado rebozado",
+   "parent_code": "884",
+   "category": "pescado_rebozado"
+  },
+  {
+   "code": "886",
+   "name": "Verdura rebozada y otros",
+   "parent_code": "884",
+   "category": "rebozados"
+  },
+  {
+   "code": "152",
+   "name": "Tartas y churros",
+   "parent_code": "17",
+   "category": null
+  },
+  {
+   "code": "518",
+   "name": "Tartas",
+   "parent_code": "152",
+   "category": "tartas_congeladas"
+  },
+  {
+   "code": "859",
+   "name": "Tartas infantiles",
+   "parent_code": "152",
+   "category": "tartas_congeladas"
+  },
+  {
+   "code": "860",
+   "name": "Churros",
+   "parent_code": "152",
+   "category": "churros"
+  },
+  {
+   "code": "14",
+   "name": "Conservas, caldos y cremas",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "122",
+   "name": "Atún y otras conservas de pescado",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "450",
+   "name": "Atún",
+   "parent_code": "122",
+   "category": "atun"
+  },
+  {
+   "code": "864",
+   "name": "Bonito",
+   "parent_code": "122",
+   "category": "bonito"
+  },
+  {
+   "code": "451",
+   "name": "Caballa y melva",
+   "parent_code": "122",
+   "category": "caballa_sardinas"
+  },
+  {
+   "code": "455",
+   "name": "Sardinas",
+   "parent_code": "122",
+   "category": "caballa_sardinas"
+  },
+  {
+   "code": "457",
+   "name": "Otras conservas de pescado",
+   "parent_code": "122",
+   "category": "conserva_pescado_otros"
+  },
+  {
+   "code": "123",
+   "name": "Berberechos y mejillones",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "454",
+   "name": "Berberechos y almejas",
+   "parent_code": "123",
+   "category": "mejillon_conserva"
+  },
+  {
+   "code": "452",
+   "name": "Mejillones",
+   "parent_code": "123",
+   "category": "mejillon_conserva"
+  },
+  {
+   "code": "127",
+   "name": "Conservas de verdura y frutas",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "467",
+   "name": "Conservas verdura",
+   "parent_code": "127",
+   "category": "conserva_verdura"
+  },
+  {
+   "code": "468",
+   "name": "Conservas fruta",
+   "parent_code": "127",
+   "category": "conserva_fruta"
+  },
+  {
+   "code": "130",
+   "name": "Gazpacho y cremas",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "473",
+   "name": "Gazpacho y salmorejo",
+   "parent_code": "130",
+   "category": "gazpacho"
+  },
+  {
+   "code": "472",
+   "name": "Cremas y puré",
+   "parent_code": "130",
+   "category": "crema_pure"
+  },
+  {
+   "code": "129",
+   "name": "Sopa y caldo",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "471",
+   "name": "Sopa",
+   "parent_code": "129",
+   "category": "sopa"
+  },
+  {
+   "code": "469",
+   "name": "Caldo líquido",
+   "parent_code": "129",
+   "category": "caldo"
+  },
+  {
+   "code": "470",
+   "name": "Caldo en pastillas",
+   "parent_code": "129",
+   "category": "caldo"
+  },
+  {
+   "code": "126",
+   "name": "Tomate",
+   "parent_code": "14",
+   "category": null
+  },
+  {
+   "code": "460",
+   "name": "Tomate",
+   "parent_code": "126",
+   "category": "tomate_conserva"
+  },
+  {
+   "code": "21",
+   "name": "Cuidado del cabello",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "201",
+   "name": "Acondicionador y mascarilla",
+   "parent_code": "21",
+   "category": null
+  },
+  {
+   "code": "642",
+   "name": "Acondicionador",
+   "parent_code": "201",
+   "category": "acondicionador"
+  },
+  {
+   "code": "643",
+   "name": "Mascarilla",
+   "parent_code": "201",
+   "category": "acondicionador"
+  },
+  {
+   "code": "644",
+   "name": "Sérum y otros",
+   "parent_code": "201",
+   "category": "acondicionador"
+  },
+  {
+   "code": "199",
+   "name": "Champú",
+   "parent_code": "21",
+   "category": null
+  },
+  {
+   "code": "638",
+   "name": "Champú",
+   "parent_code": "199",
+   "category": "champu"
+  },
+  {
+   "code": "639",
+   "name": "Champú anticaspa",
+   "parent_code": "199",
+   "category": "champu"
+  },
+  {
+   "code": "641",
+   "name": "Champú infantil",
+   "parent_code": "199",
+   "category": "champu"
+  },
+  {
+   "code": "203",
+   "name": "Coloración cabello",
+   "parent_code": "21",
+   "category": null
+  },
+  {
+   "code": "649",
+   "name": "Coloración negro y castaño oscuro",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "650",
+   "name": "Coloración castaño, marrón y rubio oscuro",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "651",
+   "name": "Coloración rubio",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "659",
+   "name": "Coloración superaclarante y platino",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "648",
+   "name": "Coloración rojo, cobre y violín",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "660",
+   "name": "Coloración hombre",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "658",
+   "name": "Retoca raíces y otros",
+   "parent_code": "203",
+   "category": "tinte"
+  },
+  {
+   "code": "202",
+   "name": "Fijación cabello",
+   "parent_code": "21",
+   "category": null
+  },
+  {
+   "code": "646",
+   "name": "Espuma y laca",
+   "parent_code": "202",
+   "category": "fijacion"
+  },
+  {
+   "code": "647",
+   "name": "Gomina y cera",
+   "parent_code": "202",
+   "category": "fijacion"
+  },
+  {
+   "code": "20",
+   "name": "Cuidado facial y corporal",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "192",
+   "name": "Afeitado y cuidado para hombre",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "622",
+   "name": "Espuma de afeitar",
+   "parent_code": "192",
+   "category": "espuma_afeitar"
+  },
+  {
+   "code": "827",
+   "name": "After shave",
+   "parent_code": "192",
+   "category": "espuma_afeitar"
+  },
+  {
+   "code": "623",
+   "name": "Maquinillas de afeitar",
+   "parent_code": "192",
+   "category": "maquinilla"
+  },
+  {
+   "code": "806",
+   "name": "Recambios maquinilla de afeitar",
+   "parent_code": "192",
+   "category": "maquinilla"
+  },
+  {
+   "code": "625",
+   "name": "Crema y gel de cara",
+   "parent_code": "192",
+   "category": "crema_facial"
+  },
+  {
+   "code": "189",
+   "name": "Cuidado corporal",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "902",
+   "name": "Aceite corporal",
+   "parent_code": "189",
+   "category": "crema_corporal"
+  },
+  {
+   "code": "610",
+   "name": "Crema corporal",
+   "parent_code": "189",
+   "category": "crema_corporal"
+  },
+  {
+   "code": "613",
+   "name": "Crema manos",
+   "parent_code": "189",
+   "category": "crema_manos"
+  },
+  {
+   "code": "828",
+   "name": "Crema pies",
+   "parent_code": "189",
+   "category": "crema_corporal"
+  },
+  {
+   "code": "614",
+   "name": "Toallitas",
+   "parent_code": "189",
+   "category": "toallitas_corporales"
+  },
+  {
+   "code": "185",
+   "name": "Cuidado e higiene facial",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "595",
+   "name": "Limpieza de cara",
+   "parent_code": "185",
+   "category": "limpieza_facial"
+  },
+  {
+   "code": "597",
+   "name": "Crema de cara",
+   "parent_code": "185",
+   "category": "crema_facial"
+  },
+  {
+   "code": "598",
+   "name": "Contorno de ojos",
+   "parent_code": "185",
+   "category": "crema_facial"
+  },
+  {
+   "code": "785",
+   "name": "Sérum y ampollas",
+   "parent_code": "185",
+   "category": "crema_facial"
+  },
+  {
+   "code": "191",
+   "name": "Depilación",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "620",
+   "name": "Bandas, cera y crema",
+   "parent_code": "191",
+   "category": "depilacion"
+  },
+  {
+   "code": "621",
+   "name": "Cuchilla",
+   "parent_code": "191",
+   "category": "maquinilla"
+  },
+  {
+   "code": "188",
+   "name": "Desodorante",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "608",
+   "name": "Desodorante roll on y stick",
+   "parent_code": "188",
+   "category": "desodorante"
+  },
+  {
+   "code": "607",
+   "name": "Desodorante Spray",
+   "parent_code": "188",
+   "category": "desodorante"
+  },
+  {
+   "code": "609",
+   "name": "Otros desodorantes",
+   "parent_code": "188",
+   "category": "desodorante"
+  },
+  {
+   "code": "187",
+   "name": "Gel y jabón de manos",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "604",
+   "name": "Gel",
+   "parent_code": "187",
+   "category": "gel_ducha"
+  },
+  {
+   "code": "605",
+   "name": "Jabón de manos",
+   "parent_code": "187",
+   "category": "jabon_manos"
+  },
+  {
+   "code": "606",
+   "name": "Esponjas",
+   "parent_code": "187",
+   "category": "esponjas"
+  },
+  {
+   "code": "186",
+   "name": "Higiene bucal",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "601",
+   "name": "Pasta de dientes",
+   "parent_code": "186",
+   "category": "pasta_dientes"
+  },
+  {
+   "code": "600",
+   "name": "Cepillo de dientes",
+   "parent_code": "186",
+   "category": "cepillo_dientes"
+  },
+  {
+   "code": "602",
+   "name": "Colutorio e hilo dental",
+   "parent_code": "186",
+   "category": "colutorio"
+  },
+  {
+   "code": "190",
+   "name": "Higiene íntima",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "615",
+   "name": "Compresas",
+   "parent_code": "190",
+   "category": "compresas"
+  },
+  {
+   "code": "616",
+   "name": "Protegeslips",
+   "parent_code": "190",
+   "category": "compresas"
+  },
+  {
+   "code": "617",
+   "name": "Tampones",
+   "parent_code": "190",
+   "category": "tampones"
+  },
+  {
+   "code": "619",
+   "name": "Pañales para adulto",
+   "parent_code": "190",
+   "category": "panal_adulto"
+  },
+  {
+   "code": "618",
+   "name": "Toallitas y gel",
+   "parent_code": "190",
+   "category": "toallitas_corporales"
+  },
+  {
+   "code": "194",
+   "name": "Manicura y pedicura",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "626",
+   "name": "Laca de uñas",
+   "parent_code": "194",
+   "category": "unas"
+  },
+  {
+   "code": "628",
+   "name": "Cuidado de uñas y complementos",
+   "parent_code": "194",
+   "category": "unas"
+  },
+  {
+   "code": "196",
+   "name": "Perfume y colonia",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "630",
+   "name": "Perfume y colonia mujer",
+   "parent_code": "196",
+   "category": "perfume"
+  },
+  {
+   "code": "835",
+   "name": "Lotes mujer",
+   "parent_code": "196",
+   "category": "lote_perfume"
+  },
+  {
+   "code": "634",
+   "name": "Perfume y colonia hombre",
+   "parent_code": "196",
+   "category": "perfume"
+  },
+  {
+   "code": "836",
+   "name": "Lotes hombre",
+   "parent_code": "196",
+   "category": "lote_perfume"
+  },
+  {
+   "code": "636",
+   "name": "Colonia infantil",
+   "parent_code": "196",
+   "category": "perfume"
+  },
+  {
+   "code": "198",
+   "name": "Protector solar y aftersun",
+   "parent_code": "20",
+   "category": null
+  },
+  {
+   "code": "637",
+   "name": "Protector solar y aftersun",
+   "parent_code": "198",
+   "category": "protector_solar"
+  },
+  {
+   "code": "23",
+   "name": "Fitoterapia y parafarmacia",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "213",
+   "name": "Fitoterapia",
+   "parent_code": "23",
+   "category": null
+  },
+  {
+   "code": "685",
+   "name": "Fitoterapia",
+   "parent_code": "213",
+   "category": "parafarmacia"
+  },
+  {
+   "code": "214",
+   "name": "Parafarmacia",
+   "parent_code": "23",
+   "category": null
+  },
+  {
+   "code": "686",
+   "name": "Botiquín",
+   "parent_code": "214",
+   "category": "botiquin"
+  },
+  {
+   "code": "687",
+   "name": "Preservativos",
+   "parent_code": "214",
+   "category": "preservativos"
+  },
+  {
+   "code": "1",
+   "name": "Fruta y verdura",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "27",
+   "name": "Fruta",
+   "parent_code": "1",
+   "category": null
+  },
+  {
+   "code": "853",
+   "name": "Plátano y uva",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "251",
+   "name": "Manzana y pera",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "249",
+   "name": "Melón y sandía",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "247",
+   "name": "Cítricos",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "250",
+   "name": "Fruta tropical",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "253",
+   "name": "Otras frutas",
+   "parent_code": "27",
+   "category": "fruta"
+  },
+  {
+   "code": "28",
+   "name": "Lechuga y ensalada preparada",
+   "parent_code": "1",
+   "category": null
+  },
+  {
+   "code": "254",
+   "name": "Lechuga",
+   "parent_code": "28",
+   "category": "lechuga"
+  },
+  {
+   "code": "255",
+   "name": "Ensalada preparada",
+   "parent_code": "28",
+   "category": "ensalada_preparada"
+  },
+  {
+   "code": "29",
+   "name": "Verdura",
+   "parent_code": "1",
+   "category": null
+  },
+  {
+   "code": "854",
+   "name": "Patata",
+   "parent_code": "29",
+   "category": "patata"
+  },
+  {
+   "code": "256",
+   "name": "Cebolla y ajo",
+   "parent_code": "29",
+   "category": "verdura"
+  },
+  {
+   "code": "855",
+   "name": "Tomate",
+   "parent_code": "29",
+   "category": "tomate"
+  },
+  {
+   "code": "257",
+   "name": "Pepino y zanahoria",
+   "parent_code": "29",
+   "category": "verdura"
+  },
+  {
+   "code": "857",
+   "name": "Calabacín y pimiento",
+   "parent_code": "29",
+   "category": "verdura"
+  },
+  {
+   "code": "856",
+   "name": "Repollo y col",
+   "parent_code": "29",
+   "category": "verdura"
+  },
+  {
+   "code": "262",
+   "name": "Setas y champiñones",
+   "parent_code": "29",
+   "category": "setas"
+  },
+  {
+   "code": "269",
+   "name": "Hierbas aromáticas",
+   "parent_code": "29",
+   "category": "hierbas_frescas"
+  },
+  {
+   "code": "268",
+   "name": "Otras verduras y hortalizas",
+   "parent_code": "29",
+   "category": "verdura"
+  },
+  {
+   "code": "267",
+   "name": "Verduras al vapor",
+   "parent_code": "29",
+   "category": "verdura_vapor"
+  },
+  {
+   "code": "6",
+   "name": "Huevos, leche y mantequilla",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "77",
+   "name": "Huevos",
+   "parent_code": "6",
+   "category": null
+  },
+  {
+   "code": "354",
+   "name": "Huevos",
+   "parent_code": "77",
+   "category": "huevos_gallina"
+  },
+  {
+   "code": "72",
+   "name": "Leche y bebidas vegetales",
+   "parent_code": "6",
+   "category": null
+  },
+  {
+   "code": "343",
+   "name": "Leche semidesnatada",
+   "parent_code": "72",
+   "category": "leche"
+  },
+  {
+   "code": "344",
+   "name": "Leche desnatada",
+   "parent_code": "72",
+   "category": "leche"
+  },
+  {
+   "code": "342",
+   "name": "Leche entera",
+   "parent_code": "72",
+   "category": "leche"
+  },
+  {
+   "code": "347",
+   "name": "Bebidas vegetales",
+   "parent_code": "72",
+   "category": "bebida_vegetal"
+  },
+  {
+   "code": "350",
+   "name": "Batidos",
+   "parent_code": "72",
+   "category": "batido"
+  },
+  {
+   "code": "348",
+   "name": "Leche Infantil",
+   "parent_code": "72",
+   "category": "leche_crecimiento"
+  },
+  {
+   "code": "799",
+   "name": "Leche condensada y otros",
+   "parent_code": "72",
+   "category": "leche_condensada"
+  },
+  {
+   "code": "75",
+   "name": "Mantequilla y margarina",
+   "parent_code": "6",
+   "category": null
+  },
+  {
+   "code": "351",
+   "name": "Mantequilla",
+   "parent_code": "75",
+   "category": "mantequilla"
+  },
+  {
+   "code": "352",
+   "name": "Margarina",
+   "parent_code": "75",
+   "category": "margarina"
+  },
+  {
+   "code": "353",
+   "name": "Nata",
+   "parent_code": "75",
+   "category": "nata"
+  },
+  {
+   "code": "26",
+   "name": "Limpieza y hogar",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "226",
+   "name": "Detergente y suavizante ropa",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "722",
+   "name": "Detergente líquido y gel",
+   "parent_code": "226",
+   "category": "detergente_liquido"
+  },
+  {
+   "code": "723",
+   "name": "Detergente en polvo y monodosis",
+   "parent_code": "226",
+   "category": "detergente_capsulas"
+  },
+  {
+   "code": "725",
+   "name": "Detergente lavado a mano",
+   "parent_code": "226",
+   "category": "detergente_liquido"
+  },
+  {
+   "code": "730",
+   "name": "Quitamanchas",
+   "parent_code": "226",
+   "category": "quitamanchas"
+  },
+  {
+   "code": "728",
+   "name": "Activador y antical lavadora",
+   "parent_code": "226",
+   "category": "quitamanchas"
+  },
+  {
+   "code": "727",
+   "name": "Suavizante",
+   "parent_code": "226",
+   "category": "suavizante"
+  },
+  {
+   "code": "732",
+   "name": "Planchado",
+   "parent_code": "226",
+   "category": "planchado"
+  },
+  {
+   "code": "237",
+   "name": "Estropajo, bayeta y guantes",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "752",
+   "name": "Estropajo",
+   "parent_code": "237",
+   "category": "estropajo_bayeta"
+  },
+  {
+   "code": "753",
+   "name": "Bayeta",
+   "parent_code": "237",
+   "category": "estropajo_bayeta"
+  },
+  {
+   "code": "754",
+   "name": "Guantes",
+   "parent_code": "237",
+   "category": "guantes"
+  },
+  {
+   "code": "241",
+   "name": "Insecticida y ambientador",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "876",
+   "name": "Insecticida spray",
+   "parent_code": "241",
+   "category": "insecticida"
+  },
+  {
+   "code": "877",
+   "name": "Insecticida eléctrico y otros",
+   "parent_code": "241",
+   "category": "insecticida"
+  },
+  {
+   "code": "872",
+   "name": "Ambientador spray",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "870",
+   "name": "Ambientador eléctrico",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "871",
+   "name": "Ambientador automático",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "873",
+   "name": "Ambientador coche",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "875",
+   "name": "Ambientador decorativo y otros",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "874",
+   "name": "Absorbeolores y antihumedad",
+   "parent_code": "241",
+   "category": "ambientador"
+  },
+  {
+   "code": "234",
+   "name": "Lejía y líquidos fuertes",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "729",
+   "name": "Lejía",
+   "parent_code": "234",
+   "category": "lejia"
+  },
+  {
+   "code": "745",
+   "name": "Amoníaco y salfumán",
+   "parent_code": "234",
+   "category": "amoniaco"
+  },
+  {
+   "code": "235",
+   "name": "Limpiacristales",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "748",
+   "name": "Limpiacristales",
+   "parent_code": "235",
+   "category": "limpiacristales"
+  },
+  {
+   "code": "233",
+   "name": "Limpiahogar y friegasuelos",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "742",
+   "name": "Friegasuelos",
+   "parent_code": "233",
+   "category": "friegasuelos"
+  },
+  {
+   "code": "743",
+   "name": "Limpiahogar",
+   "parent_code": "233",
+   "category": "limpiahogar"
+  },
+  {
+   "code": "231",
+   "name": "Limpieza baño y WC",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "738",
+   "name": "Limpieza baño y WC",
+   "parent_code": "231",
+   "category": "limpia_bano"
+  },
+  {
+   "code": "230",
+   "name": "Limpieza cocina",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "736",
+   "name": "Limpieza cocina",
+   "parent_code": "230",
+   "category": "limpia_cocina"
+  },
+  {
+   "code": "232",
+   "name": "Limpieza muebles y multiusos",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "740",
+   "name": "Limpieza muebles",
+   "parent_code": "232",
+   "category": "limpia_muebles"
+  },
+  {
+   "code": "741",
+   "name": "Multiusos y otros",
+   "parent_code": "232",
+   "category": "limpieza"
+  },
+  {
+   "code": "229",
+   "name": "Limpieza vajilla",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "734",
+   "name": "Limpiavajilla a mano",
+   "parent_code": "229",
+   "category": "lavavajillas_mano"
+  },
+  {
+   "code": "735",
+   "name": "Limpiavajilla a máquina",
+   "parent_code": "229",
+   "category": "lavavajillas_maquina"
+  },
+  {
+   "code": "243",
+   "name": "Menaje y conservación de alimentos",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "764",
+   "name": "Herméticos y moldes",
+   "parent_code": "243",
+   "category": "hermeticos"
+  },
+  {
+   "code": "763",
+   "name": "Papel y bolsas de conservación",
+   "parent_code": "243",
+   "category": "papel_conservacion"
+  },
+  {
+   "code": "772",
+   "name": "Cubiertos, vajilla y mantel",
+   "parent_code": "243",
+   "category": "menaje_mesa"
+  },
+  {
+   "code": "777",
+   "name": "Encendedores, velas y carbón",
+   "parent_code": "243",
+   "category": "velas_carbon"
+  },
+  {
+   "code": "238",
+   "name": "Papel higiénico y celulosa",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "838",
+   "name": "Servilletas",
+   "parent_code": "238",
+   "category": "servilletas"
+  },
+  {
+   "code": "756",
+   "name": "Rollo cocina",
+   "parent_code": "238",
+   "category": "rollo_cocina"
+  },
+  {
+   "code": "755",
+   "name": "Papel higiénico",
+   "parent_code": "238",
+   "category": "papel_higienico"
+  },
+  {
+   "code": "759",
+   "name": "Pañuelos",
+   "parent_code": "238",
+   "category": "panuelos"
+  },
+  {
+   "code": "757",
+   "name": "Toallitas",
+   "parent_code": "238",
+   "category": "toallitas_hogar"
+  },
+  {
+   "code": "239",
+   "name": "Pilas y bolsas de basura",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "781",
+   "name": "Pilas",
+   "parent_code": "239",
+   "category": "pilas"
+  },
+  {
+   "code": "761",
+   "name": "Bolsas de basura",
+   "parent_code": "239",
+   "category": "bolsas_basura"
+  },
+  {
+   "code": "244",
+   "name": "Utensilios de limpieza y calzado",
+   "parent_code": "26",
+   "category": null
+  },
+  {
+   "code": "751",
+   "name": "Fregonas, escobas y mopas",
+   "parent_code": "244",
+   "category": "fregona_escoba"
+  },
+  {
+   "code": "881",
+   "name": "Cubos y barreños",
+   "parent_code": "244",
+   "category": "fregona_escoba"
+  },
+  {
+   "code": "731",
+   "name": "Otros utensilios de limpieza",
+   "parent_code": "244",
+   "category": "fregona_escoba"
+  },
+  {
+   "code": "779",
+   "name": "Limpieza de calzado",
+   "parent_code": "244",
+   "category": "calzado"
+  },
+  {
+   "code": "22",
+   "name": "Maquillaje",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "206",
+   "name": "Bases de maquillaje y corrector",
+   "parent_code": "22",
+   "category": null
+  },
+  {
+   "code": "666",
+   "name": "Maquillaje fluido",
+   "parent_code": "206",
+   "category": "base_maquillaje"
+  },
+  {
+   "code": "665",
+   "name": "Maquillaje compacto",
+   "parent_code": "206",
+   "category": "base_maquillaje"
+  },
+  {
+   "code": "671",
+   "name": "Correctores y prebase",
+   "parent_code": "206",
+   "category": "base_maquillaje"
+  },
+  {
+   "code": "207",
+   "name": "Colorete y polvos",
+   "parent_code": "22",
+   "category": null
+  },
+  {
+   "code": "674",
+   "name": "Colorete",
+   "parent_code": "207",
+   "category": "colorete_polvos"
+  },
+  {
+   "code": "673",
+   "name": "Polvos",
+   "parent_code": "207",
+   "category": "colorete_polvos"
+  },
+  {
+   "code": "208",
+   "name": "Labios",
+   "parent_code": "22",
+   "category": null
+  },
+  {
+   "code": "599",
+   "name": "Cuidado",
+   "parent_code": "208",
+   "category": "labios"
+  },
+  {
+   "code": "679",
+   "name": "Perfilador labios",
+   "parent_code": "208",
+   "category": "labios"
+  },
+  {
+   "code": "675",
+   "name": "Pintalabios cremoso y brillos",
+   "parent_code": "208",
+   "category": "labios"
+  },
+  {
+   "code": "677",
+   "name": "Pintalabios mate",
+   "parent_code": "208",
+   "category": "labios"
+  },
+  {
+   "code": "210",
+   "name": "Ojos",
+   "parent_code": "22",
+   "category": null
+  },
+  {
+   "code": "682",
+   "name": "Perfilador de ojos",
+   "parent_code": "210",
+   "category": "ojos"
+  },
+  {
+   "code": "888",
+   "name": "Cejas",
+   "parent_code": "210",
+   "category": "ojos"
+  },
+  {
+   "code": "683",
+   "name": "Máscara de pestañas",
+   "parent_code": "210",
+   "category": "ojos"
+  },
+  {
+   "code": "680",
+   "name": "Sombra de ojos",
+   "parent_code": "210",
+   "category": "ojos"
+  },
+  {
+   "code": "212",
+   "name": "Pinceles y brochas",
+   "parent_code": "22",
+   "category": null
+  },
+  {
+   "code": "684",
+   "name": "Pinceles y brochas",
+   "parent_code": "212",
+   "category": "brochas"
+  },
+  {
+   "code": "2",
+   "name": "Marisco y pescado",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "32",
+   "name": "Marisco",
+   "parent_code": "2",
+   "category": null
+  },
+  {
+   "code": "272",
+   "name": "Marisco",
+   "parent_code": "32",
+   "category": "gamba_langostino"
+  },
+  {
+   "code": "852",
+   "name": "Marisco de concha",
+   "parent_code": "32",
+   "category": "mejillon_almeja"
+  },
+  {
+   "code": "834",
+   "name": "Surimi y otros",
+   "parent_code": "32",
+   "category": "surimi"
+  },
+  {
+   "code": "34",
+   "name": "Pescado congelado",
+   "parent_code": "2",
+   "category": null
+  },
+  {
+   "code": "274",
+   "name": "Pescado congelado",
+   "parent_code": "34",
+   "category": "pescado_congelado_natural"
+  },
+  {
+   "code": "275",
+   "name": "Pescado rebozado congelado",
+   "parent_code": "34",
+   "category": "pescado_rebozado"
+  },
+  {
+   "code": "276",
+   "name": "Sepia, pulpo y calamar congelado",
+   "parent_code": "34",
+   "category": "cefalopodos_congelados"
+  },
+  {
+   "code": "31",
+   "name": "Pescado fresco",
+   "parent_code": "2",
+   "category": null
+  },
+  {
+   "code": "811",
+   "name": "Salmón",
+   "parent_code": "31",
+   "category": "salmon"
+  },
+  {
+   "code": "809",
+   "name": "Dorada",
+   "parent_code": "31",
+   "category": "dorada_lubina"
+  },
+  {
+   "code": "810",
+   "name": "Lubina",
+   "parent_code": "31",
+   "category": "dorada_lubina"
+  },
+  {
+   "code": "816",
+   "name": "Merluza",
+   "parent_code": "31",
+   "category": "merluza"
+  },
+  {
+   "code": "847",
+   "name": "Bacalao",
+   "parent_code": "31",
+   "category": "bacalao"
+  },
+  {
+   "code": "880",
+   "name": "Corvina",
+   "parent_code": "31",
+   "category": "pescado_blanco_otro"
+  },
+  {
+   "code": "808",
+   "name": "Sepia, pulpo y calamar",
+   "parent_code": "31",
+   "category": "cefalopodos"
+  },
+  {
+   "code": "815",
+   "name": "Trucha",
+   "parent_code": "31",
+   "category": "pescado_blanco_otro"
+  },
+  {
+   "code": "848",
+   "name": "Rodaballo",
+   "parent_code": "31",
+   "category": "pescado_blanco_otro"
+  },
+  {
+   "code": "851",
+   "name": "Otros",
+   "parent_code": "31",
+   "category": "pescado_fresco"
+  },
+  {
+   "code": "36",
+   "name": "Salazones y ahumados",
+   "parent_code": "2",
+   "category": null
+  },
+  {
+   "code": "278",
+   "name": "Salazones",
+   "parent_code": "36",
+   "category": "salazones"
+  },
+  {
+   "code": "279",
+   "name": "Ahumados",
+   "parent_code": "36",
+   "category": "ahumados"
+  },
+  {
+   "code": "25",
+   "name": "Mascotas",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "222",
+   "name": "Gato",
+   "parent_code": "25",
+   "category": null
+  },
+  {
+   "code": "715",
+   "name": "Alimentación húmeda",
+   "parent_code": "222",
+   "category": "gato_humedo"
+  },
+  {
+   "code": "716",
+   "name": "Alimentación seca",
+   "parent_code": "222",
+   "category": "gato_seco"
+  },
+  {
+   "code": "718",
+   "name": "Aseo y cuidado",
+   "parent_code": "222",
+   "category": "gato_aseo"
+  },
+  {
+   "code": "717",
+   "name": "Snacks",
+   "parent_code": "222",
+   "category": "gato_snacks"
+  },
+  {
+   "code": "221",
+   "name": "Perro",
+   "parent_code": "25",
+   "category": null
+  },
+  {
+   "code": "711",
+   "name": "Alimentación húmeda",
+   "parent_code": "221",
+   "category": "perro_humedo"
+  },
+  {
+   "code": "712",
+   "name": "Alimentación seca",
+   "parent_code": "221",
+   "category": "perro_seco"
+  },
+  {
+   "code": "714",
+   "name": "Aseo y cuidado",
+   "parent_code": "221",
+   "category": "perro_aseo"
+  },
+  {
+   "code": "713",
+   "name": "Snacks",
+   "parent_code": "221",
+   "category": "perro_snacks"
+  },
+  {
+   "code": "225",
+   "name": "Otros",
+   "parent_code": "25",
+   "category": null
+  },
+  {
+   "code": "720",
+   "name": "Pájaro",
+   "parent_code": "225",
+   "category": "pajaro_otros"
+  },
+  {
+   "code": "721",
+   "name": "Otros",
+   "parent_code": "225",
+   "category": "pajaro_otros"
+  },
+  {
+   "code": "5",
+   "name": "Panadería y pastelería",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "65",
+   "name": "Bollería de horno",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "330",
+   "name": "Bollería dulce",
+   "parent_code": "65",
+   "category": "bolleria_horno"
+  },
+  {
+   "code": "331",
+   "name": "Bollería salada",
+   "parent_code": "65",
+   "category": "bolleria_salada"
+  },
+  {
+   "code": "66",
+   "name": "Bollería envasada",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "334",
+   "name": "Bollería envasada",
+   "parent_code": "66",
+   "category": "bolleria_envasada"
+  },
+  {
+   "code": "335",
+   "name": "Pastelitos surtidos",
+   "parent_code": "66",
+   "category": "bolleria_envasada"
+  },
+  {
+   "code": "831",
+   "name": "Polvorones y mazapanes",
+   "parent_code": "66",
+   "category": "dulces_navidad"
+  },
+  {
+   "code": "69",
+   "name": "Harina y preparado repostería",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "337",
+   "name": "Harina",
+   "parent_code": "69",
+   "category": "harina"
+  },
+  {
+   "code": "339",
+   "name": "Levadura y preparado repostería",
+   "parent_code": "69",
+   "category": "levadura_reposteria"
+  },
+  {
+   "code": "338",
+   "name": "Masas",
+   "parent_code": "69",
+   "category": "masas"
+  },
+  {
+   "code": "59",
+   "name": "Pan de horno",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "316",
+   "name": "Barra de pan",
+   "parent_code": "59",
+   "category": "barra_pan"
+  },
+  {
+   "code": "317",
+   "name": "Pan de bocadillo",
+   "parent_code": "59",
+   "category": "pan_bocadillo"
+  },
+  {
+   "code": "788",
+   "name": "Pan rebanado",
+   "parent_code": "59",
+   "category": "pan_rebanado"
+  },
+  {
+   "code": "60",
+   "name": "Pan de molde y otras especialidades",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "318",
+   "name": "Pan de molde",
+   "parent_code": "60",
+   "category": "pan_molde"
+  },
+  {
+   "code": "320",
+   "name": "Otros panes",
+   "parent_code": "60",
+   "category": "pan_especial"
+  },
+  {
+   "code": "321",
+   "name": "Pan de hamburguesa y wrap",
+   "parent_code": "60",
+   "category": "pan_hamburguesa"
+  },
+  {
+   "code": "62",
+   "name": "Pan tostado y rallado",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "322",
+   "name": "Pan tostado",
+   "parent_code": "62",
+   "category": "pan_tostado"
+  },
+  {
+   "code": "324",
+   "name": "Pan rallado",
+   "parent_code": "62",
+   "category": "pan_rallado"
+  },
+  {
+   "code": "323",
+   "name": "Crakers y tartaletas",
+   "parent_code": "62",
+   "category": "crackers"
+  },
+  {
+   "code": "64",
+   "name": "Picos, rosquilletas y picatostes",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "328",
+   "name": "Picos",
+   "parent_code": "64",
+   "category": "picos"
+  },
+  {
+   "code": "327",
+   "name": "Rosquilletas",
+   "parent_code": "64",
+   "category": "picos"
+  },
+  {
+   "code": "329",
+   "name": "Picatostes",
+   "parent_code": "64",
+   "category": "picos"
+  },
+  {
+   "code": "68",
+   "name": "Tartas y pasteles",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "336",
+   "name": "Tartas",
+   "parent_code": "68",
+   "category": "tartas"
+  },
+  {
+   "code": "858",
+   "name": "Tartas infantiles",
+   "parent_code": "68",
+   "category": "tartas"
+  },
+  {
+   "code": "837",
+   "name": "Pastelería",
+   "parent_code": "68",
+   "category": "tartas"
+  },
+  {
+   "code": "71",
+   "name": "Velas y decoración",
+   "parent_code": "5",
+   "category": null
+  },
+  {
+   "code": "341",
+   "name": "Velas",
+   "parent_code": "71",
+   "category": "velas_decoracion"
+  },
+  {
+   "code": "340",
+   "name": "Decoración",
+   "parent_code": "71",
+   "category": "velas_decoracion"
+  },
+  {
+   "code": "16",
+   "name": "Pizzas y platos preparados",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "897",
+   "name": "Listo para Comer",
+   "parent_code": "16",
+   "category": null
+  },
+  {
+   "code": "878",
+   "name": "Platos calientes",
+   "parent_code": "897",
+   "category": "listo_comer"
+  },
+  {
+   "code": "898",
+   "name": "Platos fríos",
+   "parent_code": "897",
+   "category": "listo_comer"
+  },
+  {
+   "code": "138",
+   "name": "Pizzas",
+   "parent_code": "16",
+   "category": null
+  },
+  {
+   "code": "491",
+   "name": "Pizzas refrigeradas",
+   "parent_code": "138",
+   "category": "pizza_refrigerada"
+  },
+  {
+   "code": "492",
+   "name": "Pizzas congeladas",
+   "parent_code": "138",
+   "category": "pizza_congelada"
+  },
+  {
+   "code": "862",
+   "name": "Base de pizza",
+   "parent_code": "138",
+   "category": "base_pizza"
+  },
+  {
+   "code": "493",
+   "name": "Roscas, quiche y baguettes",
+   "parent_code": "138",
+   "category": "quiche_baguette"
+  },
+  {
+   "code": "140",
+   "name": "Platos preparados calientes",
+   "parent_code": "16",
+   "category": null
+  },
+  {
+   "code": "496",
+   "name": "Pasta",
+   "parent_code": "140",
+   "category": "plato_pasta_arroz"
+  },
+  {
+   "code": "839",
+   "name": "Arroz",
+   "parent_code": "140",
+   "category": "plato_pasta_arroz"
+  },
+  {
+   "code": "497",
+   "name": "Carne",
+   "parent_code": "140",
+   "category": "plato_carne"
+  },
+  {
+   "code": "500",
+   "name": "Tortilla",
+   "parent_code": "140",
+   "category": "tortilla"
+  },
+  {
+   "code": "807",
+   "name": "Fideos orientales",
+   "parent_code": "140",
+   "category": "plato_pasta_arroz"
+  },
+  {
+   "code": "494",
+   "name": "Platos de cuchara",
+   "parent_code": "140",
+   "category": "plato_cuchara"
+  },
+  {
+   "code": "498",
+   "name": "Otros",
+   "parent_code": "140",
+   "category": "platos_preparados"
+  },
+  {
+   "code": "142",
+   "name": "Platos preparados fríos",
+   "parent_code": "16",
+   "category": null
+  },
+  {
+   "code": "503",
+   "name": "Gazpacho y salmorejo",
+   "parent_code": "142",
+   "category": "gazpacho"
+  },
+  {
+   "code": "499",
+   "name": "Ensaladilla",
+   "parent_code": "142",
+   "category": "ensaladilla"
+  },
+  {
+   "code": "502",
+   "name": "Hummus y otros",
+   "parent_code": "142",
+   "category": "hummus_untables"
+  },
+  {
+   "code": "501",
+   "name": "Sándwich",
+   "parent_code": "142",
+   "category": "sandwich"
+  },
+  {
+   "code": "11",
+   "name": "Postres y yogures",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "105",
+   "name": "Bífidus",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "409",
+   "name": "Bífidus de sabores",
+   "parent_code": "105",
+   "category": "bifidus"
+  },
+  {
+   "code": "410",
+   "name": "Bífidus naturales",
+   "parent_code": "105",
+   "category": "bifidus"
+  },
+  {
+   "code": "110",
+   "name": "Flan y natillas",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "417",
+   "name": "Flan",
+   "parent_code": "110",
+   "category": "flan"
+  },
+  {
+   "code": "418",
+   "name": "Natillas",
+   "parent_code": "110",
+   "category": "natillas"
+  },
+  {
+   "code": "111",
+   "name": "Gelatina y otros postres",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "787",
+   "name": "Gelatina",
+   "parent_code": "111",
+   "category": "gelatina"
+  },
+  {
+   "code": "419",
+   "name": "Otros postres",
+   "parent_code": "111",
+   "category": "postres"
+  },
+  {
+   "code": "106",
+   "name": "Postres de soja",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "411",
+   "name": "Postres de soja",
+   "parent_code": "106",
+   "category": "postre_soja"
+  },
+  {
+   "code": "103",
+   "name": "Yogures desnatados",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "407",
+   "name": "Yogures desnatados",
+   "parent_code": "103",
+   "category": "yogur_desnatado"
+  },
+  {
+   "code": "109",
+   "name": "Yogures griegos",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "416",
+   "name": "Yogures griegos",
+   "parent_code": "109",
+   "category": "yogur_griego"
+  },
+  {
+   "code": "108",
+   "name": "Yogures líquidos",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "413",
+   "name": "Yogures líquidos",
+   "parent_code": "108",
+   "category": "yogur_liquido"
+  },
+  {
+   "code": "414",
+   "name": "L-Casei",
+   "parent_code": "108",
+   "category": "yogur_liquido"
+  },
+  {
+   "code": "866",
+   "name": "Colesterol y otros",
+   "parent_code": "108",
+   "category": "yogur_liquido"
+  },
+  {
+   "code": "104",
+   "name": "Yogures naturales y sabores",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "867",
+   "name": "Yogures naturales",
+   "parent_code": "104",
+   "category": "yogur_natural"
+  },
+  {
+   "code": "408",
+   "name": "Yogures de sabores",
+   "parent_code": "104",
+   "category": "yogur_sabores"
+  },
+  {
+   "code": "107",
+   "name": "Yogures y postres infantiles",
+   "parent_code": "11",
+   "category": null
+  },
+  {
+   "code": "412",
+   "name": "Yogures y postres infantiles",
+   "parent_code": "107",
+   "category": "yogur_infantil"
+  },
+  {
+   "code": "10",
+   "name": "Zumos",
+   "parent_code": null,
+   "category": null
+  },
+  {
+   "code": "99",
+   "name": "Fruta variada",
+   "parent_code": "10",
+   "category": null
+  },
+  {
+   "code": "404",
+   "name": "Fruta + leche",
+   "parent_code": "99",
+   "category": "zumo_leche"
+  },
+  {
+   "code": "403",
+   "name": "Fruta variada y otros sabores",
+   "parent_code": "99",
+   "category": "zumos"
+  },
+  {
+   "code": "405",
+   "name": "Smoothie",
+   "parent_code": "99",
+   "category": "smoothie"
+  },
+  {
+   "code": "100",
+   "name": "Melocotón y piña",
+   "parent_code": "10",
+   "category": null
+  },
+  {
+   "code": "398",
+   "name": "Melocotón",
+   "parent_code": "100",
+   "category": "zumo_melocoton_pina"
+  },
+  {
+   "code": "397",
+   "name": "Piña",
+   "parent_code": "100",
+   "category": "zumo_melocoton_pina"
+  },
+  {
+   "code": "143",
+   "name": "Naranja",
+   "parent_code": "10",
+   "category": null
+  },
+  {
+   "code": "396",
+   "name": "Naranja",
+   "parent_code": "143",
+   "category": "zumo_naranja"
+  },
+  {
+   "code": "98",
+   "name": "Tomate y otros sabores",
+   "parent_code": "10",
+   "category": null
+  },
+  {
+   "code": "101",
+   "name": "Otros sabores",
+   "parent_code": "98",
+   "category": "zumo_tomate_otros"
+  }
+ ]
+}

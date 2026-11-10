@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "chain": "mercadona",
+  "categories": [
+    {"code": "10", "name": "Lácteos", "parent_code": null, "category": "lacteos_huevos"},
+    {"code": "101", "name": "Yogures", "parent_code": "10", "category": "yogures"},
+    {"code": "1011", "name": "Yogur griego", "parent_code": "101", "category": "yogur_griego"}
+  ]
+}

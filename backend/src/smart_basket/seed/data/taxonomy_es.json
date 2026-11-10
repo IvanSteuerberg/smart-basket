@@ -1,0 +1,4042 @@
+{
+ "version": 1,
+ "categories": [
+  {
+   "key": "fruta_verdura",
+   "name": "Fruta y verdura",
+   "children": [
+    {
+     "key": "fruta",
+     "name": "Fruta",
+     "vague": true,
+     "forms": [
+      "fruta",
+      "fruta variada"
+     ],
+     "children": [
+      {
+       "key": "platano",
+       "name": "Plátano",
+       "base_unit": "kg",
+       "forms": [
+        "plátano",
+        "banana"
+       ]
+      },
+      {
+       "key": "uva",
+       "name": "Uva",
+       "base_unit": "kg",
+       "forms": [
+        "uva"
+       ]
+      },
+      {
+       "key": "manzana",
+       "name": "Manzana",
+       "base_unit": "kg",
+       "forms": [
+        "manzana"
+       ]
+      },
+      {
+       "key": "pera",
+       "name": "Pera",
+       "base_unit": "kg",
+       "forms": [
+        "pera"
+       ]
+      },
+      {
+       "key": "naranja_mandarina",
+       "name": "Naranja y mandarina",
+       "base_unit": "kg",
+       "forms": [
+        "naranja",
+        "naranjas de zumo",
+        "mandarina",
+        "clementina"
+       ]
+      },
+      {
+       "key": "limon",
+       "name": "Limón y lima",
+       "base_unit": "kg",
+       "forms": [
+        "limón",
+        "lima"
+       ]
+      },
+      {
+       "key": "pomelo",
+       "name": "Pomelo",
+       "base_unit": "kg",
+       "forms": [
+        "pomelo"
+       ]
+      },
+      {
+       "key": "melon",
+       "name": "Melón",
+       "base_unit": "kg",
+       "forms": [
+        "melón"
+       ]
+      },
+      {
+       "key": "sandia",
+       "name": "Sandía",
+       "base_unit": "kg",
+       "forms": [
+        "sandía"
+       ]
+      },
+      {
+       "key": "aguacate",
+       "name": "Aguacate",
+       "base_unit": "kg",
+       "forms": [
+        "aguacate"
+       ]
+      },
+      {
+       "key": "pina",
+       "name": "Piña",
+       "base_unit": "ud",
+       "forms": [
+        "piña"
+       ]
+      },
+      {
+       "key": "kiwi",
+       "name": "Kiwi",
+       "base_unit": "kg",
+       "forms": [
+        "kiwi"
+       ]
+      },
+      {
+       "key": "mango_papaya",
+       "name": "Mango y papaya",
+       "base_unit": "kg",
+       "forms": [
+        "mango",
+        "papaya",
+        "fruta tropical"
+       ]
+      },
+      {
+       "key": "fresa_frutos_rojos",
+       "name": "Fresa y frutos rojos",
+       "base_unit": "kg",
+       "forms": [
+        "fresa",
+        "fresón",
+        "frambuesa",
+        "arándano",
+        "frutos rojos"
+       ]
+      },
+      {
+       "key": "fruta_hueso",
+       "name": "Melocotón, ciruela y fruta de hueso",
+       "base_unit": "kg",
+       "forms": [
+        "melocotón",
+        "nectarina",
+        "ciruela",
+        "albaricoque",
+        "paraguayo",
+        "cereza"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "verdura",
+     "name": "Verdura y hortalizas",
+     "vague": true,
+     "forms": [
+      "verdura",
+      "verduras",
+      "hortalizas"
+     ],
+     "children": [
+      {
+       "key": "patata",
+       "name": "Patata",
+       "base_unit": "kg",
+       "forms": [
+        "patata"
+       ]
+      },
+      {
+       "key": "cebolla",
+       "name": "Cebolla",
+       "base_unit": "kg",
+       "forms": [
+        "cebolla",
+        "cebolleta",
+        "cebolla morada"
+       ]
+      },
+      {
+       "key": "ajo",
+       "name": "Ajo",
+       "base_unit": "kg",
+       "forms": [
+        "ajo",
+        "cabeza de ajo"
+       ]
+      },
+      {
+       "key": "puerro",
+       "name": "Puerro",
+       "base_unit": "kg",
+       "forms": [
+        "puerro"
+       ]
+      },
+      {
+       "key": "tomate",
+       "name": "Tomate",
+       "base_unit": "kg",
+       "forms": [
+        "tomate",
+        "tomate cherry",
+        "tomate pera"
+       ]
+      },
+      {
+       "key": "pepino",
+       "name": "Pepino",
+       "base_unit": "kg",
+       "forms": [
+        "pepino"
+       ]
+      },
+      {
+       "key": "zanahoria",
+       "name": "Zanahoria",
+       "base_unit": "kg",
+       "forms": [
+        "zanahoria"
+       ]
+      },
+      {
+       "key": "calabacin",
+       "name": "Calabacín",
+       "base_unit": "kg",
+       "forms": [
+        "calabacín"
+       ]
+      },
+      {
+       "key": "pimiento",
+       "name": "Pimiento",
+       "base_unit": "kg",
+       "forms": [
+        "pimiento",
+        "pimiento rojo",
+        "pimiento verde",
+        "pimiento italiano"
+       ]
+      },
+      {
+       "key": "berenjena",
+       "name": "Berenjena",
+       "base_unit": "kg",
+       "forms": [
+        "berenjena"
+       ]
+      },
+      {
+       "key": "col",
+       "name": "Col y repollo",
+       "base_unit": "kg",
+       "forms": [
+        "repollo",
+        "col",
+        "lombarda"
+       ]
+      },
+      {
+       "key": "brocoli",
+       "name": "Brócoli",
+       "base_unit": "kg",
+       "forms": [
+        "brócoli"
+       ]
+      },
+      {
+       "key": "coliflor",
+       "name": "Coliflor",
+       "base_unit": "kg",
+       "forms": [
+        "coliflor"
+       ]
+      },
+      {
+       "key": "setas",
+       "name": "Setas y champiñones",
+       "base_unit": "kg",
+       "forms": [
+        "setas",
+        "champiñón",
+        "champiñones"
+       ]
+      },
+      {
+       "key": "hierbas_frescas",
+       "name": "Hierbas aromáticas frescas",
+       "base_unit": "ud",
+       "forms": [
+        "perejil",
+        "cilantro",
+        "albahaca fresca",
+        "hierbabuena"
+       ]
+      },
+      {
+       "key": "verdura_vapor",
+       "name": "Verdura para cocer al vapor",
+       "base_unit": "kg",
+       "forms": [
+        "verdura al vapor"
+       ]
+      },
+      {
+       "key": "lechuga",
+       "name": "Lechuga",
+       "base_unit": "ud",
+       "forms": [
+        "lechuga",
+        "cogollo",
+        "escarola",
+        "lechuga iceberg",
+        "lechuga romana"
+       ]
+      },
+      {
+       "key": "ensalada_preparada",
+       "name": "Ensalada preparada",
+       "base_unit": "kg",
+       "forms": [
+        "ensalada",
+        "ensalada preparada",
+        "bolsa de ensalada",
+        "rúcula",
+        "canónigos",
+        "brotes tiernos"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "carne",
+   "name": "Carne",
+   "children": [
+    {
+     "key": "carne_fresca",
+     "name": "Carne fresca",
+     "vague": true,
+     "forms": [
+      "carne"
+     ],
+     "children": [
+      {
+       "key": "pollo",
+       "name": "Pollo",
+       "base_unit": "kg",
+       "forms": [
+        "pollo",
+        "pechuga de pollo",
+        "pechuga",
+        "muslos de pollo",
+        "contramuslos",
+        "alitas",
+        "pollo entero",
+        "filetes de pollo"
+       ]
+      },
+      {
+       "key": "pavo",
+       "name": "Pavo",
+       "base_unit": "kg",
+       "forms": [
+        "pavo",
+        "pechuga de pavo fresca",
+        "muslo de pavo",
+        "filetes de pavo"
+       ]
+      },
+      {
+       "key": "otras_aves",
+       "name": "Otras aves",
+       "base_unit": "kg",
+       "forms": [
+        "codorniz",
+        "pato",
+        "picantón"
+       ]
+      },
+      {
+       "key": "cerdo",
+       "name": "Cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "cerdo",
+        "lomo de cerdo",
+        "cinta de lomo",
+        "chuletas de cerdo",
+        "costillas",
+        "panceta",
+        "solomillo de cerdo",
+        "secreto"
+       ]
+      },
+      {
+       "key": "vacuno",
+       "name": "Vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "ternera",
+        "vacuno",
+        "filetes de ternera",
+        "entrecot",
+        "carne para guisar",
+        "añojo"
+       ]
+      },
+      {
+       "key": "conejo",
+       "name": "Conejo",
+       "base_unit": "kg",
+       "forms": [
+        "conejo"
+       ]
+      },
+      {
+       "key": "cordero",
+       "name": "Cordero",
+       "base_unit": "kg",
+       "forms": [
+        "cordero",
+        "chuletillas de cordero"
+       ]
+      },
+      {
+       "key": "carne_picada",
+       "name": "Carne picada",
+       "base_unit": "kg",
+       "forms": [
+        "carne picada",
+        "picada",
+        "picado de ternera",
+        "picado mixto"
+       ]
+      },
+      {
+       "key": "hamburguesa",
+       "name": "Hamburguesa",
+       "base_unit": "kg",
+       "forms": [
+        "hamburguesa",
+        "carne de hamburguesa",
+        "carne hamburguesa",
+        "burger"
+       ]
+      },
+      {
+       "key": "chorizo_fresco",
+       "name": "Chorizo fresco para cocinar",
+       "base_unit": "kg",
+       "forms": [
+        "chorizo fresco",
+        "chorizo para cocinar",
+        "chorizo de cocinar",
+        "chorizo criollo"
+       ]
+      },
+      {
+       "key": "salchicha_fresca",
+       "name": "Salchicha fresca y longaniza",
+       "base_unit": "kg",
+       "forms": [
+        "salchicha fresca",
+        "longaniza",
+        "butifarra"
+       ]
+      },
+      {
+       "key": "morcilla",
+       "name": "Morcilla",
+       "base_unit": "kg",
+       "forms": [
+        "morcilla",
+        "morcilla de león",
+        "morcilla de burgos"
+       ]
+      },
+      {
+       "key": "carne_elaborada",
+       "name": "Empanados y elaborados de carne",
+       "base_unit": "kg",
+       "forms": [
+        "san jacobo",
+        "nuggets",
+        "flamenquín",
+        "albóndigas",
+        "empanados",
+        "pinchos morunos",
+        "brochetas"
+       ]
+      },
+      {
+       "key": "arreglos",
+       "name": "Arreglos para cocido y caldo",
+       "base_unit": "kg",
+       "forms": [
+        "arreglo",
+        "arreglo para cocido",
+        "huesos para caldo"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "pescado_marisco",
+   "name": "Pescado y marisco",
+   "children": [
+    {
+     "key": "pescado_fresco",
+     "name": "Pescado fresco",
+     "vague": true,
+     "forms": [
+      "pescado",
+      "pescado fresco"
+     ],
+     "children": [
+      {
+       "key": "salmon",
+       "name": "Salmón",
+       "base_unit": "kg",
+       "forms": [
+        "salmón"
+       ]
+      },
+      {
+       "key": "merluza",
+       "name": "Merluza",
+       "base_unit": "kg",
+       "forms": [
+        "merluza",
+        "pescadilla"
+       ]
+      },
+      {
+       "key": "bacalao",
+       "name": "Bacalao",
+       "base_unit": "kg",
+       "forms": [
+        "bacalao"
+       ]
+      },
+      {
+       "key": "dorada_lubina",
+       "name": "Dorada y lubina",
+       "base_unit": "kg",
+       "forms": [
+        "dorada",
+        "lubina"
+       ]
+      },
+      {
+       "key": "pescado_blanco_otro",
+       "name": "Corvina, rodaballo, trucha y otros",
+       "base_unit": "kg",
+       "forms": [
+        "corvina",
+        "rodaballo",
+        "trucha",
+        "lenguado",
+        "gallo"
+       ]
+      },
+      {
+       "key": "cefalopodos",
+       "name": "Sepia, pulpo y calamar",
+       "base_unit": "kg",
+       "forms": [
+        "sepia",
+        "pulpo",
+        "calamar",
+        "chipirones"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "marisco",
+     "name": "Marisco",
+     "vague": true,
+     "forms": [
+      "marisco"
+     ],
+     "children": [
+      {
+       "key": "gamba_langostino",
+       "name": "Gamba y langostino",
+       "base_unit": "kg",
+       "forms": [
+        "gambas",
+        "langostinos",
+        "carabineros",
+        "cigala"
+       ]
+      },
+      {
+       "key": "mejillon_almeja",
+       "name": "Mejillón, almeja y marisco de concha",
+       "base_unit": "kg",
+       "forms": [
+        "mejillones",
+        "almejas",
+        "navajas",
+        "vieiras",
+        "marisco de concha"
+       ]
+      },
+      {
+       "key": "surimi",
+       "name": "Surimi",
+       "base_unit": "kg",
+       "forms": [
+        "surimi",
+        "palitos de cangrejo",
+        "gulas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "pescado_congelado",
+     "name": "Pescado congelado",
+     "vague": true,
+     "forms": [
+      "pescado congelado"
+     ],
+     "children": [
+      {
+       "key": "pescado_congelado_natural",
+       "name": "Pescado congelado",
+       "base_unit": "kg",
+       "forms": [
+        "merluza congelada",
+        "filetes de pescado congelado",
+        "salmón congelado"
+       ]
+      },
+      {
+       "key": "pescado_rebozado",
+       "name": "Pescado rebozado",
+       "base_unit": "kg",
+       "forms": [
+        "pescado rebozado",
+        "varitas de merluza",
+        "palitos de pescado",
+        "calamares a la romana"
+       ]
+      },
+      {
+       "key": "cefalopodos_congelados",
+       "name": "Sepia, pulpo y calamar congelados",
+       "base_unit": "kg",
+       "forms": [
+        "anillas de calamar",
+        "pulpo congelado"
+       ]
+      },
+      {
+       "key": "marisco_congelado",
+       "name": "Marisco congelado",
+       "base_unit": "kg",
+       "forms": [
+        "gambas congeladas",
+        "langostinos congelados",
+        "mejillones congelados"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "salazones_ahumados",
+     "name": "Salazones y ahumados",
+     "vague": true,
+     "children": [
+      {
+       "key": "salazones",
+       "name": "Salazones",
+       "base_unit": "kg",
+       "forms": [
+        "anchoas en salazón",
+        "bacalao salado",
+        "mojama"
+       ]
+      },
+      {
+       "key": "ahumados",
+       "name": "Ahumados",
+       "base_unit": "kg",
+       "forms": [
+        "salmón ahumado",
+        "ahumados"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "charcuteria_quesos",
+   "name": "Charcutería y quesos",
+   "children": [
+    {
+     "key": "fiambres",
+     "name": "Fiambres y embutidos",
+     "vague": true,
+     "forms": [
+      "embutido",
+      "embutidos",
+      "fiambre"
+     ],
+     "children": [
+      {
+       "key": "pavo_fiambre",
+       "name": "Pechuga de pavo y fiambre de ave",
+       "base_unit": "kg",
+       "forms": [
+        "pechuga de pavo",
+        "fiambre de pavo",
+        "pavo en lonchas"
+       ]
+      },
+      {
+       "key": "jamon_cocido",
+       "name": "Jamón cocido",
+       "base_unit": "kg",
+       "forms": [
+        "jamón cocido",
+        "jamón york",
+        "york"
+       ]
+      },
+      {
+       "key": "bacon",
+       "name": "Bacón",
+       "base_unit": "kg",
+       "forms": [
+        "bacon",
+        "bacón",
+        "beicon"
+       ]
+      },
+      {
+       "key": "salchichas",
+       "name": "Salchichas",
+       "base_unit": "kg",
+       "forms": [
+        "salchichas",
+        "frankfurt",
+        "salchichas frankfurt"
+       ]
+      },
+      {
+       "key": "chopped_mortadela",
+       "name": "Chopped y mortadela",
+       "base_unit": "kg",
+       "forms": [
+        "chopped",
+        "mortadela"
+       ]
+      },
+      {
+       "key": "salchichon",
+       "name": "Salchichón y fuet",
+       "base_unit": "kg",
+       "forms": [
+        "salchichón",
+        "fuet",
+        "longaniza curada"
+       ]
+      },
+      {
+       "key": "chorizo",
+       "name": "Chorizo",
+       "base_unit": "kg",
+       "forms": [
+        "chorizo",
+        "chorizo en trozos",
+        "taquitos de chorizo",
+        "chorizo en lonchas",
+        "chorizo de león"
+       ]
+      },
+      {
+       "key": "lomo_embuchado",
+       "name": "Lomo embuchado y otros curados",
+       "base_unit": "kg",
+       "forms": [
+        "lomo embuchado",
+        "cecina",
+        "lomo curado"
+       ]
+      },
+      {
+       "key": "jamon_serrano",
+       "name": "Jamón serrano",
+       "base_unit": "kg",
+       "forms": [
+        "jamón serrano",
+        "jamón",
+        "jamón curado",
+        "paleta",
+        "jamón ibérico"
+       ]
+      },
+      {
+       "key": "pate",
+       "name": "Paté",
+       "base_unit": "kg",
+       "forms": [
+        "paté",
+        "foie"
+       ]
+      },
+      {
+       "key": "sobrasada",
+       "name": "Sobrasada",
+       "base_unit": "kg",
+       "forms": [
+        "sobrasada"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "quesos",
+     "name": "Quesos",
+     "vague": true,
+     "forms": [
+      "queso",
+      "quesos"
+     ],
+     "children": [
+      {
+       "key": "queso_curado",
+       "name": "Queso curado y semicurado",
+       "base_unit": "kg",
+       "forms": [
+        "queso curado",
+        "queso semicurado",
+        "queso manchego",
+        "cuña de queso"
+       ]
+      },
+      {
+       "key": "queso_tierno",
+       "name": "Queso tierno",
+       "base_unit": "kg",
+       "forms": [
+        "queso tierno"
+       ]
+      },
+      {
+       "key": "queso_lonchas",
+       "name": "Queso en lonchas",
+       "base_unit": "kg",
+       "forms": [
+        "queso en lonchas",
+        "queso lonchas",
+        "lonchas de queso"
+       ]
+      },
+      {
+       "key": "queso_rallado",
+       "name": "Queso rallado",
+       "base_unit": "kg",
+       "forms": [
+        "queso rallado",
+        "mozzarella rallada",
+        "queso para gratinar"
+       ]
+      },
+      {
+       "key": "queso_porciones",
+       "name": "Queso en porciones",
+       "base_unit": "kg",
+       "forms": [
+        "quesitos",
+        "queso en porciones"
+       ]
+      },
+      {
+       "key": "queso_untable",
+       "name": "Queso untable",
+       "base_unit": "kg",
+       "forms": [
+        "queso untable",
+        "queso crema",
+        "philadelphia"
+       ]
+      },
+      {
+       "key": "queso_fresco",
+       "name": "Queso fresco y mozzarella",
+       "base_unit": "kg",
+       "forms": [
+        "queso fresco",
+        "queso de burgos",
+        "mozzarella",
+        "requesón",
+        "queso batido"
+       ]
+      },
+      {
+       "key": "queso_especialidades",
+       "name": "Quesos especiales",
+       "base_unit": "kg",
+       "forms": [
+        "queso de cabra",
+        "queso azul",
+        "brie",
+        "camembert",
+        "parmesano",
+        "gouda",
+        "emmental"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "lacteos_huevos",
+   "name": "Lácteos y huevos",
+   "children": [
+    {
+     "key": "leche_bebidas",
+     "name": "Leche y bebidas vegetales",
+     "vague": true,
+     "children": [
+      {
+       "key": "leche",
+       "name": "Leche",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "leche",
+        "brick de leche",
+        "leche entera",
+        "leche semidesnatada",
+        "leche desnatada",
+        "leche sin lactosa"
+       ]
+      },
+      {
+       "key": "bebida_vegetal",
+       "name": "Bebida vegetal",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "bebida vegetal",
+        "bebida de avena",
+        "leche de avena",
+        "bebida de soja",
+        "leche de soja",
+        "bebida de almendra"
+       ]
+      },
+      {
+       "key": "batido",
+       "name": "Batido",
+       "base_unit": "l",
+       "forms": [
+        "batido",
+        "batido de chocolate",
+        "batido de cacao"
+       ]
+      },
+      {
+       "key": "leche_crecimiento",
+       "name": "Leche de crecimiento",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "leche de crecimiento",
+        "leche infantil"
+       ]
+      },
+      {
+       "key": "leche_condensada",
+       "name": "Leche condensada y evaporada",
+       "base_unit": "kg",
+       "forms": [
+        "leche condensada",
+        "leche evaporada"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "huevos",
+     "name": "Huevos",
+     "children": [
+      {
+       "key": "huevos_gallina",
+       "name": "Huevos",
+       "base_unit": "ud",
+       "default_quantity": 12,
+       "forms": [
+        "huevos",
+        "huevo",
+        "docena de huevos",
+        "huevos camperos"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "mantequilla_nata",
+     "name": "Mantequilla, margarina y nata",
+     "vague": true,
+     "children": [
+      {
+       "key": "mantequilla",
+       "name": "Mantequilla",
+       "base_unit": "kg",
+       "forms": [
+        "mantequilla"
+       ]
+      },
+      {
+       "key": "margarina",
+       "name": "Margarina",
+       "base_unit": "kg",
+       "forms": [
+        "margarina"
+       ]
+      },
+      {
+       "key": "nata",
+       "name": "Nata",
+       "base_unit": "l",
+       "forms": [
+        "nata",
+        "nata para cocinar",
+        "nata de cocinar",
+        "nata para montar",
+        "nata montada"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "yogures",
+     "name": "Yogures",
+     "vague": true,
+     "forms": [
+      "yogur",
+      "yogures",
+      "yogurt"
+     ],
+     "children": [
+      {
+       "key": "yogur_natural",
+       "name": "Yogur natural",
+       "base_unit": "kg",
+       "forms": [
+        "yogur natural"
+       ]
+      },
+      {
+       "key": "yogur_sabores",
+       "name": "Yogur de sabores",
+       "base_unit": "kg",
+       "forms": [
+        "yogur de sabores",
+        "yogur de fresa",
+        "yogur de limón",
+        "yogur con frutas"
+       ]
+      },
+      {
+       "key": "yogur_desnatado",
+       "name": "Yogur desnatado",
+       "base_unit": "kg",
+       "forms": [
+        "yogur desnatado",
+        "yogur 0%"
+       ]
+      },
+      {
+       "key": "yogur_griego",
+       "name": "Yogur griego",
+       "base_unit": "kg",
+       "forms": [
+        "yogur griego",
+        "griego"
+       ]
+      },
+      {
+       "key": "yogur_liquido",
+       "name": "Yogur líquido",
+       "base_unit": "kg",
+       "forms": [
+        "yogur líquido",
+        "yogur para beber",
+        "l-casei",
+        "actimel",
+        "danacol"
+       ]
+      },
+      {
+       "key": "bifidus",
+       "name": "Bífidus",
+       "base_unit": "kg",
+       "forms": [
+        "bífidus",
+        "activia"
+       ]
+      },
+      {
+       "key": "yogur_infantil",
+       "name": "Yogures y postres infantiles",
+       "base_unit": "kg",
+       "forms": [
+        "petit suisse",
+        "petisuis",
+        "danonino",
+        "yogur infantil"
+       ]
+      },
+      {
+       "key": "postre_soja",
+       "name": "Postres de soja",
+       "base_unit": "kg",
+       "forms": [
+        "yogur de soja",
+        "postre de soja"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "postres",
+     "name": "Postres lácteos",
+     "vague": true,
+     "forms": [
+      "postre",
+      "postres"
+     ],
+     "children": [
+      {
+       "key": "flan",
+       "name": "Flan",
+       "base_unit": "kg",
+       "forms": [
+        "flan",
+        "flan de huevo"
+       ]
+      },
+      {
+       "key": "natillas",
+       "name": "Natillas",
+       "base_unit": "kg",
+       "forms": [
+        "natillas"
+       ]
+      },
+      {
+       "key": "gelatina",
+       "name": "Gelatina",
+       "base_unit": "kg",
+       "forms": [
+        "gelatina"
+       ]
+      },
+      {
+       "key": "arroz_con_leche",
+       "name": "Arroz con leche y otros postres",
+       "base_unit": "kg",
+       "forms": [
+        "arroz con leche",
+        "cuajada",
+        "mousse",
+        "tiramisú",
+        "profiteroles"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "panaderia",
+   "name": "Panadería y pastelería",
+   "children": [
+    {
+     "key": "pan",
+     "name": "Pan",
+     "vague": true,
+     "forms": [
+      "pan"
+     ],
+     "children": [
+      {
+       "key": "barra_pan",
+       "name": "Barra de pan",
+       "base_unit": "ud",
+       "forms": [
+        "barra de pan",
+        "barra",
+        "baguette",
+        "pan de barra",
+        "chapata"
+       ]
+      },
+      {
+       "key": "pan_bocadillo",
+       "name": "Pan de bocadillo y panecillos",
+       "base_unit": "ud",
+       "forms": [
+        "pan de bocadillo",
+        "panecillos",
+        "bollitos de pan"
+       ]
+      },
+      {
+       "key": "pan_rebanado",
+       "name": "Pan rebanado de horno",
+       "base_unit": "kg",
+       "forms": [
+        "pan rebanado",
+        "pan de horno en rebanadas"
+       ]
+      },
+      {
+       "key": "pan_molde",
+       "name": "Pan de molde",
+       "base_unit": "kg",
+       "default_quantity": 0.45,
+       "forms": [
+        "pan de molde",
+        "pan molde",
+        "pan bimbo",
+        "pan de molde integral"
+       ]
+      },
+      {
+       "key": "pan_especial",
+       "name": "Panes especiales",
+       "base_unit": "kg",
+       "forms": [
+        "pan sin gluten",
+        "pan de pita",
+        "pan naan",
+        "pan de centeno",
+        "hogaza"
+       ]
+      },
+      {
+       "key": "pan_hamburguesa",
+       "name": "Pan de hamburguesa y wraps",
+       "base_unit": "ud",
+       "forms": [
+        "pan de hamburguesa",
+        "pan hamburguesa",
+        "pan de perrito",
+        "tortillas de trigo",
+        "wraps",
+        "fajitas"
+       ]
+      },
+      {
+       "key": "pan_tostado",
+       "name": "Pan tostado y biscotes",
+       "base_unit": "kg",
+       "forms": [
+        "pan tostado",
+        "biscotes",
+        "tostadas"
+       ]
+      },
+      {
+       "key": "pan_rallado",
+       "name": "Pan rallado",
+       "base_unit": "kg",
+       "forms": [
+        "pan rallado"
+       ]
+      },
+      {
+       "key": "crackers",
+       "name": "Crackers y tartaletas",
+       "base_unit": "kg",
+       "forms": [
+        "crackers",
+        "tartaletas"
+       ]
+      },
+      {
+       "key": "picos",
+       "name": "Picos, regañás y rosquilletas",
+       "base_unit": "kg",
+       "forms": [
+        "picos",
+        "regañás",
+        "rosquilletas",
+        "colines",
+        "picatostes"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "bolleria",
+     "name": "Bollería y pastelería",
+     "vague": true,
+     "forms": [
+      "bollería",
+      "dulces"
+     ],
+     "children": [
+      {
+       "key": "bolleria_horno",
+       "name": "Bollería de horno",
+       "base_unit": "ud",
+       "forms": [
+        "croissant",
+        "napolitana",
+        "palmera",
+        "ensaimada",
+        "bollería de horno"
+       ]
+      },
+      {
+       "key": "bolleria_salada",
+       "name": "Bollería salada",
+       "base_unit": "ud",
+       "forms": [
+        "empanada",
+        "empanadilla",
+        "hojaldre salado"
+       ]
+      },
+      {
+       "key": "bolleria_envasada",
+       "name": "Bollería envasada",
+       "base_unit": "kg",
+       "forms": [
+        "magdalenas",
+        "bizcocho",
+        "donuts",
+        "sobaos",
+        "bollos",
+        "croissants envasados"
+       ]
+      },
+      {
+       "key": "dulces_navidad",
+       "name": "Turrones, polvorones y mazapanes",
+       "base_unit": "kg",
+       "forms": [
+        "turrón",
+        "polvorones",
+        "mazapanes",
+        "mantecados"
+       ]
+      },
+      {
+       "key": "tartas",
+       "name": "Tartas y pasteles",
+       "base_unit": "ud",
+       "forms": [
+        "tarta",
+        "pastel",
+        "tarta de queso",
+        "tarta de cumpleaños"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "reposteria",
+     "name": "Harina y repostería",
+     "vague": true,
+     "children": [
+      {
+       "key": "harina",
+       "name": "Harina",
+       "base_unit": "kg",
+       "default_quantity": 1,
+       "forms": [
+        "harina",
+        "harina de trigo",
+        "maicena"
+       ]
+      },
+      {
+       "key": "levadura_reposteria",
+       "name": "Levadura y preparados de repostería",
+       "base_unit": "kg",
+       "forms": [
+        "levadura",
+        "preparado para bizcocho",
+        "fideos de chocolate"
+       ]
+      },
+      {
+       "key": "masas",
+       "name": "Masas de hojaldre y pizza",
+       "base_unit": "kg",
+       "forms": [
+        "masa de hojaldre",
+        "masa quebrada",
+        "obleas de empanadilla"
+       ]
+      },
+      {
+       "key": "velas_decoracion",
+       "name": "Velas y decoración de tartas",
+       "base_unit": "ud",
+       "forms": [
+        "velas de cumpleaños",
+        "decoración de tartas"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "despensa",
+   "name": "Despensa",
+   "children": [
+    {
+     "key": "aceite_condimentos",
+     "name": "Aceite, vinagre y condimentos",
+     "vague": true,
+     "forms": [
+      "especias"
+     ],
+     "children": [
+      {
+       "key": "aceite_oliva",
+       "name": "Aceite de oliva",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "aceite de oliva",
+        "aceite",
+        "aove",
+        "aceite de oliva virgen extra",
+        "aceite de oliva suave"
+       ]
+      },
+      {
+       "key": "aceite_otros",
+       "name": "Aceite de girasol y otros",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "aceite de girasol",
+        "aceite de semillas",
+        "aceite de coco"
+       ]
+      },
+      {
+       "key": "vinagre",
+       "name": "Vinagre y aderezos",
+       "base_unit": "l",
+       "forms": [
+        "vinagre",
+        "vinagre de módena",
+        "crema de balsámico"
+       ]
+      },
+      {
+       "key": "sal",
+       "name": "Sal y bicarbonato",
+       "base_unit": "kg",
+       "default_quantity": 1,
+       "forms": [
+        "sal",
+        "sal gorda",
+        "sal fina",
+        "bicarbonato"
+       ]
+      },
+      {
+       "key": "hierbas_secas",
+       "name": "Hierbas secas",
+       "base_unit": "kg",
+       "forms": [
+        "orégano",
+        "perejil seco",
+        "albahaca seca",
+        "tomillo",
+        "laurel",
+        "romero"
+       ]
+      },
+      {
+       "key": "pimenton",
+       "name": "Pimentón y colorante",
+       "base_unit": "kg",
+       "forms": [
+        "pimentón",
+        "pimentón dulce",
+        "pimentón picante",
+        "colorante"
+       ]
+      },
+      {
+       "key": "pimienta",
+       "name": "Pimienta",
+       "base_unit": "kg",
+       "forms": [
+        "pimienta",
+        "pimienta negra",
+        "pimienta molida"
+       ]
+      },
+      {
+       "key": "sazonador",
+       "name": "Sazonadores",
+       "base_unit": "kg",
+       "forms": [
+        "sazonador",
+        "sazonador para carne",
+        "ajo en polvo"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "salsas",
+     "name": "Salsas",
+     "vague": true,
+     "forms": [
+      "salsa",
+      "salsas"
+     ],
+     "children": [
+      {
+       "key": "mayonesa",
+       "name": "Mayonesa",
+       "base_unit": "kg",
+       "forms": [
+        "mayonesa",
+        "mahonesa"
+       ]
+      },
+      {
+       "key": "ketchup",
+       "name": "Ketchup",
+       "base_unit": "kg",
+       "forms": [
+        "ketchup",
+        "kétchup"
+       ]
+      },
+      {
+       "key": "mostaza",
+       "name": "Mostaza",
+       "base_unit": "kg",
+       "forms": [
+        "mostaza"
+       ]
+      },
+      {
+       "key": "allioli",
+       "name": "Allioli",
+       "base_unit": "kg",
+       "forms": [
+        "allioli",
+        "alioli"
+       ]
+      },
+      {
+       "key": "tomate_frito",
+       "name": "Tomate frito",
+       "base_unit": "kg",
+       "forms": [
+        "tomate frito",
+        "salsa de tomate"
+       ]
+      },
+      {
+       "key": "salsa_carne",
+       "name": "Salsas para carne",
+       "base_unit": "kg",
+       "forms": [
+        "salsa barbacoa",
+        "salsa de pimienta",
+        "salsa para carne"
+       ]
+      },
+      {
+       "key": "salsa_pasta",
+       "name": "Salsas para pasta",
+       "base_unit": "kg",
+       "forms": [
+        "salsa boloñesa",
+        "pesto",
+        "salsa carbonara",
+        "salsa para pasta"
+       ]
+      },
+      {
+       "key": "salsa_oriental",
+       "name": "Salsas orientales",
+       "base_unit": "kg",
+       "forms": [
+        "salsa de soja",
+        "salsa agridulce",
+        "salsa teriyaki"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "arroz_legumbres_pasta",
+     "name": "Arroz, legumbres y pasta",
+     "vague": true,
+     "children": [
+      {
+       "key": "arroz",
+       "name": "Arroz",
+       "base_unit": "kg",
+       "default_quantity": 1,
+       "forms": [
+        "arroz",
+        "arroz redondo",
+        "arroz largo",
+        "arroz basmati",
+        "arroz integral"
+       ]
+      },
+      {
+       "key": "garbanzos",
+       "name": "Garbanzos",
+       "base_unit": "kg",
+       "forms": [
+        "garbanzos",
+        "garbanzos cocidos"
+       ]
+      },
+      {
+       "key": "alubias",
+       "name": "Alubias",
+       "base_unit": "kg",
+       "forms": [
+        "alubias",
+        "judías blancas",
+        "judías pintas",
+        "fabes"
+       ]
+      },
+      {
+       "key": "lentejas",
+       "name": "Lentejas y otras legumbres",
+       "base_unit": "kg",
+       "forms": [
+        "lentejas",
+        "lentejas cocidas",
+        "guisantes secos"
+       ]
+      },
+      {
+       "key": "pasta_corta",
+       "name": "Macarrones y pasta corta",
+       "base_unit": "kg",
+       "default_quantity": 0.5,
+       "forms": [
+        "macarrones",
+        "pasta",
+        "hélices",
+        "pajaritas",
+        "penne",
+        "espirales"
+       ]
+      },
+      {
+       "key": "pasta_larga",
+       "name": "Espaguetis y tallarines",
+       "base_unit": "kg",
+       "default_quantity": 0.5,
+       "forms": [
+        "espaguetis",
+        "spaghetti",
+        "tallarines",
+        "espagueti"
+       ]
+      },
+      {
+       "key": "fideos",
+       "name": "Fideos",
+       "base_unit": "kg",
+       "default_quantity": 0.5,
+       "forms": [
+        "fideos",
+        "fideo fino",
+        "fideuá"
+       ]
+      },
+      {
+       "key": "pasta_rellena",
+       "name": "Pasta rellena y fresca",
+       "base_unit": "kg",
+       "forms": [
+        "tortellini",
+        "raviolis",
+        "pasta fresca",
+        "pasta rellena"
+       ]
+      },
+      {
+       "key": "pasta_oriental",
+       "name": "Fideos orientales",
+       "base_unit": "kg",
+       "forms": [
+        "fideos orientales",
+        "noodles",
+        "fideos de arroz"
+       ]
+      },
+      {
+       "key": "lasana_canelones",
+       "name": "Lasaña y canelones",
+       "base_unit": "kg",
+       "forms": [
+        "placas de lasaña",
+        "lasaña",
+        "canelones"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "conservas",
+     "name": "Conservas",
+     "vague": true,
+     "forms": [
+      "conservas",
+      "latas"
+     ],
+     "children": [
+      {
+       "key": "atun",
+       "name": "Atún",
+       "base_unit": "kg",
+       "forms": [
+        "atún",
+        "atún en aceite",
+        "atún claro",
+        "latas de atún"
+       ]
+      },
+      {
+       "key": "bonito",
+       "name": "Bonito",
+       "base_unit": "kg",
+       "forms": [
+        "bonito",
+        "bonito del norte"
+       ]
+      },
+      {
+       "key": "caballa_sardinas",
+       "name": "Caballa, sardinas y melva",
+       "base_unit": "kg",
+       "forms": [
+        "caballa",
+        "melva",
+        "sardinas",
+        "sardinillas"
+       ]
+      },
+      {
+       "key": "conserva_pescado_otros",
+       "name": "Otras conservas de pescado",
+       "base_unit": "kg",
+       "forms": [
+        "anchoas",
+        "calamares en su tinta",
+        "pulpo en conserva",
+        "ventresca"
+       ]
+      },
+      {
+       "key": "mejillon_conserva",
+       "name": "Mejillones y berberechos en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "mejillones en escabeche",
+        "berberechos",
+        "almejas en conserva"
+       ]
+      },
+      {
+       "key": "conserva_verdura",
+       "name": "Conservas de verdura",
+       "base_unit": "kg",
+       "forms": [
+        "maíz dulce",
+        "pimientos del piquillo",
+        "espárragos",
+        "champiñones en lata",
+        "judías verdes en conserva",
+        "alcachofas"
+       ]
+      },
+      {
+       "key": "conserva_fruta",
+       "name": "Conservas de fruta",
+       "base_unit": "kg",
+       "forms": [
+        "melocotón en almíbar",
+        "piña en almíbar",
+        "macedonia"
+       ]
+      },
+      {
+       "key": "tomate_conserva",
+       "name": "Tomate triturado y en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "tomate triturado",
+        "tomate natural",
+        "tomate pelado",
+        "concentrado de tomate"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "sopas_cremas",
+     "name": "Sopas, caldos y cremas",
+     "vague": true,
+     "children": [
+      {
+       "key": "caldo",
+       "name": "Caldo",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "caldo",
+        "caldo de pollo",
+        "caldo de verduras",
+        "caldo de cocido",
+        "pastillas de caldo",
+        "avecrem"
+       ]
+      },
+      {
+       "key": "sopa",
+       "name": "Sopa",
+       "base_unit": "kg",
+       "forms": [
+        "sopa",
+        "sopa de sobre"
+       ]
+      },
+      {
+       "key": "crema_pure",
+       "name": "Cremas y puré",
+       "base_unit": "kg",
+       "forms": [
+        "crema de verduras",
+        "puré de patata",
+        "crema de calabaza"
+       ]
+      },
+      {
+       "key": "gazpacho",
+       "name": "Gazpacho y salmorejo",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "gazpacho",
+        "salmorejo"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "aperitivos",
+     "name": "Aperitivos",
+     "vague": true,
+     "forms": [
+      "aperitivos",
+      "picoteo"
+     ],
+     "children": [
+      {
+       "key": "aceitunas",
+       "name": "Aceitunas",
+       "base_unit": "kg",
+       "forms": [
+        "aceitunas",
+        "olivas",
+        "aceitunas negras",
+        "aceitunas rellenas"
+       ]
+      },
+      {
+       "key": "encurtidos",
+       "name": "Pepinillos y encurtidos",
+       "base_unit": "kg",
+       "forms": [
+        "pepinillos",
+        "banderillas",
+        "encurtidos",
+        "cebollitas"
+       ]
+      },
+      {
+       "key": "frutos_secos",
+       "name": "Frutos secos",
+       "base_unit": "kg",
+       "forms": [
+        "frutos secos",
+        "almendras",
+        "nueces",
+        "cacahuetes",
+        "pistachos",
+        "anacardos",
+        "pipas",
+        "cóctel de frutos secos"
+       ]
+      },
+      {
+       "key": "fruta_desecada",
+       "name": "Fruta desecada",
+       "base_unit": "kg",
+       "forms": [
+        "pasas",
+        "dátiles",
+        "orejones",
+        "ciruelas pasas"
+       ]
+      },
+      {
+       "key": "patatas_fritas",
+       "name": "Patatas fritas",
+       "base_unit": "kg",
+       "forms": [
+        "patatas fritas",
+        "patatas chips",
+        "patatas de bolsa"
+       ]
+      },
+      {
+       "key": "snacks",
+       "name": "Snacks",
+       "base_unit": "kg",
+       "forms": [
+        "snacks",
+        "gusanitos",
+        "nachos",
+        "palomitas",
+        "cortezas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "dulces",
+     "name": "Azúcar, chocolate y dulces",
+     "vague": true,
+     "children": [
+      {
+       "key": "azucar",
+       "name": "Azúcar",
+       "base_unit": "kg",
+       "default_quantity": 1,
+       "forms": [
+        "azúcar",
+        "azúcar moreno",
+        "azúcar blanco"
+       ]
+      },
+      {
+       "key": "edulcorante",
+       "name": "Edulcorante",
+       "base_unit": "ud",
+       "forms": [
+        "edulcorante",
+        "sacarina",
+        "stevia"
+       ]
+      },
+      {
+       "key": "chocolate",
+       "name": "Chocolate",
+       "base_unit": "kg",
+       "forms": [
+        "chocolate",
+        "tableta de chocolate",
+        "chocolate negro",
+        "chocolate con leche",
+        "chocolate blanco"
+       ]
+      },
+      {
+       "key": "chocolatinas",
+       "name": "Chocolatinas",
+       "base_unit": "kg",
+       "forms": [
+        "chocolatinas",
+        "kitkat",
+        "huevo kinder"
+       ]
+      },
+      {
+       "key": "bombones",
+       "name": "Bombones",
+       "base_unit": "kg",
+       "forms": [
+        "bombones",
+        "caja de bombones"
+       ]
+      },
+      {
+       "key": "crema_untar",
+       "name": "Crema de cacao para untar",
+       "base_unit": "kg",
+       "forms": [
+        "nocilla",
+        "nutella",
+        "crema de cacao",
+        "crema de untar"
+       ]
+      },
+      {
+       "key": "chicles",
+       "name": "Chicles",
+       "base_unit": "kg",
+       "forms": [
+        "chicles"
+       ]
+      },
+      {
+       "key": "caramelos",
+       "name": "Caramelos",
+       "base_unit": "kg",
+       "forms": [
+        "caramelos"
+       ]
+      },
+      {
+       "key": "golosinas",
+       "name": "Golosinas",
+       "base_unit": "kg",
+       "forms": [
+        "golosinas",
+        "chuches",
+        "gominolas",
+        "regaliz"
+       ]
+      },
+      {
+       "key": "mermelada",
+       "name": "Mermelada y confitura",
+       "base_unit": "kg",
+       "forms": [
+        "mermelada",
+        "confitura",
+        "membrillo"
+       ]
+      },
+      {
+       "key": "miel",
+       "name": "Miel",
+       "base_unit": "kg",
+       "forms": [
+        "miel"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "desayuno",
+     "name": "Cereales",
+     "vague": true,
+     "children": [
+      {
+       "key": "cereales",
+       "name": "Cereales de desayuno",
+       "base_unit": "kg",
+       "forms": [
+        "cereales",
+        "corn flakes",
+        "copos de maíz",
+        "cereales de chocolate"
+       ]
+      },
+      {
+       "key": "cereales_integrales",
+       "name": "Cereales integrales, avena y muesli",
+       "base_unit": "kg",
+       "forms": [
+        "muesli",
+        "copos de avena",
+        "avena",
+        "granola",
+        "cereales integrales"
+       ]
+      },
+      {
+       "key": "barritas",
+       "name": "Barritas de cereales",
+       "base_unit": "kg",
+       "forms": [
+        "barritas de cereales",
+        "barritas"
+       ]
+      },
+      {
+       "key": "tortitas",
+       "name": "Tortitas de arroz y maíz",
+       "base_unit": "kg",
+       "forms": [
+        "tortitas de arroz",
+        "tortitas de maíz",
+        "tortitas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "galletas",
+     "name": "Galletas",
+     "vague": true,
+     "forms": [
+      "galletas",
+      "galleta"
+     ],
+     "children": [
+      {
+       "key": "galletas_desayuno",
+       "name": "Galletas de desayuno",
+       "base_unit": "kg",
+       "forms": [
+        "galletas maría",
+        "galletas de desayuno",
+        "galletas tostadas"
+       ]
+      },
+      {
+       "key": "galletas_integrales",
+       "name": "Galletas integrales y digestive",
+       "base_unit": "kg",
+       "forms": [
+        "galletas integrales",
+        "galletas digestive",
+        "digestive"
+       ]
+      },
+      {
+       "key": "galletas_chocolate",
+       "name": "Galletas con chocolate y rellenas",
+       "base_unit": "kg",
+       "forms": [
+        "galletas de chocolate",
+        "galletas rellenas",
+        "galletas con chocolate",
+        "oreo",
+        "príncipe"
+       ]
+      },
+      {
+       "key": "galletas_surtidas",
+       "name": "Galletas surtidas",
+       "base_unit": "kg",
+       "forms": [
+        "galletas surtidas",
+        "surtido de galletas",
+        "caja de galletas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "cafe_infusiones",
+     "name": "Café, cacao e infusiones",
+     "vague": true,
+     "forms": [
+      "cápsulas de café",
+      "cápsulas"
+     ],
+     "children": [
+      {
+       "key": "cafe_molido",
+       "name": "Café molido",
+       "base_unit": "kg",
+       "forms": [
+        "café",
+        "café molido",
+        "café natural",
+        "café mezcla"
+       ]
+      },
+      {
+       "key": "cafe_grano",
+       "name": "Café en grano",
+       "base_unit": "kg",
+       "forms": [
+        "café en grano"
+       ]
+      },
+      {
+       "key": "capsulas_nespresso",
+       "name": "Cápsulas compatibles Nespresso",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas nespresso",
+        "cápsulas de café nespresso"
+       ]
+      },
+      {
+       "key": "capsulas_dolce_gusto",
+       "name": "Cápsulas compatibles Dolce Gusto",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas dolce gusto"
+       ]
+      },
+      {
+       "key": "capsulas_tassimo",
+       "name": "Cápsulas compatibles Tassimo",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas tassimo"
+       ]
+      },
+      {
+       "key": "cafe_monodosis",
+       "name": "Café en monodosis",
+       "base_unit": "ud",
+       "forms": [
+        "monodosis de café"
+       ]
+      },
+      {
+       "key": "cafe_soluble",
+       "name": "Café soluble",
+       "base_unit": "kg",
+       "forms": [
+        "café soluble",
+        "nescafé",
+        "café instantáneo"
+       ]
+      },
+      {
+       "key": "bebida_cafe",
+       "name": "Bebidas de café frías y otras",
+       "base_unit": "l",
+       "forms": [
+        "café frío",
+        "capuccino de lata",
+        "achicoria"
+       ]
+      },
+      {
+       "key": "cacao_soluble",
+       "name": "Cacao soluble",
+       "base_unit": "kg",
+       "forms": [
+        "cacao soluble",
+        "colacao",
+        "nesquik",
+        "cola cao"
+       ]
+      },
+      {
+       "key": "chocolate_taza",
+       "name": "Chocolate a la taza",
+       "base_unit": "kg",
+       "forms": [
+        "chocolate a la taza",
+        "chocolate para fundir"
+       ]
+      },
+      {
+       "key": "te",
+       "name": "Té",
+       "base_unit": "ud",
+       "forms": [
+        "té",
+        "té verde",
+        "té negro",
+        "té rojo"
+       ]
+      },
+      {
+       "key": "infusiones",
+       "name": "Infusiones",
+       "base_unit": "ud",
+       "forms": [
+        "infusiones",
+        "manzanilla",
+        "poleo menta",
+        "tila",
+        "rooibos"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "bebidas",
+   "name": "Bebidas",
+   "children": [
+    {
+     "key": "agua",
+     "name": "Agua",
+     "children": [
+      {
+       "key": "agua_sin_gas",
+       "name": "Agua mineral",
+       "base_unit": "l",
+       "default_quantity": 1.5,
+       "forms": [
+        "agua",
+        "agua mineral",
+        "garrafa de agua",
+        "botella de agua"
+       ]
+      },
+      {
+       "key": "agua_con_gas",
+       "name": "Agua con gas y gaseosa",
+       "base_unit": "l",
+       "forms": [
+        "agua con gas",
+        "gaseosa",
+        "soda"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "refrescos",
+     "name": "Refrescos",
+     "vague": true,
+     "forms": [
+      "refresco",
+      "refrescos"
+     ],
+     "children": [
+      {
+       "key": "refresco_cola",
+       "name": "Refresco de cola",
+       "base_unit": "l",
+       "default_quantity": 2,
+       "forms": [
+        "refresco de cola",
+        "cola",
+        "coca cola",
+        "cocacola",
+        "coca-cola",
+        "pepsi",
+        "cola zero",
+        "coca cola zero"
+       ]
+      },
+      {
+       "key": "refresco_naranja_limon",
+       "name": "Refresco de naranja y limón",
+       "base_unit": "l",
+       "forms": [
+        "fanta",
+        "fanta naranja",
+        "fanta limón",
+        "refresco de naranja",
+        "refresco de limón",
+        "sprite",
+        "seven up"
+       ]
+      },
+      {
+       "key": "tonica",
+       "name": "Tónica y bitter",
+       "base_unit": "l",
+       "forms": [
+        "tónica",
+        "bitter",
+        "schweppes"
+       ]
+      },
+      {
+       "key": "refresco_te",
+       "name": "Refresco de té",
+       "base_unit": "l",
+       "forms": [
+        "nestea",
+        "té frío",
+        "refresco de té",
+        "fuze tea"
+       ]
+      },
+      {
+       "key": "isotonica",
+       "name": "Bebida isotónica",
+       "base_unit": "l",
+       "forms": [
+        "isotónica",
+        "aquarius",
+        "powerade",
+        "bebida isotónica"
+       ]
+      },
+      {
+       "key": "energetica",
+       "name": "Bebida energética",
+       "base_unit": "l",
+       "forms": [
+        "red bull",
+        "monster",
+        "bebida energética"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "zumos",
+     "name": "Zumos",
+     "vague": true,
+     "forms": [
+      "zumo",
+      "zumos",
+      "jugo"
+     ],
+     "children": [
+      {
+       "key": "zumo_naranja",
+       "name": "Zumo de naranja",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "zumo de naranja"
+       ]
+      },
+      {
+       "key": "zumo_melocoton_pina",
+       "name": "Zumo de melocotón y piña",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "zumo de melocotón",
+        "zumo de piña",
+        "néctar de melocotón"
+       ]
+      },
+      {
+       "key": "zumo_leche",
+       "name": "Zumo con leche",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "zumo con leche",
+        "bifrutas",
+        "fruta y leche"
+       ]
+      },
+      {
+       "key": "smoothie",
+       "name": "Smoothie",
+       "base_unit": "l",
+       "forms": [
+        "smoothie"
+       ]
+      },
+      {
+       "key": "zumo_tomate_otros",
+       "name": "Zumo de tomate y otros sabores",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "zumo de tomate",
+        "zumo de manzana",
+        "zumo de uva"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "cerveza",
+     "name": "Cerveza",
+     "vague": true,
+     "forms": [
+      "birra"
+     ],
+     "children": [
+      {
+       "key": "cerveza_alcohol",
+       "name": "Cerveza",
+       "base_unit": "l",
+       "forms": [
+        "cerveza",
+        "cervezas",
+        "lata de cerveza",
+        "tercio",
+        "botellín"
+       ]
+      },
+      {
+       "key": "cerveza_sin",
+       "name": "Cerveza sin alcohol",
+       "base_unit": "l",
+       "forms": [
+        "cerveza sin alcohol",
+        "cerveza 0,0",
+        "cerveza tostada sin"
+       ]
+      },
+      {
+       "key": "cerveza_combinada",
+       "name": "Cerveza con limón y combinados",
+       "base_unit": "l",
+       "forms": [
+        "clara",
+        "cerveza con limón",
+        "radler"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "vino",
+     "name": "Vino",
+     "vague": true,
+     "forms": [
+      "vino"
+     ],
+     "children": [
+      {
+       "key": "vino_tinto",
+       "name": "Vino tinto",
+       "base_unit": "l",
+       "default_quantity": 0.75,
+       "forms": [
+        "vino tinto",
+        "rioja",
+        "ribera del duero",
+        "crianza",
+        "tinto"
+       ]
+      },
+      {
+       "key": "vino_blanco",
+       "name": "Vino blanco",
+       "base_unit": "l",
+       "default_quantity": 0.75,
+       "forms": [
+        "vino blanco",
+        "rueda",
+        "verdejo",
+        "albariño"
+       ]
+      },
+      {
+       "key": "vino_rosado",
+       "name": "Vino rosado",
+       "base_unit": "l",
+       "default_quantity": 0.75,
+       "forms": [
+        "vino rosado",
+        "rosado"
+       ]
+      },
+      {
+       "key": "vino_dulce",
+       "name": "Vino dulce y mosto",
+       "base_unit": "l",
+       "forms": [
+        "vino dulce",
+        "moscatel",
+        "mosto",
+        "vino de misa"
+       ]
+      },
+      {
+       "key": "espumoso",
+       "name": "Cava, lambrusco y espumosos",
+       "base_unit": "l",
+       "default_quantity": 0.75,
+       "forms": [
+        "cava",
+        "champán",
+        "lambrusco",
+        "espumoso"
+       ]
+      },
+      {
+       "key": "sidra",
+       "name": "Sidra",
+       "base_unit": "l",
+       "forms": [
+        "sidra"
+       ]
+      },
+      {
+       "key": "tinto_verano",
+       "name": "Tinto de verano y sangría",
+       "base_unit": "l",
+       "forms": [
+        "tinto de verano",
+        "sangría"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "licores",
+     "name": "Licores",
+     "vague": true,
+     "forms": [
+      "licor",
+      "licores",
+      "alcohol"
+     ],
+     "children": [
+      {
+       "key": "ginebra",
+       "name": "Ginebra",
+       "base_unit": "l",
+       "forms": [
+        "ginebra",
+        "gin"
+       ]
+      },
+      {
+       "key": "ron",
+       "name": "Ron",
+       "base_unit": "l",
+       "forms": [
+        "ron"
+       ]
+      },
+      {
+       "key": "whisky",
+       "name": "Whisky",
+       "base_unit": "l",
+       "forms": [
+        "whisky",
+        "güisqui"
+       ]
+      },
+      {
+       "key": "vodka",
+       "name": "Vodka",
+       "base_unit": "l",
+       "forms": [
+        "vodka"
+       ]
+      },
+      {
+       "key": "brandy",
+       "name": "Brandy y coñac",
+       "base_unit": "l",
+       "forms": [
+        "brandy",
+        "coñac"
+       ]
+      },
+      {
+       "key": "vermut",
+       "name": "Vermut y aperitivos",
+       "base_unit": "l",
+       "forms": [
+        "vermut",
+        "vermouth",
+        "martini"
+       ]
+      },
+      {
+       "key": "licor_crema",
+       "name": "Cremas de licor",
+       "base_unit": "l",
+       "forms": [
+        "crema de orujo",
+        "baileys",
+        "crema de licor"
+       ]
+      },
+      {
+       "key": "anis_aguardiente",
+       "name": "Anís, orujo y pacharán",
+       "base_unit": "l",
+       "forms": [
+        "anís",
+        "orujo",
+        "pacharán",
+        "aguardiente"
+       ]
+      },
+      {
+       "key": "licor_sin",
+       "name": "Licores sin alcohol",
+       "base_unit": "l",
+       "forms": [
+        "licor sin alcohol",
+        "ginebra sin alcohol"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "congelados_preparados",
+   "name": "Congelados y platos preparados",
+   "children": [
+    {
+     "key": "congelados",
+     "name": "Congelados",
+     "vague": true,
+     "forms": [
+      "congelados"
+     ],
+     "children": [
+      {
+       "key": "verdura_congelada",
+       "name": "Verdura congelada",
+       "base_unit": "kg",
+       "forms": [
+        "verdura congelada",
+        "guisantes congelados",
+        "judías verdes congeladas",
+        "espinacas congeladas",
+        "menestra"
+       ]
+      },
+      {
+       "key": "patatas_congeladas",
+       "name": "Patatas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "patatas congeladas",
+        "patatas prefritas",
+        "patatas para freír"
+       ]
+      },
+      {
+       "key": "fruta_congelada",
+       "name": "Fruta congelada",
+       "base_unit": "kg",
+       "forms": [
+        "fruta congelada"
+       ]
+      },
+      {
+       "key": "arroz_pasta_congelados",
+       "name": "Arroz y pasta congelados",
+       "base_unit": "kg",
+       "forms": [
+        "paella congelada",
+        "pasta congelada",
+        "arroz tres delicias"
+       ]
+      },
+      {
+       "key": "carne_congelada",
+       "name": "Carne congelada",
+       "base_unit": "kg",
+       "forms": [
+        "carne congelada",
+        "pollo congelado",
+        "hamburguesas congeladas"
+       ]
+      },
+      {
+       "key": "rebozados",
+       "name": "Rebozados congelados",
+       "base_unit": "kg",
+       "forms": [
+        "croquetas",
+        "nuggets congelados",
+        "aros de cebolla",
+        "rebozados"
+       ]
+      },
+      {
+       "key": "hielo",
+       "name": "Hielo",
+       "base_unit": "kg",
+       "forms": [
+        "hielo",
+        "bolsa de hielo",
+        "cubitos"
+       ]
+      },
+      {
+       "key": "tartas_congeladas",
+       "name": "Tartas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "tarta helada",
+        "tarta congelada"
+       ]
+      },
+      {
+       "key": "churros",
+       "name": "Churros y porras",
+       "base_unit": "kg",
+       "forms": [
+        "churros",
+        "porras"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "helados",
+     "name": "Helados",
+     "vague": true,
+     "forms": [
+      "helado",
+      "helados"
+     ],
+     "children": [
+      {
+       "key": "helado_tarrina",
+       "name": "Helado en tarrina",
+       "base_unit": "l",
+       "forms": [
+        "tarrina de helado",
+        "helado de tarrina",
+        "helado de vainilla",
+        "helado de chocolate"
+       ]
+      },
+      {
+       "key": "helado_individual",
+       "name": "Helados individuales",
+       "base_unit": "ud",
+       "forms": [
+        "bombón helado",
+        "cucurucho",
+        "sándwich de helado",
+        "polo",
+        "magnum",
+        "barra de helado"
+       ]
+      },
+      {
+       "key": "granizado",
+       "name": "Granizados y polos de hielo",
+       "base_unit": "ud",
+       "forms": [
+        "granizado",
+        "polos de hielo",
+        "flash"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "pizzas",
+     "name": "Pizzas",
+     "vague": true,
+     "forms": [
+      "pizza",
+      "pizzas"
+     ],
+     "children": [
+      {
+       "key": "pizza_refrigerada",
+       "name": "Pizza refrigerada",
+       "base_unit": "ud",
+       "forms": [
+        "pizza refrigerada",
+        "pizza fresca"
+       ]
+      },
+      {
+       "key": "pizza_congelada",
+       "name": "Pizza congelada",
+       "base_unit": "ud",
+       "forms": [
+        "pizza congelada"
+       ]
+      },
+      {
+       "key": "base_pizza",
+       "name": "Base de pizza",
+       "base_unit": "ud",
+       "forms": [
+        "base de pizza",
+        "masa de pizza"
+       ]
+      },
+      {
+       "key": "quiche_baguette",
+       "name": "Quiche, roscas y baguettes rellenas",
+       "base_unit": "ud",
+       "forms": [
+        "quiche",
+        "baguette rellena",
+        "rosca"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "platos_preparados",
+     "name": "Platos preparados",
+     "vague": true,
+     "forms": [
+      "plato preparado",
+      "platos preparados",
+      "comida preparada"
+     ],
+     "children": [
+      {
+       "key": "tortilla",
+       "name": "Tortilla de patata",
+       "base_unit": "ud",
+       "forms": [
+        "tortilla",
+        "tortilla de patata",
+        "tortilla española"
+       ]
+      },
+      {
+       "key": "plato_cuchara",
+       "name": "Platos de cuchara",
+       "base_unit": "kg",
+       "forms": [
+        "cocido",
+        "fabada",
+        "lentejas preparadas",
+        "potaje"
+       ]
+      },
+      {
+       "key": "plato_pasta_arroz",
+       "name": "Pasta y arroz preparados",
+       "base_unit": "kg",
+       "forms": [
+        "paella",
+        "lasaña preparada",
+        "macarrones preparados"
+       ]
+      },
+      {
+       "key": "plato_carne",
+       "name": "Platos de carne preparados",
+       "base_unit": "kg",
+       "forms": [
+        "albóndigas en salsa",
+        "pollo asado",
+        "carrilleras"
+       ]
+      },
+      {
+       "key": "listo_comer",
+       "name": "Listo para comer",
+       "base_unit": "ud",
+       "forms": [
+        "listo para comer",
+        "comida para llevar"
+       ]
+      },
+      {
+       "key": "ensaladilla",
+       "name": "Ensaladilla y ensaladas preparadas",
+       "base_unit": "kg",
+       "forms": [
+        "ensaladilla",
+        "ensaladilla rusa",
+        "ensalada de pasta"
+       ]
+      },
+      {
+       "key": "hummus_untables",
+       "name": "Hummus y otros untables",
+       "base_unit": "kg",
+       "forms": [
+        "hummus",
+        "guacamole",
+        "tzatziki"
+       ]
+      },
+      {
+       "key": "sandwich",
+       "name": "Sándwich preparado",
+       "base_unit": "ud",
+       "forms": [
+        "sándwich",
+        "sandwich preparado"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "bebe",
+   "name": "Bebé",
+   "children": [
+    {
+     "key": "alimentacion_infantil",
+     "name": "Alimentación infantil",
+     "vague": true,
+     "children": [
+      {
+       "key": "tarritos",
+       "name": "Tarritos",
+       "base_unit": "kg",
+       "forms": [
+        "tarritos",
+        "potitos",
+        "tarrito de fruta",
+        "tarrito de verduras"
+       ]
+      },
+      {
+       "key": "papillas",
+       "name": "Papillas",
+       "base_unit": "kg",
+       "forms": [
+        "papilla",
+        "papillas",
+        "cereales para bebé"
+       ]
+      },
+      {
+       "key": "leche_bebe",
+       "name": "Leche infantil",
+       "base_unit": "kg",
+       "forms": [
+        "leche de continuación",
+        "leche en polvo",
+        "leche para bebé"
+       ]
+      },
+      {
+       "key": "postre_bebe",
+       "name": "Yogures y postres para bebé",
+       "base_unit": "kg",
+       "forms": [
+        "yogur para bebé",
+        "postre para bebé"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "cuidado_bebe",
+     "name": "Cuidado del bebé",
+     "vague": true,
+     "children": [
+      {
+       "key": "panales",
+       "name": "Pañales",
+       "base_unit": "ud",
+       "forms": [
+        "pañales",
+        "dodot",
+        "braguitas pañal",
+        "pañales talla 4"
+       ]
+      },
+      {
+       "key": "toallitas_bebe",
+       "name": "Toallitas para bebé",
+       "base_unit": "ud",
+       "forms": [
+        "toallitas para bebé",
+        "toallitas húmedas"
+       ]
+      },
+      {
+       "key": "higiene_bebe",
+       "name": "Higiene y cosmética infantil",
+       "base_unit": "ud",
+       "forms": [
+        "champú de bebé",
+        "crema del pañal",
+        "colonia de bebé",
+        "aceite de bebé",
+        "peine de bebé"
+       ]
+      },
+      {
+       "key": "biberon_chupete",
+       "name": "Biberones y chupetes",
+       "base_unit": "ud",
+       "forms": [
+        "biberón",
+        "chupete",
+        "tetina"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "higiene_cuidado",
+   "name": "Higiene y cuidado personal",
+   "children": [
+    {
+     "key": "cabello",
+     "name": "Cuidado del cabello",
+     "vague": true,
+     "children": [
+      {
+       "key": "champu",
+       "name": "Champú",
+       "base_unit": "l",
+       "forms": [
+        "champú",
+        "champú anticaspa",
+        "champú infantil"
+       ]
+      },
+      {
+       "key": "acondicionador",
+       "name": "Acondicionador y mascarilla",
+       "base_unit": "l",
+       "forms": [
+        "acondicionador",
+        "mascarilla de pelo",
+        "sérum de pelo"
+       ]
+      },
+      {
+       "key": "tinte",
+       "name": "Tinte de pelo",
+       "base_unit": "ud",
+       "forms": [
+        "tinte",
+        "tinte de pelo",
+        "coloración"
+       ]
+      },
+      {
+       "key": "fijacion",
+       "name": "Espuma, laca y gomina",
+       "base_unit": "ud",
+       "forms": [
+        "laca",
+        "espuma de pelo",
+        "gomina",
+        "cera de pelo"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "higiene_corporal",
+     "name": "Higiene corporal",
+     "vague": true,
+     "children": [
+      {
+       "key": "gel_ducha",
+       "name": "Gel de ducha",
+       "base_unit": "l",
+       "forms": [
+        "gel",
+        "gel de ducha",
+        "gel de baño"
+       ]
+      },
+      {
+       "key": "jabon_manos",
+       "name": "Jabón de manos",
+       "base_unit": "l",
+       "forms": [
+        "jabón de manos",
+        "jabón",
+        "jabón líquido"
+       ]
+      },
+      {
+       "key": "esponjas",
+       "name": "Esponjas",
+       "base_unit": "ud",
+       "forms": [
+        "esponja",
+        "esponjas de baño"
+       ]
+      },
+      {
+       "key": "desodorante",
+       "name": "Desodorante",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante",
+        "desodorante roll on",
+        "desodorante spray"
+       ]
+      },
+      {
+       "key": "crema_corporal",
+       "name": "Crema y aceite corporal",
+       "base_unit": "ud",
+       "forms": [
+        "crema corporal",
+        "crema hidratante",
+        "body milk",
+        "aceite corporal",
+        "crema de pies"
+       ]
+      },
+      {
+       "key": "crema_manos",
+       "name": "Crema de manos",
+       "base_unit": "ud",
+       "forms": [
+        "crema de manos"
+       ]
+      },
+      {
+       "key": "toallitas_corporales",
+       "name": "Toallitas corporales y desmaquillantes",
+       "base_unit": "ud",
+       "forms": [
+        "toallitas desmaquillantes",
+        "toallitas íntimas"
+       ]
+      },
+      {
+       "key": "protector_solar",
+       "name": "Protector solar y aftersun",
+       "base_unit": "ud",
+       "forms": [
+        "crema solar",
+        "protector solar",
+        "aftersun"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "higiene_bucal",
+     "name": "Higiene bucal",
+     "vague": true,
+     "children": [
+      {
+       "key": "pasta_dientes",
+       "name": "Pasta de dientes",
+       "base_unit": "ud",
+       "forms": [
+        "pasta de dientes",
+        "dentífrico",
+        "colgate"
+       ]
+      },
+      {
+       "key": "cepillo_dientes",
+       "name": "Cepillo de dientes",
+       "base_unit": "ud",
+       "forms": [
+        "cepillo de dientes",
+        "recambio de cepillo eléctrico"
+       ]
+      },
+      {
+       "key": "colutorio",
+       "name": "Colutorio e hilo dental",
+       "base_unit": "ud",
+       "forms": [
+        "colutorio",
+        "enjuague bucal",
+        "hilo dental"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "cuidado_facial",
+     "name": "Cuidado facial",
+     "vague": true,
+     "children": [
+      {
+       "key": "limpieza_facial",
+       "name": "Limpieza facial",
+       "base_unit": "ud",
+       "forms": [
+        "desmaquillante",
+        "agua micelar",
+        "limpiador facial",
+        "tónico facial"
+       ]
+      },
+      {
+       "key": "crema_facial",
+       "name": "Crema facial y sérum",
+       "base_unit": "ud",
+       "forms": [
+        "crema de cara",
+        "crema facial",
+        "contorno de ojos",
+        "sérum facial",
+        "crema para hombre"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "afeitado_depilacion",
+     "name": "Afeitado y depilación",
+     "vague": true,
+     "children": [
+      {
+       "key": "maquinilla",
+       "name": "Maquinillas y recambios",
+       "base_unit": "ud",
+       "forms": [
+        "maquinillas",
+        "cuchillas de afeitar",
+        "recambios de cuchillas",
+        "cuchillas"
+       ]
+      },
+      {
+       "key": "espuma_afeitar",
+       "name": "Espuma y cuidado para el afeitado",
+       "base_unit": "ud",
+       "forms": [
+        "espuma de afeitar",
+        "gel de afeitar",
+        "after shave"
+       ]
+      },
+      {
+       "key": "depilacion",
+       "name": "Cera y bandas depilatorias",
+       "base_unit": "ud",
+       "forms": [
+        "cera depilatoria",
+        "bandas de cera",
+        "crema depilatoria"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "higiene_intima",
+     "name": "Higiene íntima",
+     "vague": true,
+     "children": [
+      {
+       "key": "compresas",
+       "name": "Compresas y protegeslips",
+       "base_unit": "ud",
+       "forms": [
+        "compresas",
+        "protegeslips",
+        "salvaslips"
+       ]
+      },
+      {
+       "key": "tampones",
+       "name": "Tampones",
+       "base_unit": "ud",
+       "forms": [
+        "tampones"
+       ]
+      },
+      {
+       "key": "panal_adulto",
+       "name": "Pañales para adulto",
+       "base_unit": "ud",
+       "forms": [
+        "pañales de adulto",
+        "incontinencia"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "perfumeria",
+     "name": "Perfumería",
+     "vague": true,
+     "children": [
+      {
+       "key": "perfume",
+       "name": "Perfume y colonia",
+       "base_unit": "ud",
+       "forms": [
+        "colonia",
+        "perfume",
+        "agua de colonia"
+       ]
+      },
+      {
+       "key": "lote_perfume",
+       "name": "Lotes de perfumería",
+       "base_unit": "ud",
+       "forms": [
+        "lote de colonia",
+        "estuche de perfume"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "maquillaje_unas",
+     "name": "Maquillaje y uñas",
+     "vague": true,
+     "forms": [
+      "maquillaje"
+     ],
+     "children": [
+      {
+       "key": "base_maquillaje",
+       "name": "Base de maquillaje y corrector",
+       "base_unit": "ud",
+       "forms": [
+        "base de maquillaje",
+        "corrector",
+        "prebase"
+       ]
+      },
+      {
+       "key": "colorete_polvos",
+       "name": "Colorete y polvos",
+       "base_unit": "ud",
+       "forms": [
+        "colorete",
+        "polvos",
+        "polvos de sol"
+       ]
+      },
+      {
+       "key": "labios",
+       "name": "Pintalabios y cuidado de labios",
+       "base_unit": "ud",
+       "forms": [
+        "pintalabios",
+        "barra de labios",
+        "perfilador de labios",
+        "cacao de labios",
+        "brillo de labios"
+       ]
+      },
+      {
+       "key": "ojos",
+       "name": "Maquillaje de ojos",
+       "base_unit": "ud",
+       "forms": [
+        "rímel",
+        "máscara de pestañas",
+        "eyeliner",
+        "sombra de ojos",
+        "lápiz de cejas"
+       ]
+      },
+      {
+       "key": "brochas",
+       "name": "Pinceles y brochas",
+       "base_unit": "ud",
+       "forms": [
+        "brochas de maquillaje",
+        "pinceles"
+       ]
+      },
+      {
+       "key": "unas",
+       "name": "Laca y cuidado de uñas",
+       "base_unit": "ud",
+       "forms": [
+        "laca de uñas",
+        "esmalte de uñas",
+        "quitaesmalte",
+        "lima de uñas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "parafarmacia",
+     "name": "Parafarmacia y fitoterapia",
+     "vague": true,
+     "children": [
+      {
+       "key": "omega_3",
+       "name": "Omega 3",
+       "base_unit": "ud",
+       "forms": [
+        "omega 3",
+        "cápsulas de omega 3",
+        "pastillas de omega 3",
+        "perlas de omega 3",
+        "aceite de pescado"
+       ]
+      },
+      {
+       "key": "vitaminas",
+       "name": "Vitaminas",
+       "base_unit": "ud",
+       "forms": [
+        "vitaminas",
+        "multivitamínico",
+        "vitamina c",
+        "vitamina d"
+       ]
+      },
+      {
+       "key": "magnesio",
+       "name": "Magnesio",
+       "base_unit": "ud",
+       "forms": [
+        "magnesio",
+        "pastillas de magnesio"
+       ]
+      },
+      {
+       "key": "complementos_otros",
+       "name": "Otros complementos y fitoterapia",
+       "base_unit": "ud",
+       "forms": [
+        "complementos",
+        "melatonina",
+        "colágeno",
+        "valeriana",
+        "jalea real",
+        "infusión medicinal"
+       ]
+      },
+      {
+       "key": "botiquin",
+       "name": "Botiquín",
+       "base_unit": "ud",
+       "forms": [
+        "tiritas",
+        "gasas",
+        "alcohol de curar",
+        "agua oxigenada",
+        "suero fisiológico",
+        "termómetro"
+       ]
+      },
+      {
+       "key": "preservativos",
+       "name": "Preservativos",
+       "base_unit": "ud",
+       "forms": [
+        "preservativos",
+        "condones"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "limpieza_hogar",
+   "name": "Limpieza y hogar",
+   "children": [
+    {
+     "key": "ropa",
+     "name": "Lavado de ropa",
+     "vague": true,
+     "children": [
+      {
+       "key": "detergente_liquido",
+       "name": "Detergente líquido",
+       "base_unit": "l",
+       "forms": [
+        "detergente",
+        "detergente líquido",
+        "jabón para la ropa"
+       ]
+      },
+      {
+       "key": "detergente_capsulas",
+       "name": "Detergente en polvo y cápsulas",
+       "base_unit": "ud",
+       "forms": [
+        "detergente en polvo",
+        "cápsulas de detergente",
+        "cápsulas de lavadora"
+       ]
+      },
+      {
+       "key": "suavizante",
+       "name": "Suavizante",
+       "base_unit": "l",
+       "forms": [
+        "suavizante"
+       ]
+      },
+      {
+       "key": "quitamanchas",
+       "name": "Quitamanchas y aditivos de lavadora",
+       "base_unit": "ud",
+       "forms": [
+        "quitamanchas",
+        "antical",
+        "calgon",
+        "toallitas atrapacolor"
+       ]
+      },
+      {
+       "key": "planchado",
+       "name": "Productos de planchado",
+       "base_unit": "ud",
+       "forms": [
+        "agua de plancha",
+        "almidón"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "limpieza",
+     "name": "Productos de limpieza",
+     "vague": true,
+     "forms": [
+      "productos de limpieza",
+      "limpieza"
+     ],
+     "children": [
+      {
+       "key": "lejia",
+       "name": "Lejía",
+       "base_unit": "l",
+       "forms": [
+        "lejía",
+        "lejía con detergente"
+       ]
+      },
+      {
+       "key": "amoniaco",
+       "name": "Amoniaco y salfumán",
+       "base_unit": "l",
+       "forms": [
+        "amoniaco",
+        "salfumán"
+       ]
+      },
+      {
+       "key": "friegasuelos",
+       "name": "Friegasuelos",
+       "base_unit": "l",
+       "forms": [
+        "friegasuelos",
+        "fregasuelos"
+       ]
+      },
+      {
+       "key": "limpiahogar",
+       "name": "Limpiahogar y desinfectante",
+       "base_unit": "l",
+       "forms": [
+        "limpiahogar",
+        "desinfectante",
+        "limpiador multiusos",
+        "multiusos"
+       ]
+      },
+      {
+       "key": "limpia_bano",
+       "name": "Limpiador de baño y WC",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de baño",
+        "pato wc",
+        "bloque wc",
+        "desatascador"
+       ]
+      },
+      {
+       "key": "limpia_cocina",
+       "name": "Limpiador de cocina",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de cocina",
+        "desengrasante",
+        "limpiavitrocerámicas"
+       ]
+      },
+      {
+       "key": "limpiacristales",
+       "name": "Limpiacristales",
+       "base_unit": "l",
+       "forms": [
+        "limpiacristales"
+       ]
+      },
+      {
+       "key": "limpia_muebles",
+       "name": "Limpiador de muebles",
+       "base_unit": "ud",
+       "forms": [
+        "limpiamuebles",
+        "pronto"
+       ]
+      },
+      {
+       "key": "lavavajillas_mano",
+       "name": "Lavavajillas a mano",
+       "base_unit": "l",
+       "forms": [
+        "lavavajillas",
+        "fairy",
+        "jabón de platos",
+        "lavavajillas a mano"
+       ]
+      },
+      {
+       "key": "lavavajillas_maquina",
+       "name": "Lavavajillas a máquina",
+       "base_unit": "ud",
+       "forms": [
+        "pastillas de lavavajillas",
+        "detergente lavavajillas",
+        "abrillantador",
+        "sal de lavavajillas"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "utensilios",
+     "name": "Utensilios de limpieza",
+     "vague": true,
+     "children": [
+      {
+       "key": "estropajo_bayeta",
+       "name": "Estropajos y bayetas",
+       "base_unit": "ud",
+       "forms": [
+        "estropajo",
+        "bayeta",
+        "bayetas"
+       ]
+      },
+      {
+       "key": "guantes",
+       "name": "Guantes",
+       "base_unit": "ud",
+       "forms": [
+        "guantes",
+        "guantes de goma"
+       ]
+      },
+      {
+       "key": "fregona_escoba",
+       "name": "Fregonas, escobas y cubos",
+       "base_unit": "ud",
+       "forms": [
+        "fregona",
+        "escoba",
+        "mopa",
+        "recambio de fregona",
+        "cubo"
+       ]
+      },
+      {
+       "key": "calzado",
+       "name": "Limpieza de calzado",
+       "base_unit": "ud",
+       "forms": [
+        "betún",
+        "limpiador de zapatos"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "papel_celulosa",
+     "name": "Papel y celulosa",
+     "vague": true,
+     "children": [
+      {
+       "key": "papel_higienico",
+       "name": "Papel higiénico",
+       "base_unit": "ud",
+       "forms": [
+        "papel higiénico",
+        "papel wc",
+        "papel de váter"
+       ]
+      },
+      {
+       "key": "rollo_cocina",
+       "name": "Rollo de cocina",
+       "base_unit": "ud",
+       "forms": [
+        "rollo de cocina",
+        "papel de cocina"
+       ]
+      },
+      {
+       "key": "servilletas",
+       "name": "Servilletas",
+       "base_unit": "ud",
+       "forms": [
+        "servilletas"
+       ]
+      },
+      {
+       "key": "panuelos",
+       "name": "Pañuelos",
+       "base_unit": "ud",
+       "forms": [
+        "pañuelos",
+        "kleenex",
+        "pañuelos de papel"
+       ]
+      },
+      {
+       "key": "toallitas_hogar",
+       "name": "Toallitas húmedas de hogar",
+       "base_unit": "ud",
+       "forms": [
+        "toallitas desinfectantes",
+        "toallitas de limpieza"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "ambientador_insecticida",
+     "name": "Ambientadores e insecticidas",
+     "vague": true,
+     "children": [
+      {
+       "key": "ambientador",
+       "name": "Ambientador",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador",
+        "ambientador de coche",
+        "absorbeolores",
+        "antihumedad",
+        "varitas aromáticas"
+       ]
+      },
+      {
+       "key": "insecticida",
+       "name": "Insecticida",
+       "base_unit": "ud",
+       "forms": [
+        "insecticida",
+        "matamosquitos",
+        "antimosquitos",
+        "raid"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "menaje",
+     "name": "Menaje y conservación",
+     "vague": true,
+     "children": [
+      {
+       "key": "papel_conservacion",
+       "name": "Papel de aluminio, film y bolsas",
+       "base_unit": "ud",
+       "forms": [
+        "papel de aluminio",
+        "papel albal",
+        "film transparente",
+        "papel de horno",
+        "bolsas de congelación",
+        "bolsas zip"
+       ]
+      },
+      {
+       "key": "bolsas_basura",
+       "name": "Bolsas de basura",
+       "base_unit": "ud",
+       "forms": [
+        "bolsas de basura",
+        "bolsas basura"
+       ]
+      },
+      {
+       "key": "menaje_mesa",
+       "name": "Vajilla, cubiertos y mantel desechables",
+       "base_unit": "ud",
+       "forms": [
+        "platos de plástico",
+        "vasos desechables",
+        "cubiertos desechables",
+        "mantel"
+       ]
+      },
+      {
+       "key": "hermeticos",
+       "name": "Herméticos y moldes",
+       "base_unit": "ud",
+       "forms": [
+        "táper",
+        "tupper",
+        "molde de horno"
+       ]
+      },
+      {
+       "key": "velas_carbon",
+       "name": "Encendedores, velas y carbón",
+       "base_unit": "ud",
+       "forms": [
+        "mechero",
+        "velas",
+        "carbón",
+        "pastillas de encender"
+       ]
+      },
+      {
+       "key": "pilas",
+       "name": "Pilas",
+       "base_unit": "ud",
+       "forms": [
+        "pilas",
+        "pila aa",
+        "pilas aaa"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mascotas",
+   "name": "Mascotas",
+   "children": [
+    {
+     "key": "perro",
+     "name": "Perro",
+     "vague": true,
+     "forms": [
+      "comida de perro",
+      "comida para perro"
+     ],
+     "children": [
+      {
+       "key": "perro_seco",
+       "name": "Pienso para perro",
+       "base_unit": "kg",
+       "forms": [
+        "pienso de perro",
+        "pienso para perro",
+        "pienso"
+       ]
+      },
+      {
+       "key": "perro_humedo",
+       "name": "Comida húmeda para perro",
+       "base_unit": "kg",
+       "forms": [
+        "latas de perro",
+        "comida húmeda de perro"
+       ]
+      },
+      {
+       "key": "perro_snacks",
+       "name": "Snacks para perro",
+       "base_unit": "kg",
+       "forms": [
+        "snacks de perro",
+        "huesos para perro",
+        "premios para perro"
+       ]
+      },
+      {
+       "key": "perro_aseo",
+       "name": "Aseo y cuidado del perro",
+       "base_unit": "ud",
+       "forms": [
+        "bolsas para excrementos",
+        "champú para perro",
+        "antiparasitario perro"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "gato",
+     "name": "Gato",
+     "vague": true,
+     "forms": [
+      "comida de gato",
+      "comida para gato"
+     ],
+     "children": [
+      {
+       "key": "gato_seco",
+       "name": "Pienso para gato",
+       "base_unit": "kg",
+       "forms": [
+        "pienso de gato",
+        "pienso para gato"
+       ]
+      },
+      {
+       "key": "gato_humedo",
+       "name": "Comida húmeda para gato",
+       "base_unit": "kg",
+       "forms": [
+        "latas de gato",
+        "comida húmeda de gato",
+        "sobres de gato"
+       ]
+      },
+      {
+       "key": "gato_snacks",
+       "name": "Snacks para gato",
+       "base_unit": "kg",
+       "forms": [
+        "snacks de gato",
+        "premios para gato"
+       ]
+      },
+      {
+       "key": "gato_aseo",
+       "name": "Arena y cuidado del gato",
+       "base_unit": "ud",
+       "forms": [
+        "arena de gato",
+        "arena para gatos"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "otras_mascotas",
+     "name": "Otras mascotas",
+     "vague": true,
+     "children": [
+      {
+       "key": "pajaro_otros",
+       "name": "Pájaros y otras mascotas",
+       "base_unit": "kg",
+       "forms": [
+        "comida de pájaro",
+        "alpiste",
+        "comida para peces"
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
