@@ -32,6 +32,7 @@ class Settings(BaseSettings):
 
     overpass_url: str = "https://overpass-api.de/api/interpreter"
     stores_bbox: str = "42.56,-5.62,42.63,-5.52"
+    nominatim_url: str = "https://nominatim.openstreetmap.org/search"
 
     data_dir: Path = Path("data")
     mercadona_warehouses: str = "3683"
