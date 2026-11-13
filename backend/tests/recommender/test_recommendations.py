@@ -330,6 +330,25 @@ def test_product_named_like_the_line_wins(world):
     assert body["total_cost"] == "1.20"
 
 
+def test_products_sharing_most_words_win(world):
+    # No product has both words; the ones with "papel" beat the raffia bag.
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("papel d encerado", "papel_horno", "1", "ud")]),
+    ).json()
+    assert body["stores"][0]["lines"][0]["product_name"] != "Bolsa de rafia"
+
+
+def test_counted_leaf_accepts_weighed_products(world):
+    # Bread or paper sold by kg still answers a leaf counted in units.
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("papel vegetal", "papel_horno", "1", "ud")]),
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Papel vegetal a granel"
+
+
 def test_line_without_a_matching_name_keeps_every_product(world):
     body = world.client.post(
         "/api/recommendations",

@@ -229,6 +229,7 @@ def _seed(connection: Connection) -> dict[str, int]:
         ("refresco", "R4", "Coca Cola Zero", "1", "ud", "0.90", "1.00"),
         ("papel_horno", "PH1", "Papel de horno Bosque Verde", "1", "ud", "1.20", "1.30"),
         ("papel_horno", "PH2", "Bolsa de rafia", "1", "ud", "0.50", "0.60"),
+        ("papel_horno", "PH3", "Papel vegetal a granel", "0.2", "kg", "0.90", "1.00"),
         ("aves", "AV1", "Ala de pavo", "1", "kg", "3.00", "3.10"),
         ("aves", "AV2", "Muslo de pavo", "1", "kg", "2.50", "2.60"),
     ):

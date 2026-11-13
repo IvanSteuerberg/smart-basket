@@ -26,8 +26,11 @@ FALLBACK_RATIO = 80
 SHORT_TEXT = 4
 #: Words of a line that carry no product meaning when its text is compared with product names.
 CONNECTORS = frozenset({"de", "del", "la", "el", "los", "las", "y", "con", "para", "en", "al"})
-#: Physical dimension of each base unit: products of another dimension cannot satisfy the line.
-_DIMENSIONS = {"kg": "mass", "g": "mass", "l": "volume", "ml": "volume", "ud": "count"}
+#: Measured dimension of each base unit. A product measured by mass cannot satisfy a leaf measured
+#: by volume or the other way round; counted leaves accept weighed products (bread sold by kg).
+_DIMENSIONS = {"kg": "mass", "g": "mass", "l": "volume", "ml": "volume"}
+#: Shorter words of a line ("d", "l", "kg") are abbreviations or units, not product words.
+MIN_CONTENT_WORD = 3
 
 #: Columns of `brand`; `aliases` is read only when the column exists.
 _BRAND_COLUMNS_SQL = "select column_name from information_schema.columns where table_name = 'brand'"
@@ -230,7 +233,9 @@ def _product(
     quantity, unit = row["base_quantity"], row["base_unit"]
     if quantity is None or unit is None:
         return None
-    if leaf_base_unit is not None and _DIMENSIONS.get(unit) != _DIMENSIONS.get(leaf_base_unit):
+    leaf_dimension = _DIMENSIONS.get(leaf_base_unit or "")
+    product_dimension = _DIMENSIONS.get(unit)
+    if leaf_dimension and product_dimension and leaf_dimension != product_dimension:
         return None
     ancestors = row["ancestor_ids"] or []
     return Product(
@@ -248,12 +253,19 @@ def _product(
 def _prefer_named(
     rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
 ) -> list[tuple[Mapping[str, Any], Product]]:
-    """Products named like the line, when any of them is ("papel de horno" over "Bolsa")."""
+    """Products whose names share the most words with the line, when any shares one.
+
+    "papel de horno" keeps "Papel vegetal" over "Bolsa de rafia"; a line sharing no word with any
+    product name keeps every product.
+    """
     content = _content_words(item_text)
     if not content:
         return list(rows)
-    named = [row for row in rows if _name_has_words(row[0]["name"], content)]
-    return named or list(rows)
+    scores = [_shared_words(row[0]["name"], content) for row in rows]
+    best = max(scores, default=0)
+    if best == 0:
+        return list(rows)
+    return [row for row, score in zip(rows, scores, strict=True) if score == best]
 
 
 def _content_words(text: str) -> tuple[str, ...]:
@@ -261,14 +273,16 @@ def _content_words(text: str) -> tuple[str, ...]:
     return tuple(
         token.key
         for token in tokenize(text)
-        if token.kind == "word" and token.key not in CONNECTORS
+        if token.kind == "word"
+        and token.key not in CONNECTORS
+        and len(token.key) >= MIN_CONTENT_WORD
     )
 
 
-def _name_has_words(name: str, content: tuple[str, ...]) -> bool:
-    """True when a product name has every content word as a whole word (plural tolerated)."""
+def _shared_words(name: str, content: tuple[str, ...]) -> int:
+    """How many content words of the line a product name has as whole words (plural tolerated)."""
     product_words = tuple(token.key for token in tokenize(name) if token.kind == "word")
-    return all(any(same_word(word, other) for other in product_words) for word in content)
+    return sum(any(same_word(word, other) for other in product_words) for word in content)
 
 
 def _matches_brand(name: str, terms: set[str]) -> bool:
