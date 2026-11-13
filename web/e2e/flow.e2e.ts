@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 import type {
   CategoriesResponse,
   GeocodeResponse,
@@ -161,138 +161,94 @@ const mockRecommendation: Recommendation = {
   degraded: false,
 };
 
+const LIST = "2 l de leche\npan de molde\ncolacao";
+const ROUTE_ERROR = "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.";
+
+async function mockJson(page: Page, url: string, body: unknown, status = 200): Promise<void> {
+  await page.route(url, (route) =>
+    route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }),
+  );
+}
+
 test.beforeEach(async ({ page }) => {
-  // Prevent any request to the outside internet; answer tiles with 1x1 transparent PNG.
-  await page.route(/tile\.openstreetmap\.org/, async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "image/png",
-      body: TRANSPARENT_1X1_PNG,
-    });
-  });
-
-  // Mock every /api/* route with synthetic fixtures.
-  await page.route("**/api/health", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockHealth),
-    });
-  });
-
-  await page.route("**/api/categories", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockCategories),
-    });
-  });
-
-  await page.route("**/api/search*", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockSearch),
-    });
-  });
-
-  await page.route("**/api/geocode*", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockGeocode),
-    });
-  });
-
-  await page.route("**/api/interpret", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockInterpret),
-    });
-  });
+  // Routes registered later take precedence. First block everything that is not the
+  // dev server, and any /api call without a fixture, so nothing reaches the network.
+  await page.route(
+    (url) => url.hostname !== "localhost",
+    (route) => route.abort(),
+  );
+  await page.route("**/api/**", (route) => route.abort());
+  // Map tiles: a transparent 1x1 PNG.
+  await page.route(/tile\.openstreetmap\.org/, (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_1X1_PNG }),
+  );
+  await mockJson(page, "**/api/health", mockHealth);
+  await mockJson(page, "**/api/categories", mockCategories);
+  await mockJson(page, "**/api/search*", mockSearch);
+  await mockJson(page, "**/api/geocode*", mockGeocode);
+  await mockJson(page, "**/api/interpret", mockInterpret);
 });
 
-test("full recommendation flow through list, review, origin and basket", async ({ page }) => {
-  await page.route("**/api/recommendations", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(mockRecommendation),
-    });
-  });
-
+/** Writes the list, interprets it, continues the review and picks the origin on the map. */
+async function goToOriginStep(page: Page): Promise<void> {
   await page.goto("/");
+  await page.getByRole("textbox", { name: "Tu lista de la compra" }).fill(LIST);
+  const interpreted = page.waitForRequest("**/api/interpret");
+  await page.getByRole("button", { name: "Interpretar" }).click();
+  expect((await interpreted).postDataJSON()).toEqual({ text: LIST });
 
-  // 1. List step: write items and click "Interpretar".
-  const listInput = page.getByRole("textbox", { name: "Tu lista de la compra" });
-  await expect(listInput).toBeVisible();
-  await listInput.fill("2 l de leche\npan de molde\ncolacao");
-
-  const interpretButton = page.getByRole("button", { name: "Interpretar" });
-  await expect(interpretButton).toBeEnabled();
-  await interpretButton.click();
-
-  // 2. Review step: continue with the interpreted items.
   const continueButton = page.getByRole("button", { name: "Continuar" });
   await expect(continueButton).toBeEnabled();
   await continueButton.click();
 
-  // 3. Origin step: click map to set origin, choose "En coche" and calculate basket.
-  const calculateButton = page.getByRole("button", { name: "Calcular cesta" });
-  await expect(calculateButton).toBeDisabled();
-
-  // The map has no accessible role; click container to pick an origin coordinate.
+  const calculate = page.getByRole("button", { name: "Calcular cesta" });
+  await expect(calculate).toBeDisabled();
+  // The map has no accessible role: click its container to pick the origin.
   await page.locator(".map").click();
-  await expect(calculateButton).toBeEnabled();
+  await expect(calculate).toBeEnabled();
 
-  const carRadio = page.getByRole("radio", { name: "En coche" });
-  await carRadio.check();
-  await expect(carRadio).toBeChecked();
+  const car = page.getByRole("radio", { name: "En coche" });
+  await car.check();
+  await expect(car).toBeChecked();
+}
 
-  await calculateButton.click();
+test("full recommendation flow through list, review, origin and basket", async ({ page }) => {
+  await mockJson(page, "**/api/recommendations", mockRecommendation);
+  await goToOriginStep(page);
 
-  // 4. Basket step: assert explanation, store card with lines, total, and map route line.
-  await expect(
-    page.getByText("Tu cesta en Mercadona ahorra 2,30 € respecto a la segunda opción."),
-  ).toBeVisible();
+  const sent = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Calcular cesta" }).click();
+  const body = (await sent).postDataJSON();
+  expect(body.mode).toBe("car");
+  expect(body.items).toHaveLength(3);
+  // The origin is the clicked point, around León.
+  expect(body.origin.lat).toBeGreaterThan(42.5);
+  expect(body.origin.lat).toBeLessThan(42.7);
+  expect(body.origin.lon).toBeGreaterThan(-5.7);
+  expect(body.origin.lon).toBeLessThan(-5.4);
 
+  await expect(page.getByText(mockRecommendation.explanation)).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "1. Mercadona – Mercadona Palomera" }),
   ).toBeVisible();
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
   await expect(page.getByText("Pan de molde con corteza Hacendado")).toBeVisible();
   await expect(page.getByText("Cacao soluble ColaCao Original 760g")).toBeVisible();
-
   await expect(page.getByText(/Total:\s*5,45\s*€/)).toBeVisible();
 
-  // The polyline renders an SVG path inside the leaflet map pane.
-  await expect(page.locator(".map path.leaflet-interactive")).toBeVisible();
+  // Map: the origin marker plus one numbered marker per store, and the route line.
+  await expect(page.locator(".map .leaflet-marker-icon")).toHaveCount(
+    1 + mockRecommendation.stores.length,
+  );
+  await expect(page.locator(".map path.leaflet-interactive")).toHaveCount(1);
 });
 
 test("recommendations 503 displays the error inline", async ({ page }) => {
-  await page.route("**/api/recommendations", async (route) => {
-    await route.fulfill({
-      status: 503,
-      contentType: "application/json",
-      body: JSON.stringify({
-        detail: "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.",
-      }),
-    });
-  });
-
-  await page.goto("/");
-
-  const listInput = page.getByRole("textbox", { name: "Tu lista de la compra" });
-  await listInput.fill("2 l de leche\npan de molde\ncolacao");
-
-  await page.getByRole("button", { name: "Interpretar" }).click();
-  await page.getByRole("button", { name: "Continuar" }).click();
-
-  await page.locator(".map").click();
+  await mockJson(page, "**/api/recommendations", { detail: ROUTE_ERROR }, 503);
+  await goToOriginStep(page);
   await page.getByRole("button", { name: "Calcular cesta" }).click();
 
-  await expect(
-    page.getByRole("alert"),
-  ).toHaveText("No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.");
+  await expect(page.getByRole("alert").filter({ hasText: ROUTE_ERROR })).toBeVisible();
+  // The flow stays on the origin step.
+  await expect(page.getByRole("button", { name: "Calcular cesta" })).toBeVisible();
 });
