@@ -55,6 +55,7 @@ export function ReviewStep({
               keyOf={(result) => result.key}
               hintOf={(result) => result.path}
               onSelect={(result) => onPickCategory(item.id, result)}
+              minLength={2}
             />
 
             <div className="review-fields">

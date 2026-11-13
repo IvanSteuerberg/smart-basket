@@ -109,6 +109,7 @@ export function ListStep({
           keyOf={(result) => result.key}
           hintOf={(result) => result.path}
           onSelect={(result) => onAddItem(draftFromSearchResult(result))}
+          minLength={2}
         />
         {addedItems.length > 0 && (
           <ul className="added-list">
