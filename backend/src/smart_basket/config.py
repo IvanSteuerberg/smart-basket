@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
 
+    nominatim_url: str = "https://nominatim.openstreetmap.org/search"
+
     data_dir: Path = Path("data")
     mercadona_warehouses: str = "3683"
     ingest_delay_seconds: float = 1.5
