@@ -4,7 +4,6 @@ import {
   formatDateTime,
   formatEuro,
   formatMinutes,
-  formatQuantity,
 } from "../format";
 import { MapView } from "./MapView";
 
@@ -43,7 +42,7 @@ export function BasketStep({ recommendation, origin, onBack, onNewList }: Basket
                     <div>
                       <p className="basket-line-name">{line.product_name}</p>
                       <p className="small muted">
-                        {line.packs} packs · {formatQuantity(line.quantity_bought)}
+                        «{line.text}» · {line.packs} {line.packs === 1 ? "envase" : "envases"}
                       </p>
                     </div>
                     <span className="basket-line-cost">{formatEuro(line.cost)}</span>

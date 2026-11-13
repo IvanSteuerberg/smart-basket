@@ -28,6 +28,6 @@ test("full flow against the real backend", async ({ page }) => {
 
   // Routing and the optimizer may take a few seconds.
   await expect(page.locator(".store-card h3").first()).toBeVisible({ timeout: 90_000 });
-  await expect(page.getByText(/Total:/)).toBeVisible();
+  await expect(page.getByText(/^Total: /)).toBeVisible();
   await expect(page.locator(".map path.leaflet-interactive").first()).toBeVisible();
 });
