@@ -230,6 +230,16 @@ button.link-button {
   margin: 0.5rem 0;
 }
 
+.search-row {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.search-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .search-results {
   margin: 0;
   padding: 0;

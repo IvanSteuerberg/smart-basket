@@ -1,5 +1,11 @@
 import type { LatLon, Recommendation } from "../api";
-import { formatAmount, formatDateTime, formatEuro, formatQuantity } from "../format";
+import {
+  formatAmount,
+  formatDateTime,
+  formatEuro,
+  formatMinutes,
+  formatQuantity,
+} from "../format";
 import { MapView } from "./MapView";
 
 export interface BasketStepProps {
@@ -20,7 +26,7 @@ export function BasketStep({ recommendation, origin, onBack, onNewList }: Basket
 
       <div className="basket-summary">
         <strong>Total: {formatEuro(recommendation.total_cost)}</strong>
-        <span className="muted">{recommendation.minutes} min de trayecto</span>
+        <span className="muted">{formatMinutes(recommendation.minutes)} min de trayecto</span>
       </div>
 
       <ol className="store-list">
@@ -30,6 +36,7 @@ export function BasketStep({ recommendation, origin, onBack, onNewList }: Basket
               <h3>
                 {store.position}. {store.chain} – {store.name}
               </h3>
+              {store.address && <p className="small muted">{store.address}</p>}
               <ul className="basket-lines">
                 {store.lines.map((line, index) => (
                   <li key={`${line.text}-${index}`} className="basket-line">
@@ -63,7 +70,7 @@ export function BasketStep({ recommendation, origin, onBack, onNewList }: Basket
                   <span className="small muted">
                     {" "}
                     Está en {missing.stop.name}, {formatAmount(missing.stop.cost)} €,{" "}
-                    {missing.stop.extra_minutes} min más
+                    {formatMinutes(missing.stop.extra_minutes)} min más
                   </span>
                 )}
               </li>
@@ -74,7 +81,9 @@ export function BasketStep({ recommendation, origin, onBack, onNewList }: Basket
 
       <MapView origin={origin} stores={stores} route={recommendation.route} fitContent />
 
-      <p className="small muted">Precios del {formatDateTime(recommendation.data_as_of)}</p>
+      {recommendation.data_as_of && (
+        <p className="small muted">Precios del {formatDateTime(recommendation.data_as_of)}</p>
+      )}
 
       <div className="actions">
         <button type="button" className="secondary" onClick={onBack}>

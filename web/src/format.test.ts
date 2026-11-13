@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatAmount, formatDateTime, formatEuro, formatQuantity, parseDecimal } from "./format";
+import {
+  formatAmount,
+  formatDateTime,
+  formatEuro,
+  formatMinutes,
+  formatQuantity,
+  parseDecimal,
+} from "./format";
 
 describe("parseDecimal", () => {
   it("accepts numbers and decimal strings with a dot or a comma", () => {
@@ -30,6 +37,18 @@ describe("quantity formatting", () => {
   it("drops trailing zeros", () => {
     expect(formatQuantity(2)).toBe("2");
     expect(formatQuantity("2.5")).toBe("2,5");
+  });
+});
+
+describe("minutes formatting", () => {
+  it("rounds decimal strings to whole minutes", () => {
+    expect(formatMinutes("14.28")).toBe("14");
+    expect(formatMinutes("14.62")).toBe("15");
+    expect(formatMinutes(8)).toBe("8");
+  });
+
+  it("keeps the raw value when it cannot be parsed", () => {
+    expect(formatMinutes("n/d")).toBe("n/d");
   });
 });
 

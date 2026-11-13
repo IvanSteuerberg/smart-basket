@@ -121,6 +121,7 @@ const mockRecommendation: Recommendation = {
       store_id: "store-1",
       name: "Mercadona Palomera",
       chain: "Mercadona",
+      address: "Av. de Portugal, 12",
       lat: 42.6001,
       lon: -5.565,
       position: 1,
@@ -151,7 +152,7 @@ const mockRecommendation: Recommendation = {
     },
   ],
   total_cost: "5.45",
-  minutes: 8,
+  minutes: "14.28",
   missing: [],
   route: [
     [42.5987, -5.5671],
@@ -235,12 +236,46 @@ test("full recommendation flow through list, review, origin and basket", async (
   await expect(page.getByText("Pan de molde con corteza Hacendado")).toBeVisible();
   await expect(page.getByText("Cacao soluble ColaCao Original 760g")).toBeVisible();
   await expect(page.getByText(/Total:\s*5,45\s*€/)).toBeVisible();
+  // Minutes travel as a decimal string and are shown rounded.
+  await expect(page.getByText("14 min de trayecto")).toBeVisible();
+  await expect(page.getByText("Av. de Portugal, 12")).toBeVisible();
 
   // Map: the origin marker plus one numbered marker per store, and the route line.
   await expect(page.locator(".map .leaflet-marker-icon")).toHaveCount(
     1 + mockRecommendation.stores.length,
   );
   await expect(page.locator(".map path.leaflet-interactive")).toHaveCount(1);
+});
+
+test("address search waits for Enter and three characters", async ({ page }) => {
+  const searches: string[] = [];
+  await page.route("**/api/geocode*", (route) => {
+    searches.push(route.request().url());
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(mockGeocode),
+    });
+  });
+  await goToOriginStep(page);
+
+  const address = page.getByRole("searchbox", { name: "Escribe una dirección de León" });
+  const buscar = page.getByRole("button", { name: "Buscar" });
+  await expect(buscar).toBeDisabled();
+
+  await address.fill("Ca");
+  await expect(buscar).toBeDisabled();
+  // Long enough for the debounce to fire if typing still sent requests.
+  await page.waitForTimeout(500);
+  expect(searches).toHaveLength(0);
+
+  await address.fill("Calle Ancha");
+  await expect(buscar).toBeEnabled();
+  await address.press("Enter");
+
+  await expect.poll(() => searches.length).toBe(1);
+  expect(searches[0]).toContain("q=Calle%20Ancha");
+  await expect(page.getByText(mockGeocode.results[0].label)).toBeVisible();
 });
 
 test("recommendations 503 displays the error inline", async ({ page }) => {

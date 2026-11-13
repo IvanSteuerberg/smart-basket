@@ -33,6 +33,13 @@ export function formatQuantity(value: Decimal): string {
   return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 3 }).format(parseDecimal(value) || 0);
 }
 
+/** A travel time in whole minutes; the raw value if it is not a number. */
+export function formatMinutes(value: Decimal): string {
+  const parsed = parseDecimal(value);
+  if (!Number.isFinite(parsed)) return String(value);
+  return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(Math.round(parsed));
+}
+
 /** A full timestamp as `dd/mm/yyyy HH:mm`; the raw value if it is not a date. */
 export function formatDateTime(value: string): string {
   const date = new Date(value);

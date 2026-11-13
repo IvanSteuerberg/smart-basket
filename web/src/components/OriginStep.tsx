@@ -87,6 +87,8 @@ export function OriginStep({
         labelOf={(result) => result.label}
         keyOf={(result) => `${result.lat},${result.lon}`}
         onSelect={(result) => onOriginChange({ lat: result.lat, lon: result.lon })}
+        minLength={3}
+        onDemand
       />
 
       <div className="choice-row" role="group" aria-label="A pie o en coche">

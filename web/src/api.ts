@@ -118,6 +118,7 @@ export interface BasketStore {
   store_id: string | number;
   name: string;
   chain: string;
+  address: string | null;
   lat: number;
   lon: number;
   position: number;
@@ -129,7 +130,7 @@ export interface MissingStop {
   store_id: string | number;
   name: string;
   cost: Decimal;
-  extra_minutes: number;
+  extra_minutes: Decimal;
   exceeds_max_stores: boolean;
 }
 
@@ -141,11 +142,12 @@ export interface MissingItem {
 
 export interface Recommendation {
   id: string | number;
-  data_as_of: string;
+  /** Null when there was nothing to buy; there is no price date then. */
+  data_as_of: string | null;
   engine_version: string;
   stores: BasketStore[];
   total_cost: Decimal;
-  minutes: number;
+  minutes: Decimal;
   missing: MissingItem[];
   route: [number, number][];
   explanation: string;
