@@ -1,7 +1,8 @@
 {
   "version": 1,
   "brands": [
-    {"name": "Marca Blanca", "aliases": ["blanca"], "private_label_of": "mercadona"},
+    {"name": "Marca Blanca", "aliases": ["blanca"], "private_label_of": "mercadona",
+     "match_name": false},
     {"name": "Otra Marca", "aliases": ["otra"], "private_label_of": "carrefour"},
     {"name": "Coca-Cola", "aliases": ["coca cola", "cocacola"], "implies": "yogur_natural"}
   ]

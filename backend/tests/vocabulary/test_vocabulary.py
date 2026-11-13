@@ -77,13 +77,20 @@ def test_brands_and_variants_come_from_their_sources(session, lexicon):
 def test_seed_brand_aliases_and_implies_reach_the_lexicon(session, lexicon):
     brands = {brand.name: brand for brand in lexicon.brands()}
     cocacola = brands["Coca-Cola"]
-    assert cocacola.aliases == ("coca cola", "cocacola", "coca-cola", "coke")
+    assert cocacola.aliases == ("coca-cola", "coca cola", "cocacola", "coke")
     assert cocacola.implies == "refresco_cola"
     assert cocacola.is_private_label is False
 
     hacendado = brands["Hacendado"]
     assert hacendado.is_private_label is True
     assert hacendado.implies is None
+
+    assert brands["Actimel"].implies == "yogur_liquido"
+    assert brands["Activia"].implies == "bifidus"
+    # `match_name` false exports only the explicit aliases, never the bare name.
+    assert brands["Dia"].aliases == ()
+    assert brands["Gallo"].aliases == ("pastas gallo",)
+    assert brands["Gallo"].implies is None
 
 
 def test_a_category_removed_from_the_file_leaves_the_lexicon(session, tmp_path):
@@ -137,6 +144,22 @@ def test_preprocessor_resolves_seed_brands(pp: Preprocessor):
     assert colacao.brand == "Cola Cao"
     assert colacao.generic_key == "cacao_soluble"
     assert colacao.resolved is True
+
+
+def test_ordinary_words_are_not_taken_as_brands(pp: Preprocessor):
+    gallo = pp.preprocess("1 kg de gallo").items[0]
+    assert gallo.generic_key == "pescado_blanco_otro"
+    assert gallo.brand is None
+    assert gallo.resolved is True
+
+    actimel = pp.preprocess("actimel").items[0]
+    assert actimel.brand == "Actimel"
+    assert actimel.generic_key == "yogur_liquido"
+    assert actimel.resolved is True
+
+    pan = pp.preprocess("pan del dia").items[0]
+    assert pan.generic_key == "pan"
+    assert pan.brand is None
 
 
 def test_preprocessor_resolves_seed_terms(pp: Preprocessor):

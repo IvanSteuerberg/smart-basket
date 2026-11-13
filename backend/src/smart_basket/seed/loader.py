@@ -139,12 +139,15 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
         row = session.execute(
             text(
                 "insert into brand "
-                "(name, is_private_label, owner_chain_id, aliases, implies_category) "
-                "values (:name, :is_private_label, :owner_chain_id, :aliases, :implies) "
+                "(name, is_private_label, owner_chain_id, aliases, implies_category, "
+                "match_name) "
+                "values (:name, :is_private_label, :owner_chain_id, :aliases, :implies, "
+                ":match_name) "
                 "on conflict (name) do update set "
                 "is_private_label = excluded.is_private_label, "
                 "owner_chain_id = excluded.owner_chain_id, aliases = excluded.aliases, "
-                "implies_category = excluded.implies_category "
+                "implies_category = excluded.implies_category, "
+                "match_name = excluded.match_name "
                 "returning (xmax = 0) as inserted"
             ),
             {
@@ -153,6 +156,7 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
                 "owner_chain_id": owner_chain_id,
                 "aliases": brand.aliases,
                 "implies": brand.implies,
+                "match_name": brand.match_name,
             },
         ).one()
         _count(report.brand, row.inserted)

@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from smart_basket.seed import DEFAULT_DATA_DIR
 from smart_basket.seed.models import (
     BrandsFile,
     ChainCategoriesFile,
@@ -222,3 +223,72 @@ def test_private_label_and_implies_must_reference_seed_files():
         validate_seed(
             taxonomy, chains, {}, brands_file({"name": "Marca", "private_label_of": "otra"})
         )
+
+
+def test_implies_must_be_a_leaf():
+    taxonomy = taxonomy_file(node("grupo", children=[node("hoja", base_unit="kg")]))
+    with pytest.raises(ValueError, match="implies category 'grupo', which is not a leaf"):
+        validate_seed(
+            taxonomy, chains_file(chain()), {}, brands_file({"name": "Marca", "implies": "grupo"})
+        )
+
+
+def test_implies_must_not_be_vague():
+    taxonomy = taxonomy_file(node("difusa", base_unit="kg", vague=True))
+    with pytest.raises(ValueError, match="implies vague category 'difusa'"):
+        validate_seed(
+            taxonomy, chains_file(chain()), {}, brands_file({"name": "Marca", "implies": "difusa"})
+        )
+
+
+def test_matchable_name_equal_to_a_foreign_form_is_rejected():
+    taxonomy = taxonomy_file(node("pescado_blanco_otro", base_unit="kg", forms=["gallo"]))
+    with pytest.raises(ValueError, match=r"'Gallo' matches 'gallo'.*pescado_blanco_otro"):
+        validate_seed(taxonomy, chains_file(chain()), {}, brands_file({"name": "Gallo"}))
+
+
+def test_matchable_alias_equal_to_a_foreign_form_is_rejected():
+    taxonomy = taxonomy_file(node("pescado_blanco_otro", base_unit="kg", forms=["gallo"]))
+    brands = brands_file({"name": "Marca", "aliases": ["gallo"]})
+    with pytest.raises(ValueError, match=r"'Marca' matches 'gallo'.*pescado_blanco_otro"):
+        validate_seed(taxonomy, chains_file(chain()), {}, brands)
+
+
+def test_match_name_false_lets_a_brand_use_an_ordinary_word():
+    taxonomy = taxonomy_file(node("pescado_blanco_otro", base_unit="kg", forms=["gallo"]))
+    brands = brands_file({"name": "Gallo", "aliases": ["pastas gallo"], "match_name": False})
+    validate_seed(taxonomy, chains_file(chain()), {}, brands)
+
+
+def test_matching_the_form_of_the_implied_category_is_allowed():
+    taxonomy = taxonomy_file(node("yogur_liquido", base_unit="kg", forms=["actimel"]))
+    brands = brands_file({"name": "Actimel", "implies": "yogur_liquido"})
+    validate_seed(taxonomy, chains_file(chain()), {}, brands)
+
+
+def test_brand_names_repeat_after_folding():
+    with pytest.raises(ValidationError, match="duplicate brand name 'Cafe'"):
+        brands_file({"name": "Café"}, {"name": "Cafe"})
+
+
+def test_alias_and_name_repeat_after_folding():
+    with pytest.raises(ValidationError, match="belongs to both brands"):
+        brands_file({"name": "Marca", "aliases": ["Café"]}, {"name": "Cafe"})
+
+
+def test_real_seed_validates():
+    taxonomy = TaxonomyFile.model_validate_json(
+        (DEFAULT_DATA_DIR / "taxonomy_es.json").read_text(encoding="utf-8")
+    )
+    chains = ChainsFile.model_validate_json(
+        (DEFAULT_DATA_DIR / "chains_es.json").read_text(encoding="utf-8")
+    )
+    brands = BrandsFile.model_validate_json(
+        (DEFAULT_DATA_DIR / "brands_es.json").read_text(encoding="utf-8")
+    )
+    mappings = {
+        path.stem: ChainCategoriesFile.model_validate_json(path.read_text(encoding="utf-8"))
+        for path in sorted((DEFAULT_DATA_DIR / "chain_categories").glob("*.json"))
+    }
+    validate_seed(taxonomy, chains, mappings, brands)
+    assert brands.brands

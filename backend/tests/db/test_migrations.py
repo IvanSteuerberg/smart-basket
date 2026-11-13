@@ -312,20 +312,22 @@ def test_brand_seed_columns_downgrade_and_upgrade(engine):
         columns = set(c.execute(text(columns_sql)).scalars())
     assert "aliases" not in columns
     assert "implies_category" not in columns
+    assert "match_name" not in columns
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         columns = set(c.execute(text(columns_sql)).scalars())
-    assert {"aliases", "implies_category"} <= columns
+    assert {"aliases", "implies_category", "match_name"} <= columns
     with engine.connect() as c:
         row = c.execute(
             text(
                 "insert into brand (name) values ('Demo') "
-                "returning aliases, implies_category, is_private_label"
+                "returning aliases, implies_category, match_name, is_private_label"
             )
         ).one()
         c.rollback()
     assert row.aliases == []
     assert row.implies_category is None
+    assert row.match_name is True
     assert row.is_private_label is False
     with engine.connect() as c:
         assert scalar(c, "select version_num from alembic_version") == "0004"

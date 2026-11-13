@@ -17,13 +17,15 @@ depends_on = None
 UPGRADE = r"""
 alter table brand
     add column aliases text[] not null default '{}',
-    add column implies_category text;
+    add column implies_category text,
+    add column match_name boolean not null default true;
 """
 
 DOWNGRADE = r"""
 alter table brand
-    drop column implies_category,
-    drop column aliases;
+    drop column if exists match_name,
+    drop column if exists implies_category,
+    drop column if exists aliases;
 """
 
 

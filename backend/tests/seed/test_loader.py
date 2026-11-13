@@ -216,7 +216,7 @@ def test_private_label_has_its_chain_and_manufacturer_has_none(session, seed_dir
     load(session, seed_dir)
     private = session.execute(
         text(
-            "select b.is_private_label, b.aliases, b.implies_category, c.code "
+            "select b.is_private_label, b.aliases, b.implies_category, b.match_name, c.code "
             "from brand b join chain c on c.id = b.owner_chain_id where b.name = 'Marca Blanca'"
         )
     ).one()
@@ -224,10 +224,11 @@ def test_private_label_has_its_chain_and_manufacturer_has_none(session, seed_dir
     assert private.code == "mercadona"
     assert private.aliases == ["blanca"]
     assert private.implies_category is None
+    assert private.match_name is False
 
     manufacturer = session.execute(
         text(
-            "select is_private_label, owner_chain_id, aliases, implies_category "
+            "select is_private_label, owner_chain_id, aliases, implies_category, match_name "
             "from brand where name = 'Coca-Cola'"
         )
     ).one()
@@ -235,6 +236,7 @@ def test_private_label_has_its_chain_and_manufacturer_has_none(session, seed_dir
     assert manufacturer.owner_chain_id is None
     assert manufacturer.aliases == ["coca cola", "cocacola"]
     assert manufacturer.implies_category == "yogur_natural"
+    assert manufacturer.match_name is True
 
 
 def test_brand_removed_from_the_file_stays_and_is_reported_stale(session, seed_dir, tmp_path):
