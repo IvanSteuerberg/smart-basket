@@ -77,6 +77,7 @@ class StoreResponse(BaseModel):
     store_id: int
     name: str
     chain: str
+    address: str | None
     lat: float
     lon: float
     position: int
@@ -157,6 +158,7 @@ def recommend(
     names = {pid: name for entry in entries for pid, name in entry.product_names.items()}
     texts = {str(entry.item_index): entry.text for entry in entries}
     names_by_id = {c.store_id: c.name for c in candidates}
+    addresses_by_id = {c.store_id: c.address for c in candidates}
     data_as_of = _data_as_of(session, candidates, basket)
     extra = tuple(
         MissingLine(str(entry.item_index), MissingReason.NOT_AVAILABLE)
@@ -175,7 +177,7 @@ def recommend(
         minutes=_quantity(basket.minutes) if basket.stores else "0",
         missing=[_missing_line(line, stores_by_id, texts) for line in missing],
         route=[[lat, lon] for lat, lon in route],
-        explanation=explain(basket, names_by_id, texts, extra),
+        explanation=explain(basket, names_by_id, texts, extra, addresses_by_id),
         degraded=query.degraded,
     )
     _persist(session, recommendation_id, query, basket, data_as_of, response)
@@ -277,6 +279,7 @@ def _store(
         store_id=store.store_id,
         name=store.name,
         chain=store.chain,
+        address=store.address,
         lat=store.latitude,
         lon=store.longitude,
         position=purchase.position,
