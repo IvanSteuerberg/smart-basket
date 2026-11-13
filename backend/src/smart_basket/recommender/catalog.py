@@ -1,7 +1,8 @@
 """Products of the chain catalog for each requested line (decision 0016, provisional matching).
 
-Until real product matching exists (iteration 12), the requested leaf category is the canonical
-product: every chain product mapped to that category, or to a descendant, is a candidate. A leaf
+Until real product matching exists (iteration 12), every chain product mapped to the requested
+leaf category, or to a descendant, is a candidate of that line. Each line gets a synthetic
+canonical id of its own, so two lines of the same leaf do not share products and options. A leaf
 without products falls back to the products of its parent group whose name resembles the text.
 """
 
@@ -17,12 +18,16 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
-from smart_basket.preprocessor.text import fold, words
+from smart_basket.preprocessor.text import fold, same_word, tokenize, words
 
 #: Minimum `token_set_ratio` between the folded item text and a fallback product name.
 FALLBACK_RATIO = 80
 #: Folded texts shorter than this are matched as whole words only, never as substrings.
 SHORT_TEXT = 4
+#: Words of a line that carry no product meaning when its text is compared with product names.
+CONNECTORS = frozenset({"de", "del", "la", "el", "los", "las", "y", "con", "para", "en", "al"})
+#: Physical dimension of each base unit: products of another dimension cannot satisfy the line.
+_DIMENSIONS = {"kg": "mass", "g": "mass", "l": "volume", "ml": "volume", "ud": "count"}
 
 #: Columns of `brand`; `aliases` is read only when the column exists.
 _BRAND_COLUMNS_SQL = "select column_name from information_schema.columns where table_name = 'brand'"
@@ -45,6 +50,7 @@ class CategoryInfo:
     category_id: int
     parent_id: int | None
     default_quantity: Decimal | None
+    base_unit: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +74,8 @@ def load_categories(session: Session, keys: set[str]) -> dict[str, CategoryInfo]
         return {}
     rows = session.execute(
         text(
-            "select key, id, parent_id, default_quantity from category where key in :keys"
+            "select key, id, parent_id, default_quantity, base_unit from category "
+            "where key in :keys"
         ).bindparams(bindparam("keys", expanding=True)),
         {"keys": sorted(keys)},
     ).mappings()
@@ -80,6 +87,7 @@ def _category(row: Mapping[str, Any]) -> CategoryInfo:
         category_id=row["id"],
         parent_id=row["parent_id"],
         default_quantity=row["default_quantity"],
+        base_unit=row["base_unit"],
     )
 
 
@@ -121,21 +129,27 @@ def _entry(
     item_rows = [row for row in rows if category.category_id in (row["ancestor_ids"] or [])]
     if not item_rows and category.parent_id is not None:
         item_rows = _fallback_rows(rows, category.parent_id, item.text)
-    products: dict[int, list[Product]] = {}
-    names: dict[int, str] = {}
+    # A synthetic canonical id per line keeps two lines of the same leaf apart: the optimizer
+    # matches products to lines by canonical id, so a shared one would mix brands and options.
+    canonical_id = -(index + 1)
+    candidates: list[tuple[Mapping[str, Any], Product]] = []
     for row in item_rows:
-        product = _product(row, category.category_id, brands)
+        product = _product(row, canonical_id, category.base_unit, brands)
         if product is None:
             continue
         if not item.private_label_ok and product.is_private_label:
             continue
         if brand_terms is not None and not _matches_brand(row["name"], brand_terms):
             continue
+        candidates.append((row, product))
+    products: dict[int, list[Product]] = {}
+    names: dict[int, str] = {}
+    for row, product in _prefer_named(candidates, item.text):
         products.setdefault(row["zone_id"], []).append(product)
         names[row["product_id"]] = row["name"]
     line = Line(
         line_id=str(index),
-        canonical_id=category.category_id,
+        canonical_id=canonical_id,
         quantity=item.quantity,
         unit=item.unit,
         preferences=LinePreferences(private_label_ok=item.private_label_ok),
@@ -206,10 +220,17 @@ def _fallback_rows(
     return matched
 
 
-def _product(row: Mapping[str, Any], canonical_id: int, brands: _Brands) -> Product | None:
-    """Optimizer product, or None when the catalog has no size to compare prices by."""
+def _product(
+    row: Mapping[str, Any],
+    canonical_id: int,
+    leaf_base_unit: str | None,
+    brands: _Brands,
+) -> Product | None:
+    """Optimizer product, or None when it cannot satisfy the line or has no size to compare by."""
     quantity, unit = row["base_quantity"], row["base_unit"]
     if quantity is None or unit is None:
+        return None
+    if leaf_base_unit is not None and _DIMENSIONS.get(unit) != _DIMENSIONS.get(leaf_base_unit):
         return None
     ancestors = row["ancestor_ids"] or []
     return Product(
@@ -222,6 +243,32 @@ def _product(row: Mapping[str, Any], canonical_id: int, brands: _Brands) -> Prod
         is_private_label=brands.is_private_label(row["chain_id"], row["name"]),
         category_ids=frozenset(ancestors),
     )
+
+
+def _prefer_named(
+    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
+) -> list[tuple[Mapping[str, Any], Product]]:
+    """Products named like the line, when any of them is ("papel de horno" over "Bolsa")."""
+    content = _content_words(item_text)
+    if not content:
+        return list(rows)
+    named = [row for row in rows if _name_has_words(row[0]["name"], content)]
+    return named or list(rows)
+
+
+def _content_words(text: str) -> tuple[str, ...]:
+    """Folded words of a line that carry meaning, without connectors or numbers."""
+    return tuple(
+        token.key
+        for token in tokenize(text)
+        if token.kind == "word" and token.key not in CONNECTORS
+    )
+
+
+def _name_has_words(name: str, content: tuple[str, ...]) -> bool:
+    """True when a product name has every content word as a whole word (plural tolerated)."""
+    product_words = tuple(token.key for token in tokenize(name) if token.kind == "word")
+    return all(any(same_word(word, other) for other in product_words) for word in content)
 
 
 def _matches_brand(name: str, terms: set[str]) -> bool:
@@ -253,7 +300,12 @@ class _Brands:
             text(f"select name, {alias}, is_private_label, owner_chain_id from brand")
         ).mappings():
             folded = fold(row["name"])
-            self._aliases[folded] = tuple(fold(alias) for alias in (row["aliases"] or ()))
+            aliases = tuple(fold(value) for value in (row["aliases"] or ()))
+            terms = (folded, *aliases)
+            # A brand written as an alias must reach the same terms as its name.
+            self._aliases[folded] = terms
+            for value in aliases:
+                self._aliases[value] = terms
             if row["is_private_label"] and row["owner_chain_id"] is not None:
                 self._private_labels.setdefault(row["owner_chain_id"], []).append(
                     words(row["name"])

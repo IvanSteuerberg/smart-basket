@@ -73,6 +73,7 @@ def test_five_item_basket_has_prices_minutes_and_route(world):
     store = body["stores"][0]
     assert store["name"] == "Mercadona"
     assert store["chain"] == "Mercadona"
+    assert store["address"] == "Calle Ancha 1, León"
     assert store["position"] == 1
     assert store["lat"] == pytest.approx(42.6)
     assert store["lon"] == pytest.approx(-5.57)
@@ -222,16 +223,14 @@ def test_brand_filter_matches_whole_words_only(world):
 def test_private_label_from_the_brand_table_is_excluded(world):
     body = world.client.post(
         "/api/recommendations",
-        json=payload([item("leche semidesnatada", "leche", "2", "l", private_label_ok=False)]),
+        json=payload([item("yogur natural", "yogur", "4", "ud", private_label_ok=False)]),
     ).json()
     assert body["stores"] == []
     assert body["total_cost"] == "0"
     assert body["minutes"] == "0"
     assert body["route"] == []
     assert body["data_as_of"] is None
-    assert body["missing"] == [
-        {"text": "leche semidesnatada", "reason": "not_available", "stop": None}
-    ]
+    assert body["missing"] == [{"text": "yogur natural", "reason": "not_available", "stop": None}]
 
 
 def test_short_item_does_not_fall_back_to_a_substring(world):
@@ -275,6 +274,69 @@ def test_unknown_categories_give_an_empty_answer(world):
     assert body["explanation"].startswith(
         "No hemos encontrado nada de tu lista en las tiendas cercanas."
     )
+
+
+def test_lines_of_the_same_leaf_keep_their_own_brand(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [
+                item("leche semidesnatada", "leche", "2", "l"),
+                item("leche pascual", "leche", "1", "l", brand="Pascual"),
+            ]
+        ),
+    ).json()
+    assert body["missing"] == []
+    lines = [(line["text"], line["product_name"]) for line in body["stores"][0]["lines"]]
+    assert lines == [
+        ("leche semidesnatada", "Leche semidesnatada Hacendado"),
+        ("leche pascual", "Leche entera Pascual"),
+    ]
+
+
+def test_a_brand_without_products_is_reported_as_missing(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("leche puleva", "leche", "1", "l", brand="Puleva")]),
+    ).json()
+    assert body["missing"] == [{"text": "leche puleva", "reason": "not_available", "stop": None}]
+
+
+def test_brand_alias_finds_the_brand_products(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("refresco", "refresco", "1", "ud", brand="cocacola")]),
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Coca Cola Zero"
+
+
+def test_product_of_another_dimension_is_not_offered(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("leche", "leche", "1", "ud")]),
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Leche semidesnatada Hacendado"
+    assert body["total_cost"] == "0.95"
+
+
+def test_product_named_like_the_line_wins(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("papel de horno", "papel_horno", "1", "ud")]),
+    ).json()
+    assert body["stores"][0]["lines"][0]["product_name"] == "Papel de horno Bosque Verde"
+    assert body["total_cost"] == "1.20"
+
+
+def test_line_without_a_matching_name_keeps_every_product(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("pollo", "aves", "1", "kg")]),
+    ).json()
+    assert body["stores"][0]["lines"][0]["product_name"] == "Muslo de pavo"
+    assert body["total_cost"] == "2.50"
 
 
 def _query(return_to_origin: bool) -> RecommendationQuery:

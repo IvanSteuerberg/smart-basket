@@ -18,8 +18,10 @@ def explain(
     names_by_id: Mapping[int, str],
     line_texts: Mapping[str, str],
     extra_missing: Sequence[MissingLine] = (),
+    addresses_by_id: Mapping[int, str | None] | None = None,
 ) -> str:
     """The user-visible summary, with comma decimals and whole minutes."""
+    addresses = addresses_by_id or {}
     if result.stores:
         stores = _join([names_by_id[s.store_id] for s in result.stores])
         vuelta = " (ida y vuelta)" if result.return_to_origin else ""
@@ -36,8 +38,9 @@ def explain(
                 sentences.append(f"No hemos encontrado «{text}» en las tiendas cercanas.")
             case MissingReason.SEPARATE_STOP if missing.stop is not None:
                 stop = missing.stop
+                place = _place(names_by_id[stop.store_id], addresses.get(stop.store_id))
                 sentences.append(
-                    f"«{text}» está en {names_by_id[stop.store_id]}: añadirlo hoy supone "
+                    f"«{text}» está en {place}: añadirlo hoy supone "
                     f"{minutes(stop.extra_minutes)} min más; puedes comprarlo otro día."
                 )
             case _:
@@ -66,6 +69,11 @@ def decimal_text(value: Decimal) -> str:
     if "." in rendered:
         rendered = rendered.rstrip("0").rstrip(".")
     return rendered or "0"
+
+
+def _place(name: str, address: str | None) -> str:
+    """Store name with its address in brackets when the catalog has one."""
+    return f"{name} ({address})" if address else name
 
 
 def _join(names: Sequence[str]) -> str:

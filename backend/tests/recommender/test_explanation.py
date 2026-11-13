@@ -96,3 +96,14 @@ def test_every_missing_reason_has_its_sentence():
         "puedes comprarlo otro día. "
         "No hay forma de llegar a la tienda que tiene «harina»."
     )
+
+
+def test_separate_stop_sentence_shows_the_store_address():
+    missing = (MissingLine("1", MissingReason.SEPARATE_STOP, stop()),)
+    explained = explain(
+        basket(1, missing=missing),
+        NAMES,
+        TEXTS,
+        addresses_by_id={2: "Avenida de Astorga 5"},
+    )
+    assert "«salmón» está en Mercadona Centro (Avenida de Astorga 5):" in explained

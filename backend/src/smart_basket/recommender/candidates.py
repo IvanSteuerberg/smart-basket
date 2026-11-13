@@ -19,6 +19,7 @@ class CandidateStore:
     chain_id: int
     name: str
     chain: str
+    address: str | None
     latitude: float
     longitude: float
     zone_id: int
@@ -36,7 +37,7 @@ def candidate_stores(
             with origin as (
                 select st_setsrid(st_makepoint(:lon, :lat), 4326)::geography as point
             )
-            select s.id, s.chain_id, s.name, c.name as chain, s.zone_id,
+            select s.id, s.chain_id, s.name, s.address, c.name as chain, s.zone_id,
                    st_y(s.geom::geometry) as latitude,
                    st_x(s.geom::geometry) as longitude,
                    st_distance(s.geom, origin.point) as distance_m
@@ -65,6 +66,7 @@ def candidate_stores(
             chain_id=row["chain_id"],
             name=row["name"],
             chain=row["chain"],
+            address=row["address"],
             latitude=row["latitude"],
             longitude=row["longitude"],
             zone_id=row["zone_id"],
