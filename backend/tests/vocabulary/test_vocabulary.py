@@ -74,6 +74,18 @@ def test_brands_and_variants_come_from_their_sources(session, lexicon):
     assert {v.key for v in lexicon.variants()} == {v["key"] for v in variants["variants"]}
 
 
+def test_seed_brand_aliases_and_implies_reach_the_lexicon(session, lexicon):
+    brands = {brand.name: brand for brand in lexicon.brands()}
+    cocacola = brands["Coca-Cola"]
+    assert cocacola.aliases == ("coca cola", "cocacola", "coca-cola", "coke")
+    assert cocacola.implies == "refresco_cola"
+    assert cocacola.is_private_label is False
+
+    hacendado = brands["Hacendado"]
+    assert hacendado.is_private_label is True
+    assert hacendado.implies is None
+
+
 def test_a_category_removed_from_the_file_leaves_the_lexicon(session, tmp_path):
     data_dir = tmp_path / "seed"
     shutil.copytree(DEFAULT_DATA_DIR, data_dir)
@@ -112,6 +124,19 @@ def test_export_round_trips(lexicon, tmp_path):
     assert loaded.brands() == lexicon.brands()
     assert loaded.variants() == lexicon.variants()
     assert loaded.units() == lexicon.units()
+
+
+def test_preprocessor_resolves_seed_brands(pp: Preprocessor):
+    for phrase in ("Cocacola", "coca cola zero"):
+        item = pp.preprocess(phrase).items[0]
+        assert item.brand == "Coca-Cola", phrase
+        assert item.generic_key == "refresco_cola", phrase
+        assert item.resolved is True, phrase
+
+    colacao = pp.preprocess("colacao").items[0]
+    assert colacao.brand == "Cola Cao"
+    assert colacao.generic_key == "cacao_soluble"
+    assert colacao.resolved is True
 
 
 def test_preprocessor_resolves_seed_terms(pp: Preprocessor):

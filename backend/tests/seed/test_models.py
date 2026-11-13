@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from smart_basket.seed.models import (
+    BrandsFile,
     ChainCategoriesFile,
     ChainsFile,
     TaxonomyFile,
@@ -29,6 +30,10 @@ def mapping_file(chain: str, *categories: dict) -> ChainCategoriesFile:
     )
 
 
+def brands_file(*brands: dict) -> BrandsFile:
+    return BrandsFile.model_validate({"version": 1, "brands": list(brands)})
+
+
 def chain(code: str = "mercadona", **fields) -> dict:
     return {"code": code, "name": code.title(), **fields}
 
@@ -43,7 +48,10 @@ def test_fixture_seed_validates(seed_dir):
     mapping = ChainCategoriesFile.model_validate_json(
         (seed_dir / "chain_categories" / "mercadona.json").read_text(encoding="utf-8")
     )
-    validate_seed(taxonomy, chains, {"mercadona": mapping})
+    brands = BrandsFile.model_validate_json(
+        (seed_dir / "brands_es.json").read_text(encoding="utf-8")
+    )
+    validate_seed(taxonomy, chains, {"mercadona": mapping}, brands)
     assert [row.key for row in taxonomy.rows()] == [
         "lacteos_huevos",
         "yogures",
@@ -165,7 +173,7 @@ def test_mapping_to_unknown_taxonomy_key_is_rejected():
     chains = chains_file(chain())
     mapping = mapping_file("mercadona", {"code": "1", "name": "A", "category": "no_existe"})
     with pytest.raises(ValueError, match="no_existe"):
-        validate_seed(taxonomy, chains, {"mercadona": mapping})
+        validate_seed(taxonomy, chains, {"mercadona": mapping}, brands_file())
 
 
 def test_mapping_of_unknown_chain_is_rejected():
@@ -173,11 +181,44 @@ def test_mapping_of_unknown_chain_is_rejected():
     chains = chains_file(chain())
     mapping = mapping_file("carrefour")
     with pytest.raises(ValueError, match="chain 'carrefour'"):
-        validate_seed(taxonomy, chains, {"carrefour": mapping})
+        validate_seed(taxonomy, chains, {"carrefour": mapping}, brands_file())
 
 
 def test_mapping_file_name_must_match_its_chain():
     taxonomy = taxonomy_file(node("fruta", base_unit="kg"))
     chains = chains_file(chain())
     with pytest.raises(ValueError, match="declares chain 'mercadona'"):
-        validate_seed(taxonomy, chains, {"otra": mapping_file("mercadona")})
+        validate_seed(taxonomy, chains, {"otra": mapping_file("mercadona")}, brands_file())
+
+
+def test_aliases_are_lower_case_and_trimmed():
+    brands = brands_file({"name": "Marca", "aliases": ["  Alias  "]})
+    assert brands.brands[0].aliases == ["alias"]
+
+
+def test_repeated_brand_name_is_rejected():
+    with pytest.raises(ValidationError, match="duplicate brand name 'marca'"):
+        brands_file({"name": "Marca"}, {"name": "marca"})
+
+
+def test_repeated_alias_within_a_brand_is_rejected():
+    with pytest.raises(ValidationError, match="duplicate alias 'alias'"):
+        brands_file({"name": "Marca", "aliases": ["alias", " Alias "]})
+
+
+def test_alias_shared_by_two_brands_is_rejected():
+    with pytest.raises(ValidationError, match="alias 'comun' belongs to both brands"):
+        brands_file({"name": "Marca", "aliases": ["comun"]}, {"name": "Otra", "aliases": ["comun"]})
+
+
+def test_private_label_and_implies_must_reference_seed_files():
+    taxonomy = taxonomy_file(node("agua", base_unit="l"))
+    chains = chains_file(chain())
+    valid = brands_file({"name": "Marca", "private_label_of": "mercadona", "implies": "agua"})
+    validate_seed(taxonomy, chains, {}, valid)
+    with pytest.raises(ValueError, match="unknown taxonomy category 'no_existe'"):
+        validate_seed(taxonomy, chains, {}, brands_file({"name": "Marca", "implies": "no_existe"}))
+    with pytest.raises(ValueError, match="unknown chain 'otra'"):
+        validate_seed(
+            taxonomy, chains, {}, brands_file({"name": "Marca", "private_label_of": "otra"})
+        )

@@ -82,6 +82,7 @@ def test_load_twice_has_no_duplicates_and_correct_closure(session, seed_dir):
     assert (first.category.inserted, first.category.updated) == (6, 0)
     assert (first.chain_category.inserted, first.chain_category.updated) == (3, 0)
     assert first.category_closure.inserted == 12
+    assert (first.brand.inserted, first.brand.updated) == (3, 0)
 
     second = load(session, seed_dir)
     assert (second.chain.inserted, second.chain.updated) == (0, 2)
@@ -89,6 +90,7 @@ def test_load_twice_has_no_duplicates_and_correct_closure(session, seed_dir):
     assert (second.category.inserted, second.category.updated) == (0, 6)
     assert (second.chain_category.inserted, second.chain_category.updated) == (0, 3)
     assert second.category_closure.inserted == 12
+    assert (second.brand.inserted, second.brand.updated) == (0, 3)
 
     for table, expected in [
         ("chain", 2),
@@ -96,6 +98,7 @@ def test_load_twice_has_no_duplicates_and_correct_closure(session, seed_dir):
         ("category", 6),
         ("chain_category", 3),
         ("category_closure", 12),
+        ("brand", 3),
     ]:
         assert count(session, table) == expected, table
     assert closure_of(session, "yogur_griego") == [
@@ -207,3 +210,42 @@ def test_chain_wide_zone_exists_once_per_chain(session, seed_dir):
         )
     ).all()
     assert rows == [("carrefour", "all"), ("mercadona", "all")]
+
+
+def test_private_label_has_its_chain_and_manufacturer_has_none(session, seed_dir):
+    load(session, seed_dir)
+    private = session.execute(
+        text(
+            "select b.is_private_label, b.aliases, b.implies_category, c.code "
+            "from brand b join chain c on c.id = b.owner_chain_id where b.name = 'Marca Blanca'"
+        )
+    ).one()
+    assert private.is_private_label is True
+    assert private.code == "mercadona"
+    assert private.aliases == ["blanca"]
+    assert private.implies_category is None
+
+    manufacturer = session.execute(
+        text(
+            "select is_private_label, owner_chain_id, aliases, implies_category "
+            "from brand where name = 'Coca-Cola'"
+        )
+    ).one()
+    assert manufacturer.is_private_label is False
+    assert manufacturer.owner_chain_id is None
+    assert manufacturer.aliases == ["coca cola", "cocacola"]
+    assert manufacturer.implies_category == "yogur_natural"
+
+
+def test_brand_removed_from_the_file_stays_and_is_reported_stale(session, seed_dir, tmp_path):
+    data_dir = copy_seed(seed_dir, tmp_path)
+    load(session, data_dir)
+
+    update_json(
+        data_dir / "brands_es.json",
+        lambda data: data.update(brands=[b for b in data["brands"] if b["name"] != "Otra Marca"]),
+    )
+    report = load(session, data_dir)
+    assert report.stale_brands == ["Otra Marca"]
+    names = set(session.execute(text("select name from brand")).scalars())
+    assert "Otra Marca" in names

@@ -33,7 +33,9 @@ _CATEGORIES_SQL = text(
     "from category c where cardinality(c.forms) > 0 order by c.key"
 )
 
-_BRANDS_SQL = text("select id, name, is_private_label from brand order by name, id")
+_BRANDS_SQL = text(
+    "select id, name, is_private_label, aliases, implies_category from brand order by name, id"
+)
 
 
 def build_lexicon(session: Session) -> InMemoryLexicon:
@@ -54,9 +56,10 @@ def build_lexicon(session: Session) -> InMemoryLexicon:
     brands = [
         BrandTerm(
             name=row.name,
-            aliases=(row.name.lower(),),
+            aliases=tuple(row.aliases) if row.aliases else (row.name.lower(),),
             is_private_label=row.is_private_label,
             brand_id=row.id,
+            implies=row.implies_category,
         )
         for row in session.execute(_BRANDS_SQL)
     ]

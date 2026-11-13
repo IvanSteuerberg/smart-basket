@@ -1,8 +1,8 @@
 """Pydantic models of the seed JSON files and their joint validation (decision 0007, point 2).
 
-The files describe the canonical category taxonomy, the chains with their zones and, per
-chain, the mapping from the chain's own category tree to taxonomy keys. `validate_seed`
-checks the references that cross files.
+The files describe the canonical category taxonomy, the chains with their zones, the brands
+with their aliases and, per chain, the mapping from the chain's own category tree to taxonomy
+keys. `validate_seed` checks the references that cross files.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from collections.abc import Iterator, Mapping
 from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from smart_basket.optimizer.models import BaseUnit
 
@@ -214,17 +214,73 @@ class ChainCategoriesFile(BaseModel):
         return self
 
 
+class BrandSeed(BaseModel):
+    """One brand of `brands_es.json`."""
+
+    name: str = Field(min_length=1)
+    aliases: list[str] = Field(default_factory=list)
+    private_label_of: str | None = Field(default=None, pattern=KEY_PATTERN)
+    implies: str | None = Field(default=None, pattern=KEY_PATTERN)
+
+    @field_validator("aliases")
+    @classmethod
+    def _normalize_aliases(cls, aliases: list[str]) -> list[str]:
+        normalized = []
+        for alias in aliases:
+            value = alias.strip().lower()
+            if not value:
+                raise ValueError("alias must not be empty")
+            if value in normalized:
+                raise ValueError(f"duplicate alias {value!r}")
+            normalized.append(value)
+        return normalized
+
+
+class BrandsFile(BaseModel):
+    """`brands_es.json`: manufacturer brands and the chains' private labels."""
+
+    version: int = 1
+    brands: list[BrandSeed] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_brands(self) -> BrandsFile:
+        names: set[str] = set()
+        aliases: dict[str, str] = {}
+        for brand in self.brands:
+            folded = brand.name.strip().lower()
+            if folded in names:
+                raise ValueError(f"duplicate brand name {brand.name!r}")
+            names.add(folded)
+            for alias in brand.aliases:
+                owner = aliases.setdefault(alias, brand.name)
+                if owner != brand.name:
+                    raise ValueError(
+                        f"alias {alias!r} belongs to both brands {owner!r} and {brand.name!r}"
+                    )
+        return self
+
+
 def validate_seed(
     taxonomy: TaxonomyFile,
     chains: ChainsFile,
     mappings: Mapping[str, ChainCategoriesFile],
+    brands: BrandsFile,
 ) -> None:
-    """Check the references that cross the three seed files.
+    """Check the references that cross the seed files.
 
     `mappings` is keyed by chain code (the file name without `.json`).
     """
     category_keys = {row.key for row in taxonomy.rows()}
     chain_codes = {chain.code for chain in chains.chains}
+    for brand in brands.brands:
+        if brand.implies is not None and brand.implies not in category_keys:
+            raise ValueError(
+                f"brand {brand.name!r} implies unknown taxonomy category {brand.implies!r}"
+            )
+        if brand.private_label_of is not None and brand.private_label_of not in chain_codes:
+            raise ValueError(
+                f"private label {brand.name!r} belongs to unknown chain {brand.private_label_of!r}"
+            )
     for chain_code, mapping in mappings.items():
         if mapping.chain != chain_code:
             raise ValueError(f"chain_categories/{chain_code}.json declares chain {mapping.chain!r}")
