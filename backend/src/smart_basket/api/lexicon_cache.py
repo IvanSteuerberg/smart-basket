@@ -29,7 +29,9 @@ _FINGERPRINT_SQL = text(
     "    ',' order by id)), '') from category) as categories_hash,"
     " (select count(*) from brand) as brands,"
     " (select coalesce(md5(string_agg("
-    "    name || '|' || is_private_label::text, ',' order by id)), '') from brand) as brands_hash"
+    "    name || '|' || is_private_label::text || '|' || array_to_string(aliases, ';')"
+    " || '|' || coalesce(implies_category, '') || '|' || match_name::text, ',' order by id)), '')"
+    " from brand) as brands_hash"
 )
 
 #: Folded name and forms of every category, computed when the lexicon is rebuilt.
