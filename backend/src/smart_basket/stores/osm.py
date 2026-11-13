@@ -21,12 +21,17 @@ CHAIN_ALIASES: dict[str, str] = {
     "mercadona": "mercadona",
     "dia": "dia",
     "diago": "dia",
+    "diamarket": "dia",
+    "diamaxi": "dia",
+    "maxidia": "dia",
     "laplazadedia": "dia",
     "alimerka": "alimerka",
     "lidl": "lidl",
     "alcampo": "alcampo",
     "alcamposupermercado": "alcampo",
+    "mialcampo": "alcampo",
     "eleclerc": "eleclerc",
+    "leclerc": "eleclerc",
     "lupa": "lupa",
     "carrefour": "carrefour",
     "carrefourexpress": "carrefour",
@@ -34,14 +39,6 @@ CHAIN_ALIASES: dict[str, str] = {
     "gadis": "gadis",
     "claudio": "gadis",
     "aldi": "aldi",
-}
-
-# `brand:wikidata` is a fallback between `brand` and `name`; only unambiguous items are mapped.
-CHAIN_WIKIDATA: dict[str, str] = {
-    "Q125054": "aldi",
-    "Q151954": "lidl",
-    "Q15708738": "mercadona",
-    "Q390258": "carrefour",
 }
 
 # Brand variants that name a store format rather than another chain.
@@ -105,11 +102,11 @@ class BoundingBox:
         return cls(south=south, west=west, north=north, east=east)
 
     def query(self) -> str:
-        """The Overpass QL query: supermarkets of every kind, with their centre and tags."""
+        """The Overpass QL query: supermarkets and hypermarkets, with their centre and tags."""
         corners = f"{self.south},{self.west},{self.north},{self.east}"
         return (
             f"[out:json][timeout:{OVERPASS_QUERY_TIMEOUT_SECONDS}];\n"
-            f'nwr["shop"="supermarket"]({corners});\n'
+            f'nwr["shop"~"^(supermarket|hypermarket)$"]({corners});\n'
             "out center tags;"
         )
 
@@ -123,17 +120,10 @@ def normalize(value: str | None) -> str:
 
 
 def chain_for_tags(tags: dict[str, str]) -> str | None:
-    """The chain code of `tags`, or None when the brand is not one of the ten."""
-    for key in ("brand", "brand:wikidata", "name"):
+    """The chain code of `tags` by brand, then name, or None when it is not one of the ten."""
+    for key in ("brand", "name"):
         value = tags.get(key)
-        if not value:
-            continue
-        code = (
-            CHAIN_WIKIDATA.get(value.strip().upper())
-            if key == "brand:wikidata"
-            else CHAIN_ALIASES.get(normalize(value))
-        )
-        if code is not None:
+        if value and (code := CHAIN_ALIASES.get(normalize(value))) is not None:
             return code
     return None
 
@@ -157,7 +147,7 @@ def build_address(tags: dict[str, str]) -> str | None:
 
 
 def parse_elements(elements: Iterable[dict[str, Any]]) -> tuple[StoreObservation, ...]:
-    """Keep the supermarkets of the ten chains; every other element is ignored."""
+    """Keep the supermarkets and hypermarkets of the ten chains; anything else is ignored."""
     observations: dict[str, StoreObservation] = {}
     for element in elements:
         kind, element_id = element.get("type"), element.get("id")

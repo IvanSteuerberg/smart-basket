@@ -31,6 +31,8 @@ URL = os.environ.get("TEST_DATABASE_URL")
 pytestmark = [pytest.mark.db, pytest.mark.skipif(not URL, reason="TEST_DATABASE_URL not set")]
 
 BBOX = BoundingBox.parse("42.56,-5.62,42.63,-5.52")
+# A box around the centre of BBOX that leaves out a store at 42.61.
+SMALLER_BBOX = BoundingBox.parse("42.595,-5.575,42.605,-5.565")
 
 # The seed layout the import relies on: Mercadona has warehouse 3683, Dia one León zone, the rest
 # only their chain-wide zone (`kind = 'chain'`, code `all`).
@@ -87,20 +89,29 @@ def scalar(db: Db, sql: str, **params):
         return conn.execute(text(sql), params).scalar_one()
 
 
-def element(osm_id: int, brand: str, *, kind: str = "node", name: str | None = None, **tags: str):
+def element(
+    osm_id: int,
+    brand: str,
+    *,
+    kind: str = "node",
+    name: str | None = None,
+    lat: float = 42.6,
+    lon: float = -5.57,
+    **tags: str,
+):
     """One synthetic Overpass element of the given brand."""
     element_tags = {"shop": "supermarket", "brand": brand, **tags}
     if name is not None:
         element_tags["name"] = name
     body: dict[str, Any] = {"type": kind, "id": osm_id, "tags": element_tags}
     if kind == "node":
-        body.update(lat=42.6, lon=-5.57)
+        body.update(lat=lat, lon=lon)
     else:
-        body["center"] = {"lat": 42.6, "lon": -5.57}
+        body["center"] = {"lat": lat, "lon": lon}
     return body
 
 
-def load(db: Db, elements: list[dict[str, Any]]):
+def load(db: Db, elements: list[dict[str, Any]], *, bbox: BoundingBox = BBOX):
     """Run the whole path: a fake Overpass answer, its parsing and the import."""
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -108,8 +119,8 @@ def load(db: Db, elements: list[dict[str, Any]]):
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     with OverpassClient(client, url="https://overpass.test/api") as overpass:
-        observations = fetch_stores(overpass, BBOX)
-    return import_stores(observations, mercadona_warehouse="3683", database_url=db.url)
+        observations = fetch_stores(overpass, bbox)
+    return import_stores(observations, bbox, mercadona_warehouse="3683", database_url=db.url)
 
 
 def test_the_same_answer_loaded_twice_does_not_duplicate_stores(db):
@@ -153,6 +164,28 @@ def test_a_store_that_disappears_is_deactivated_and_not_deleted(db):
         "node/1": True,
         "node/2": False,
     }
+
+
+def test_a_store_outside_the_queried_box_is_not_deactivated(db):
+    load(db, [element(1, "Lidl", lat=42.61), element(2, "Lidl")])
+    second = load(db, [element(2, "Lidl")], bbox=SMALLER_BBOX)
+
+    assert second.deactivated == 0
+    assert dict(rows(db, "select osm_id, is_active from store")) == {
+        "node/1": True,
+        "node/2": True,
+    }
+
+
+def test_an_empty_answer_deactivates_nothing(db):
+    load(db, [element(1, "Mercadona"), element(2, "Lidl")])
+    empty = load(db, [])
+
+    assert (empty.inserted, empty.updated, empty.deactivated) == (0, 0, 0)
+    assert empty.per_chain == {}
+    assert empty.run_ids == ()
+    assert scalar(db, "select count(*) from store where is_active") == 2
+    assert scalar(db, "select count(*) from ingest_run where kind = 'stores'") == 2
 
 
 def test_a_store_that_reappears_becomes_active_again(db):
@@ -221,7 +254,7 @@ def test_a_missing_chain_asks_for_the_seed_loader(db):
     )
 
     with pytest.raises(store_module.StoreSetupError, match="smart-basket-seed"):
-        import_stores((observation,), database_url=db.url)
+        import_stores((observation,), BBOX, database_url=db.url)
 
 
 def test_a_missing_mercadona_warehouse_asks_for_the_seed_loader(db):

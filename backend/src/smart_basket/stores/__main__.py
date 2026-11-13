@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
             for chain_code, count in count_by_chain(observations).items():
                 print(f"{chain_code}: {count}")
             return 0
-        summary = import_stores(observations)
+        summary = import_stores(observations, bbox)
         log_store_summary(summary)
         for chain_code, count in summary.per_chain.items():
             print(f"{chain_code}: {count}")

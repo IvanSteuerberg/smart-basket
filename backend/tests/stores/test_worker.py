@@ -50,7 +50,7 @@ def test_the_job_fetches_and_imports_the_stores(monkeypatch):
     monkeypatch.setattr(jobs, "get_settings", lambda: settings())
     monkeypatch.setattr(jobs.stores, "OverpassClient", Client)
     monkeypatch.setattr(jobs.stores, "fetch_stores", lambda client, bbox: ("observations",))
-    monkeypatch.setattr(jobs.stores, "import_stores", lambda observations: summary)
+    monkeypatch.setattr(jobs.stores, "import_stores", lambda observations, bbox: summary)
     monkeypatch.setattr(
         jobs.stores, "log_store_summary", lambda value: calls.append(("log", value))
     )

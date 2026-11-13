@@ -45,12 +45,17 @@ def make_client(handler) -> OverpassClient:
         ({"brand": "Dia"}, "dia"),
         ({"brand": "DIA"}, "dia"),
         ({"brand": "Dia&Go"}, "dia"),
+        ({"brand": "Dia Maxi"}, "dia"),
+        ({"brand": "Maxi Dia"}, "dia"),
+        ({"brand": "Dia Market"}, "dia"),
         ({"brand": "La Plaza de Día"}, "dia"),
         ({"brand": "Alimerka"}, "alimerka"),
         ({"brand": "Lidl"}, "lidl"),
         ({"brand": "Alcampo"}, "alcampo"),
         ({"brand": "Alcampo Supermercado"}, "alcampo"),
-        ({"brand": "E.Leclerc"}, "eleclerc"),
+        ({"brand": "Mi Alcampo"}, "alcampo"),
+        ({"brand": "E. Leclerc"}, "eleclerc"),
+        ({"brand": "Leclerc"}, "eleclerc"),
         ({"brand": "Lupa"}, "lupa"),
         ({"brand": "Carrefour"}, "carrefour"),
         ({"brand": "Carrefour Express"}, "carrefour"),
@@ -58,7 +63,6 @@ def make_client(handler) -> OverpassClient:
         ({"brand": "Gadis"}, "gadis"),
         ({"name": "Claudio"}, "gadis"),
         ({"brand": "Aldi"}, "aldi"),
-        ({"brand:wikidata": "Q151954"}, "lidl"),
     ],
 )
 def test_known_brands_map_to_their_chain(tags, code):
@@ -68,17 +72,17 @@ def test_known_brands_map_to_their_chain(tags, code):
 def test_unknown_brands_and_untagged_stores_are_ignored():
     assert chain_for_tags({"brand": "Eroski"}) is None
     assert chain_for_tags({"name": "Supermercado Centro"}) is None
+    assert chain_for_tags({"name": "Supermercados Diamante"}) is None
     assert chain_for_tags({}) is None
 
 
-def test_brand_wins_over_wikidata_and_name():
-    tags = {"brand": "Lidl", "brand:wikidata": "Q15708738", "name": "Mercadona"}
+def test_the_brand_wins_over_the_name():
+    tags = {"brand": "Lidl", "name": "Mercadona"}
     assert chain_for_tags(tags) == "lidl"
 
 
-def test_wikidata_wins_over_name_and_falls_back_to_it_when_unknown():
-    assert chain_for_tags({"brand:wikidata": "Q151954", "name": "Mercadona"}) == "lidl"
-    assert chain_for_tags({"brand:wikidata": "Q999999", "name": "Lidl"}) == "lidl"
+def test_an_unknown_brand_falls_back_to_the_name():
+    assert chain_for_tags({"brand": "Eroski", "name": "Lidl"}) == "lidl"
 
 
 def test_address_is_built_from_the_osm_parts():
@@ -118,6 +122,21 @@ def test_a_node_becomes_an_observation():
         lat=42.6,
         opening_hours="Mo-Sa 09:00-21:00",
     )
+
+
+def test_a_hypermarket_keeps_its_shop_value_as_the_format():
+    hypermarket = {
+        "type": "node",
+        "id": 6,
+        "lat": 42.6,
+        "lon": -5.57,
+        "tags": {"shop": "hypermarket", "brand": "Carrefour"},
+    }
+
+    (observation,) = parse_elements([hypermarket])
+
+    assert observation.chain_code == "carrefour"
+    assert observation.format == "hypermarket"
 
 
 def test_a_way_uses_the_centre_of_its_outline():
@@ -178,10 +197,10 @@ def test_a_malformed_bbox_is_rejected(value, message):
         BoundingBox.parse(value)
 
 
-def test_the_query_asks_for_supermarkets_inside_the_bbox():
+def test_the_query_asks_for_supermarkets_and_hypermarkets_inside_the_bbox():
     query = BBOX.query()
 
-    assert 'nwr["shop"="supermarket"](42.56,-5.62,42.63,-5.52)' in query
+    assert 'nwr["shop"~"^(supermarket|hypermarket)$"](42.56,-5.62,42.63,-5.52)' in query
     assert query.endswith("out center tags;")
 
 

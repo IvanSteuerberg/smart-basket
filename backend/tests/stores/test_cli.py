@@ -50,7 +50,7 @@ def test_an_overpass_failure_exits_with_code_one(monkeypatch, capsys):
 def test_a_setup_error_exits_with_code_two(monkeypatch, capsys):
     configure(monkeypatch, lambda request: httpx.Response(200, json={"elements": []}))
 
-    def fail(observations):
+    def fail(observations, bbox):
         raise StoreSetupError("chain 'mercadona' not found; run `smart-basket-seed` first")
 
     monkeypatch.setattr(cli, "import_stores", fail)

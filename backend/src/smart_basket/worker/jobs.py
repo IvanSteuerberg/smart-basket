@@ -43,7 +43,7 @@ def import_stores() -> None:
         bbox = stores.BoundingBox.parse(settings.stores_bbox)
         with stores.OverpassClient(url=settings.overpass_url) as client:
             observations = stores.fetch_stores(client, bbox)
-        summary = stores.import_stores(observations)
+        summary = stores.import_stores(observations, bbox)
         stores.log_store_summary(summary)
     except Exception:
         log.exception("store import failed; other jobs keep running")

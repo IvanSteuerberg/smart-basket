@@ -2,7 +2,12 @@
 
 A store is keyed by `osm_id`, so loading the same Overpass answer twice only updates. A store
 that the answer no longer lists is deactivated, never deleted: a missing shop is a fact worth
-keeping. The chain and the zone come from the seed loader; the import only provides observations.
+keeping. Only stores inside the bounding box of the query are deactivated, so a smaller or moved
+box never touches the rest of the table. The chain and the zone come from the seed loader; the
+import only provides observations.
+
+The run bookkeeping of `ingestion/store.py` is catalog-specific (kind `catalog`, prices), so the
+store runs keep their own.
 """
 
 import json
@@ -16,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
-from smart_basket.stores.osm import CHAIN_ALIASES, StoreObservation
+from smart_basket.stores.osm import CHAIN_ALIASES, BoundingBox, StoreObservation
 
 log = logging.getLogger("smart_basket.stores")
 
@@ -56,12 +61,13 @@ def count_by_chain(observations: Iterable[StoreObservation]) -> dict[str, int]:
 
 def import_stores(
     observations: Iterable[StoreObservation],
+    bbox: BoundingBox,
     *,
     mercadona_warehouse: str | None = None,
     now: datetime | None = None,
     database_url: str | None = None,
 ) -> StoreImportSummary:
-    """Upsert the observed stores and deactivate the ones the answer no longer lists.
+    """Upsert the observed stores and deactivate the unseen ones inside `bbox`.
 
     One `ingest_run` of kind `stores` is recorded per chain that had stores in the answer:
     `ingest_run.chain_id` is required and a single Overpass answer covers every chain of a zone.
@@ -96,7 +102,7 @@ def import_stores(
         run_ids.append(run_id)
         inserted += chain_inserted
         updated += chain_updated
-    deactivated = _deactivate_unseen(observed, database_url=database_url)
+    deactivated = _deactivate_unseen(observed, bbox=bbox, database_url=database_url)
     return StoreImportSummary(
         per_chain=count_by_chain(observed),
         run_ids=tuple(run_ids),
@@ -291,12 +297,16 @@ def _upsert_stores(
 
 
 def _deactivate_unseen(
-    observations: Sequence[StoreObservation], *, database_url: str | None
+    observations: Sequence[StoreObservation],
+    *,
+    bbox: BoundingBox,
+    database_url: str | None,
 ) -> int:
-    """Deactivate the stores of the ten chains that the answer no longer lists.
+    """Deactivate the stores of the ten chains inside `bbox` that the answer no longer lists.
 
-    An answer without stores would deactivate the whole table, so it is never trusted: the
-    caller returns before reaching this function in that case.
+    Only stores inside the box are considered: a smaller or moved box says nothing about the
+    stores outside it. An answer without stores would deactivate the whole box, so it is never
+    trusted: the caller returns before reaching this function in that case.
     """
     seen = sorted({observation.osm_id for observation in observations})
     with session_scope(database_url) as session:
@@ -304,8 +314,17 @@ def _deactivate_unseen(
             text(
                 "update store set is_active = false where is_active and chain_id in ("
                 "select id from chain where code = any(cast(:codes as text[]))) "
-                "and not (osm_id = any(cast(:seen as text[])))"
+                "and not (osm_id = any(cast(:seen as text[]))) "
+                "and ST_Covers("
+                "ST_MakeEnvelope(:west, :south, :east, :north, 4326)::geography, geom)"
             ),
-            {"codes": sorted(CHAIN_CODES), "seen": seen},
+            {
+                "codes": sorted(CHAIN_CODES),
+                "seen": seen,
+                "west": bbox.west,
+                "south": bbox.south,
+                "east": bbox.east,
+                "north": bbox.north,
+            },
         )
         return result.rowcount
