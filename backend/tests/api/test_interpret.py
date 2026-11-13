@@ -64,6 +64,19 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
     assert item["needs_llm"] is False
 
 
+def test_rule_lines_keep_the_category_of_their_own_match(client):
+    provider = FakeProvider()
+    with_provider(client, provider)
+    body = client.post("/api/interpret", json={"text": "colacao, pasta/espaguetis"}).json()
+    assert provider.calls == []
+
+    colacao, pasta = body["items"]
+    assert colacao["category_key"] == "cacao_soluble"
+    assert colacao["category_name"] == "Cacao soluble"
+    assert pasta["category_key"] == "pasta_corta"
+    assert pasta["category_name"] == "Macarrones y pasta corta"
+
+
 def test_unresolved_lines_go_to_the_llm(client):
     provider = FakeProvider(
         {
@@ -95,6 +108,30 @@ def test_unresolved_lines_go_to_the_llm(client):
     assert tortilla["category_name"] == "Tortilla de patata"
     assert tortilla["resolved"] is True
     assert tortilla["needs_llm"] is False
+
+
+def test_llm_items_keep_the_order_of_the_unresolved_lines(client):
+    provider = FakeProvider(
+        {
+            "items": [
+                {"item": "servilletas", "quantity": 1, "unit": "ud", "ambiguous": False},
+                {"item": "algo para la cena", "quantity": 1, "unit": "ud", "ambiguous": True},
+            ]
+        }
+    )
+    with_provider(client, provider)
+    body = client.post(
+        "/api/interpret", json={"text": "leche, algo para la cena, cosas del finde"}
+    ).json()
+    assert provider.calls == ["algo para la cena\ncosas del finde"]
+
+    items = body["items"]
+    assert [item["line"] for item in items] == [0, 1, 2]
+    assert [item["text"] for item in items] == [
+        "leche",
+        "servilletas",
+        "algo para la cena",
+    ]
 
 
 def test_no_provider_leaves_the_unresolved_line_and_degrades(client):

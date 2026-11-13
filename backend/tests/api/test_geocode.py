@@ -1,5 +1,7 @@
 """Geocoding through Nominatim with a mock transport (no network)."""
 
+import logging
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -7,19 +9,9 @@ from fastapi.testclient import TestClient
 from smart_basket.api.app import create_app
 from smart_basket.api.catalog import get_geocoder
 from smart_basket.geo.nominatim import NominatimGeocoder, RateLimiter
+from tests.api.conftest import FakeClock
 
 DETAIL = "No se ha podido buscar la dirección. Prueba a marcar el punto en el mapa."
-
-
-class FakeClock:
-    def __init__(self) -> None:
-        self.now = 0.0
-
-    def __call__(self) -> float:
-        return self.now
-
-    def sleep(self, seconds: float) -> None:
-        self.now += seconds
 
 
 def geocoder_with(handler, clock: FakeClock) -> NominatimGeocoder:
@@ -115,6 +107,24 @@ def test_repeated_queries_hit_the_cache():
     assert len(calls) == 2
 
 
+def test_the_cache_ignores_accents():
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json=[{"display_name": "León", "lat": "42.6", "lon": "-5.5"}])
+
+    client = api_with(geocoder_with(handler, FakeClock()))
+    assert client.get("/api/geocode", params={"q": "León"}).json()["results"]
+    assert client.get("/api/geocode", params={"q": "Leon"}).json()["results"]
+    assert len(calls) == 1
+
+
+def test_httpx_request_logs_are_silenced():
+    # httpx logs every request URL at INFO, and those URLs carry the address.
+    assert logging.getLogger("httpx").level == logging.WARNING
+
+
 def test_nominatim_failure_is_a_503():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(500)
@@ -135,7 +145,14 @@ def test_connection_errors_are_a_503():
     assert response.json() == {"detail": DETAIL}
 
 
-@pytest.mark.parametrize("query", ["", "ab"])
-def test_at_least_three_characters(query):
-    client = api_with(geocoder_with(lambda request: httpx.Response(200, json=[]), FakeClock()))
+@pytest.mark.parametrize("query", ["", "   ", "ab", "  a  "])
+def test_at_least_three_characters_once_stripped(query):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json=[])
+
+    client = api_with(geocoder_with(handler, FakeClock()))
     assert client.get("/api/geocode", params={"q": query}).status_code == 422
+    assert calls == []

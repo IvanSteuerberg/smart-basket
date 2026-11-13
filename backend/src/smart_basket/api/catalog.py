@@ -19,7 +19,7 @@ from rapidfuzz import fuzz
 from sqlalchemy import Row, text
 from sqlalchemy.orm import Session
 
-from smart_basket.api.lexicon_cache import preprocessor_for
+from smart_basket.api.lexicon_cache import preprocessor_for, search_forms_for
 from smart_basket.config import get_settings
 from smart_basket.db.engine import get_session
 from smart_basket.geo.nominatim import GeocodingError, NominatimGeocoder
@@ -34,6 +34,10 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 SEARCH_MIN_SCORE = 60.0
 SEARCH_LIMIT = 10
+SEARCH_MIN_LENGTH = 2
+GEOCODE_MIN_LENGTH = 3
+SEARCH_SHORT_ERROR = "La búsqueda debe tener al menos 2 caracteres."
+GEOCODE_SHORT_ERROR = "La dirección debe tener al menos 3 caracteres."
 GEOCODING_ERROR = "No se ha podido buscar la dirección. Prueba a marcar el punto en el mapa."
 
 _CATEGORIES_SQL = text(
@@ -89,6 +93,14 @@ def _order(row: Row) -> tuple[str, str]:
     return (fold(row.name), row.key)
 
 
+def _checked_query(q: str, minimum: int, error: str) -> str:
+    """`q` without surrounding blanks, or a 422 when it is too short once stripped."""
+    query = q.strip()
+    if len(query) < minimum:
+        raise HTTPException(status_code=422, detail=error)
+    return query
+
+
 def _category_rows(session: Session) -> list[Row]:
     return [row for row in session.execute(_CATEGORIES_SQL) if not _is_stale(row.name, row.forms)]
 
@@ -97,9 +109,13 @@ def _category_rows(session: Session) -> list[Row]:
 def categories(session: SessionDep) -> CategoriesResponse:
     """The taxonomy as sections, groups and leaves, with product counts."""
     rows = _category_rows(session)
-    children: dict[int | None, list[Row]] = defaultdict(list)
+    by_id = {row.id: row for row in rows}
+    children: dict[int, list[Row]] = defaultdict(list)
     for row in rows:
-        children[row.parent_id].append(row)
+        # A category whose parent was left out (a stale one) is left out with it.
+        parent = by_id.get(row.parent_id) if row.parent_id is not None else None
+        if parent is not None:
+            children[parent.id].append(row)
     sections = [
         Section(
             key=section.key,
@@ -123,7 +139,7 @@ def categories(session: SessionDep) -> CategoriesResponse:
                 for group in sorted(children[section.id], key=_order)
             ],
         )
-        for section in sorted(children[None], key=_order)
+        for section in sorted((row for row in rows if row.parent_id is None), key=_order)
     ]
     return CategoriesResponse(sections=sections)
 
@@ -146,26 +162,45 @@ def _ancestor_path(row: Row, by_id: dict[int, Row]) -> str:
     names: list[str] = []
     parent_id = row.parent_id
     while parent_id is not None:
-        ancestor = by_id[parent_id]
+        ancestor = by_id.get(parent_id)
+        if ancestor is None:
+            break
         names.append(ancestor.name)
         parent_id = ancestor.parent_id
     return " › ".join(reversed(names))
 
 
+def _match_tier(query: str, forms: Sequence[str]) -> int:
+    """2 for an exact form, 1 when one starts with the query, 0 for a fuzzy match alone."""
+    if query in forms:
+        return 2
+    return 1 if any(form.startswith(query) for form in forms) else 0
+
+
 @router.get("/search", response_model=SearchResponse)
-def search(q: Annotated[str, Query(min_length=2)], session: SessionDep) -> SearchResponse:
-    """Categories whose forms or name resemble `q`, best first, leaves before groups on ties."""
+def search(q: Annotated[str, Query()], session: SessionDep) -> SearchResponse:
+    """Categories whose forms or name resemble `q`: exact and prefix matches first, then
+    leaves before groups and by name."""
+    query = fold(_checked_query(q, SEARCH_MIN_LENGTH, SEARCH_SHORT_ERROR))
     rows = _category_rows(session)
     by_id = {row.id: row for row in rows}
     with_children = {row.parent_id for row in rows}
-    query = fold(q.strip())
-    scored: list[tuple[float, Row]] = []
+    folded = search_forms_for(session)
+    scored: list[tuple[int, float, Row]] = []
     for row in rows:
-        names = (row.name, *row.forms)
-        score = max(fuzz.WRatio(query, fold(name)) for name in names if name)
+        forms = folded.get(row.id, (fold(row.name),))
+        score = max(fuzz.WRatio(query, form) for form in forms if form)
         if score >= SEARCH_MIN_SCORE:
-            scored.append((score, row))
-    scored.sort(key=lambda pair: (-pair[0], 0 if pair[1].id not in with_children else 1))
+            scored.append((_match_tier(query, forms), score, row))
+    scored.sort(
+        key=lambda pair: (
+            -pair[0],
+            -pair[1],
+            0 if pair[2].id not in with_children else 1,
+            fold(pair[2].name),
+            pair[2].key,
+        )
+    )
     results = [
         SearchResult(
             key=row.key,
@@ -173,7 +208,7 @@ def search(q: Annotated[str, Query(min_length=2)], session: SessionDep) -> Searc
             kind="leaf" if row.id not in with_children else "group",
             path=_ancestor_path(row, by_id),
         )
-        for _, row in scored[:SEARCH_LIMIT]
+        for _, _, row in scored[:SEARCH_LIMIT]
     ]
     return SearchResponse(results=results)
 
@@ -250,7 +285,8 @@ def _interpreted_item(
     line: int,
 ) -> InterpretedItem:
     text = str(item.get("item", ""))
-    key = _category_key(preprocessor, text)
+    # A rule-resolved line already knows its category; only LLM items are parsed again.
+    key = source.generic_key if source is not None else _category_key(preprocessor, text)
     term = preprocessor.generic_by_key.get(key) if key is not None else None
     return InterpretedItem(
         line=line,
@@ -276,6 +312,8 @@ def interpret(
     """Turn a free-text list into items, asking the LLM only for the unresolved lines."""
     preprocessor = preprocessor_for(session)
     result = preprocessor.preprocess(body.text)
+    # The LLM can take seconds: release the connection before waiting on it.
+    session.close()
     interpretation = interpret_unresolved(result, provider)
     sources = _source_items(result, interpretation)
     items = [
@@ -308,12 +346,13 @@ def get_geocoder() -> NominatimGeocoder:
 
 @router.get("/geocode", response_model=GeocodeResponse)
 def geocode(
-    q: Annotated[str, Query(min_length=3)],
+    q: Annotated[str, Query()],
     geocoder: Annotated[NominatimGeocoder, Depends(get_geocoder)],
 ) -> GeocodeResponse:
     """Up to five places inside León for an address; a failed lookup is a 503."""
+    query = _checked_query(q, GEOCODE_MIN_LENGTH, GEOCODE_SHORT_ERROR)
     try:
-        places = geocoder.search(q)
+        places = geocoder.search(query)
     except GeocodingError:
         raise HTTPException(status_code=503, detail=GEOCODING_ERROR) from None
     return GeocodeResponse(

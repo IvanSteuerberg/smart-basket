@@ -20,6 +20,19 @@ from smart_basket.seed.loader import load_seed
 URL = os.environ.get("TEST_DATABASE_URL")
 
 
+class FakeClock:
+    """A monotonic clock that only moves when asked; `sleep` advances it."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.now += seconds
+
+
 @pytest.fixture(scope="module")
 def engine() -> Iterator[Engine]:
     command.upgrade(alembic_config(URL), "head")

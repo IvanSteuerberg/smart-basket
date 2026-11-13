@@ -6,6 +6,7 @@ second across the process and answers are cached in memory for a day (decision 0
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections import OrderedDict
@@ -15,6 +16,10 @@ from dataclasses import dataclass
 import httpx
 
 from smart_basket import __version__
+from smart_basket.preprocessor.text import fold
+
+#: httpx logs every request URL at INFO, and those URLs carry the address.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 USER_AGENT = f"smart-basket/{__version__}"
 REQUEST_TIMEOUT_SECONDS = 10.0
@@ -115,7 +120,7 @@ class NominatimGeocoder:
 
     def search(self, query: str) -> tuple[Place, ...]:
         """Up to five places inside León, best first; raises `GeocodingError` on failure."""
-        key = " ".join(query.split()).casefold()
+        key = fold(" ".join(query.split()))
         cached = self._cache.get(key)
         if cached is not None:
             return cached
