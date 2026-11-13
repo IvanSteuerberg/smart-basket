@@ -24,6 +24,7 @@ smart-basket-migrate = "smart_basket.db.migrate:main"
 smart-basket-seed = "smart_basket.seed.__main__:main"
 smart-basket-lexicon = "smart_basket.vocabulary.__main__:main"
 smart-basket-ingest = "smart_basket.ingestion.__main__:main"
+smart-basket-stores = "smart_basket.stores.__main__:main"
 
 [dependency-groups]
 dev = [
