@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from smart_basket import __version__
 from smart_basket.api.catalog import router as catalog_router
 from smart_basket.api.health import router as health_router
+from smart_basket.api.recommendations import router as recommendations_router
 
 
 def create_app() -> FastAPI:
@@ -17,6 +18,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health_router, prefix="/api")
     app.include_router(catalog_router, prefix="/api")
+    app.include_router(recommendations_router, prefix="/api")
     return app
 
 
