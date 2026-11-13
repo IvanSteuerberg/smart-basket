@@ -28,6 +28,11 @@ def build_scheduler() -> BlockingScheduler:
         CronTrigger(day=1, hour=3, minute=17, timezone=tz),
         id="ensure_price_history_partitions",
     )
+    scheduler.add_job(
+        jobs.import_stores,
+        CronTrigger(day=1, hour=4, minute=17, timezone=tz),
+        id="import_stores",
+    )
     return scheduler
 
 
