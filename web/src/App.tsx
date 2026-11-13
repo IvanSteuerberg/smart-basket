@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   describeError,
   getCategories,
@@ -56,6 +56,7 @@ export default function App() {
   const [degraded, setDegraded] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
   const [interpretError, setInterpretError] = useState<string | null>(null);
+  const interpretingRef = useRef(false);
 
   const [sections, setSections] = useState<SectionCategory[]>([]);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export default function App() {
   const [options, setOptions] = useState<RouteOptions>(DEFAULT_OPTIONS);
   const [calculating, setCalculating] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
+  const calculatingRef = useRef(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export default function App() {
   }, []);
 
   async function handleInterpret() {
+    if (interpretingRef.current) return;
     setInterpretError(null);
     const trimmed = text.trim();
     if (trimmed === "") {
@@ -90,6 +93,7 @@ export default function App() {
       setStep("review");
       return;
     }
+    interpretingRef.current = true;
     setInterpreting(true);
     try {
       const response = await interpretText(trimmed);
@@ -102,6 +106,7 @@ export default function App() {
     } catch (error) {
       setInterpretError(describeError(error));
     } finally {
+      interpretingRef.current = false;
       setInterpreting(false);
     }
   }
@@ -156,7 +161,9 @@ export default function App() {
   }
 
   async function handleCalculate() {
+    if (calculatingRef.current) return;
     if (!origin) return;
+    calculatingRef.current = true;
     setCalculating(true);
     setCalcError(null);
     try {
@@ -174,6 +181,7 @@ export default function App() {
     } catch (error) {
       setCalcError(describeError(error));
     } finally {
+      calculatingRef.current = false;
       setCalculating(false);
     }
   }

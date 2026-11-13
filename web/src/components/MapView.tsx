@@ -38,6 +38,18 @@ function OriginClicker({ onPick }: { onPick: (point: LatLon) => void }) {
   return null;
 }
 
+/** Leaflet measures its container on mount; a step change can leave it grey until it is told to re-measure. */
+function InvalidateSize() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
+  return null;
+}
+
 /** Keeps the origin visible when it comes from an address or the browser. */
 function FollowOrigin({ origin }: { origin: LatLon | null }) {
   const map = useMap();
@@ -100,8 +112,9 @@ export function MapView({
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
+      <InvalidateSize />
       {onPickOrigin && <OriginClicker onPick={onPickOrigin} />}
-      <FollowOrigin origin={origin} />
+      {!fitContent && <FollowOrigin origin={origin} />}
       {origin && <Marker position={toPosition(origin)} />}
       {stores.map((store) => (
         <Marker
