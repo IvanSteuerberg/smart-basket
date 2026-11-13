@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Literal
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -17,12 +18,15 @@ from smart_basket.db import get_session
 from smart_basket.optimizer import PriorityMode, Unit
 from smart_basket.recommender import NoCandidateStores, RecommendationQuery, recommend
 from smart_basket.recommender.catalog import Item
+from smart_basket.recommender.service import BasketCalculationError, RecommendationResponse
 from smart_basket.routing import GeoPoint, RoutingEngine, RoutingError, TravelMode, ValhallaClient
 
 router = APIRouter(tags=["recommendations"])
+logger = logging.getLogger(__name__)
 
 NO_STORES = "No hay tiendas con precios cerca de este punto."
 ROUTING_FAILED = "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos."
+BASKET_FAILED = "No se ha podido calcular la cesta con esta lista."
 
 
 class ItemRequest(BaseModel):
@@ -49,52 +53,6 @@ class RecommendationRequest(BaseModel):
     degraded: bool = False
 
 
-class LineResponse(BaseModel):
-    text: str
-    product_name: str
-    packs: int
-    quantity_bought: str
-    cost: str
-
-
-class StoreResponse(BaseModel):
-    store_id: int
-    name: str
-    chain: str
-    lat: float
-    lon: float
-    position: int
-    lines: list[LineResponse]
-    subtotal: str
-
-
-class StopResponse(BaseModel):
-    store_id: int
-    name: str
-    cost: str
-    extra_minutes: str
-    exceeds_max_stores: bool
-
-
-class MissingResponse(BaseModel):
-    text: str
-    reason: Literal["not_available", "separate_stop", "unreachable"]
-    stop: StopResponse | None = None
-
-
-class RecommendationResponse(BaseModel):
-    id: str
-    data_as_of: str
-    engine_version: str
-    stores: list[StoreResponse]
-    total_cost: str
-    minutes: str
-    missing: list[MissingResponse]
-    route: list[list[float]]
-    explanation: str
-    degraded: bool
-
-
 def get_routing_engine() -> Iterator[RoutingEngine]:
     settings = get_settings()
     client = ValhallaClient(settings.valhalla_url, timeout=settings.routing_timeout_seconds)
@@ -115,7 +73,7 @@ def create_recommendation(
     session: Annotated[Session, Depends(get_session)],
     routing: Annotated[RoutingEngine, Depends(get_routing_engine)],
     today: Annotated[date, Depends(get_today)],
-) -> dict:
+) -> RecommendationResponse:
     query = RecommendationQuery(
         items=tuple(
             Item(
@@ -145,4 +103,10 @@ def create_recommendation(
     except RoutingError:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=ROUTING_FAILED
+        ) from None
+    except BasketCalculationError as exc:
+        # The message describes the basket, never the origin.
+        logger.warning("basket calculation failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=BASKET_FAILED
         ) from None

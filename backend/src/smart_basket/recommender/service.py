@@ -7,16 +7,20 @@ arrives (iteration 12); every price, quantity and total is a `Decimal` outside t
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
+from typing import Any, Literal
 
+from pydantic import BaseModel
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from smart_basket.config import Settings
 from smart_basket.optimizer import (
+    ENGINE_VERSION,
+    LAMBDA_PRESETS,
     BasketRequest,
     BasketResult,
     LinePurchase,
@@ -26,6 +30,7 @@ from smart_basket.optimizer import (
     Product,
     Store,
     StorePurchase,
+    TravelTimes,
     optimize,
 )
 from smart_basket.recommender.candidates import CandidateStore, candidate_stores
@@ -35,7 +40,7 @@ from smart_basket.recommender.catalog import (
     build_catalog,
     load_categories,
 )
-from smart_basket.recommender.explanation import explain
+from smart_basket.recommender.explanation import cents, decimal_text, explain
 from smart_basket.routing.base import (
     GeoPoint,
     RoutingEngine,
@@ -50,6 +55,60 @@ CENT = Decimal("0.01")
 
 class NoCandidateStores(Exception):
     """No store with current prices is close enough to the origin."""
+
+
+class BasketCalculationError(Exception):
+    """The optimizer rejected the basket built for this list."""
+
+
+class InconsistentResult(RuntimeError):
+    """The optimizer returned a store that is not among the candidates: an internal error."""
+
+
+class LineResponse(BaseModel):
+    text: str
+    product_name: str
+    packs: int
+    quantity_bought: str
+    cost: str
+
+
+class StoreResponse(BaseModel):
+    store_id: int
+    name: str
+    chain: str
+    lat: float
+    lon: float
+    position: int
+    lines: list[LineResponse]
+    subtotal: str
+
+
+class StopResponse(BaseModel):
+    store_id: int
+    name: str
+    cost: str
+    extra_minutes: str
+    exceeds_max_stores: bool
+
+
+class MissingResponse(BaseModel):
+    text: str
+    reason: Literal["not_available", "separate_stop", "unreachable"]
+    stop: StopResponse | None = None
+
+
+class RecommendationResponse(BaseModel):
+    id: str
+    data_as_of: str | None
+    engine_version: str
+    stores: list[StoreResponse]
+    total_cost: str
+    minutes: str
+    missing: list[MissingResponse]
+    route: list[list[float]]
+    explanation: str
+    degraded: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,31 +132,28 @@ def recommend(
     routing: RoutingEngine,
     today: date,
     settings: Settings,
-) -> dict[str, Any]:
+) -> RecommendationResponse:
     """Run the pipeline and store the recommendation; returns the response body."""
     candidates = candidate_stores(session, query.origin, query.mode, settings)
     if not candidates:
         raise NoCandidateStores
     categories = load_categories(session, {item.category_key for item in query.items})
     entries = build_catalog(session, query.items, categories, {c.zone_id for c in candidates})
+    lines = tuple(entry.line for entry in entries if entry.line is not None)
 
-    travel = routing.travel_times(
-        query.origin,
-        [StoreLocation(c.store_id, _point(c)) for c in candidates],
-        query.mode,
-    )
-    basket = optimize(
-        BasketRequest(
-            lines=tuple(entry.line for entry in entries if entry.line is not None),
-            stores=_stores(candidates, entries),
-            travel_times=travel,
-            shopping_date=today,
-            max_stores=query.max_stores,
-            priority_mode=query.priority_mode,
-            return_to_origin=query.return_to_origin,
+    if lines:
+        # The session stays open during the Valhalla calls (a second connection would be
+        # needed otherwise); acceptable for the MVP, where a recommendation is short.
+        travel = routing.travel_times(
+            query.origin,
+            [StoreLocation(c.store_id, _point(c)) for c in candidates],
+            query.mode,
         )
-    )
+        basket = _optimize(query, entries, candidates, travel, today)
+    else:
+        basket = _nothing_to_buy(query)
     route = _route(routing, query, candidates, basket)
+    stores_by_id = {c.store_id: c for c in candidates}
     names = {pid: name for entry in entries for pid, name in entry.product_names.items()}
     texts = {str(entry.item_index): entry.text for entry in entries}
     names_by_id = {c.store_id: c.name for c in candidates}
@@ -110,20 +166,61 @@ def recommend(
     missing = tuple(sorted((*basket.missing, *extra), key=lambda line: int(line.line_id)))
 
     recommendation_id = session.execute(text("select uuidv7()")).scalar_one()
-    body: dict[str, Any] = {
-        "id": str(recommendation_id),
-        "data_as_of": _iso(data_as_of),
-        "engine_version": basket.engine_version,
-        "stores": [_store(sp, candidates, names, texts) for sp in basket.stores],
-        "total_cost": _money(basket.total_cost),
-        "minutes": _quantity(basket.minutes),
-        "missing": [_missing_line(line, candidates, texts) for line in missing],
-        "route": [[lat, lon] for lat, lon in route],
-        "explanation": explain(basket, names_by_id, texts, extra),
-        "degraded": query.degraded,
-    }
-    _persist(session, recommendation_id, query, basket, data_as_of, body)
-    return body
+    response = RecommendationResponse(
+        id=str(recommendation_id),
+        data_as_of=_iso(data_as_of) if basket.stores else None,
+        engine_version=basket.engine_version,
+        stores=[_store(sp, stores_by_id, names, texts) for sp in basket.stores],
+        total_cost=_money(basket.total_cost) if basket.stores else "0",
+        minutes=_quantity(basket.minutes) if basket.stores else "0",
+        missing=[_missing_line(line, stores_by_id, texts) for line in missing],
+        route=[[lat, lon] for lat, lon in route],
+        explanation=explain(basket, names_by_id, texts, extra),
+        degraded=query.degraded,
+    )
+    _persist(session, recommendation_id, query, basket, data_as_of, response)
+    return response
+
+
+def _optimize(
+    query: RecommendationQuery,
+    entries: tuple[CatalogEntry, ...],
+    candidates: list[CandidateStore],
+    travel: TravelTimes,
+    today: date,
+) -> BasketResult:
+    """Build the optimizer input and run it; a rejected input is a client-side error."""
+    try:
+        request = BasketRequest(
+            lines=tuple(entry.line for entry in entries if entry.line is not None),
+            stores=_stores(candidates, entries),
+            travel_times=travel,
+            shopping_date=today,
+            max_stores=query.max_stores,
+            priority_mode=query.priority_mode,
+            return_to_origin=query.return_to_origin,
+        )
+        return optimize(request)
+    except ValueError as exc:
+        raise BasketCalculationError(str(exc)) from exc
+
+
+def _nothing_to_buy(query: RecommendationQuery) -> BasketResult:
+    """An empty result when no item resolved to a line: the optimizer is not called."""
+    return BasketResult(
+        engine_version=ENGINE_VERSION,
+        stores=(),
+        total_cost=Decimal(0),
+        comparable_cost=Decimal(0),
+        minutes=Decimal(0),
+        lambda_per_minute=LAMBDA_PRESETS[query.priority_mode],
+        coverage_margin=Decimal("3.00"),
+        objective=Decimal(0),
+        priority_mode=query.priority_mode,
+        max_stores=query.max_stores,
+        return_to_origin=query.return_to_origin,
+        missing=(),
+    )
 
 
 def _point(store: CandidateStore) -> GeoPoint:
@@ -169,51 +266,55 @@ def _route(
 
 def _store(
     purchase: StorePurchase,
-    candidates: list[CandidateStore],
+    stores: Mapping[int, CandidateStore],
     names: dict[int, str],
     texts: dict[str, str],
-) -> dict[str, Any]:
-    store = next(c for c in candidates if c.store_id == purchase.store_id)
-    return {
-        "store_id": store.store_id,
-        "name": store.name,
-        "chain": store.chain,
-        "lat": store.latitude,
-        "lon": store.longitude,
-        "position": purchase.position,
-        "lines": [_line(line, names, texts) for line in purchase.lines],
-        "subtotal": _money(purchase.subtotal),
-    }
+) -> StoreResponse:
+    store = stores.get(purchase.store_id)
+    if store is None:
+        raise InconsistentResult(f"store {purchase.store_id} is not among the candidates")
+    return StoreResponse(
+        store_id=store.store_id,
+        name=store.name,
+        chain=store.chain,
+        lat=store.latitude,
+        lon=store.longitude,
+        position=purchase.position,
+        lines=[_line(line, names, texts) for line in purchase.lines],
+        subtotal=_money(purchase.subtotal),
+    )
 
 
-def _line(purchase: LinePurchase, names: dict[int, str], texts: dict[str, str]) -> dict[str, Any]:
+def _line(purchase: LinePurchase, names: dict[int, str], texts: dict[str, str]) -> LineResponse:
     product_names = list(
         dict.fromkeys(names[pack.product_id] for pack in purchase.packs if pack.product_id in names)
     )
-    return {
-        "text": texts[purchase.line_id],
-        "product_name": " + ".join(product_names),
-        "packs": sum(pack.packs for pack in purchase.packs),
-        "quantity_bought": _quantity(purchase.quantity_bought),
-        "cost": _money(purchase.cost),
-    }
+    return LineResponse(
+        text=texts[purchase.line_id],
+        product_name=" + ".join(product_names),
+        packs=sum(pack.packs for pack in purchase.packs),
+        quantity_bought=_quantity(purchase.quantity_bought),
+        cost=_money(purchase.cost),
+    )
 
 
 def _missing_line(
-    line: MissingLine, candidates: list[CandidateStore], texts: dict[str, str]
-) -> dict[str, Any]:
+    line: MissingLine, stores: Mapping[int, CandidateStore], texts: dict[str, str]
+) -> MissingResponse:
     stop = None
     if line.reason is MissingReason.SEPARATE_STOP and line.stop is not None:
         separate = line.stop
-        store = next(c for c in candidates if c.store_id == separate.store_id)
-        stop = {
-            "store_id": separate.store_id,
-            "name": store.name,
-            "cost": _money(separate.purchase.cost),
-            "extra_minutes": _quantity(separate.extra_minutes),
-            "exceeds_max_stores": separate.exceeds_max_stores,
-        }
-    return {"text": texts[line.line_id], "reason": line.reason.value, "stop": stop}
+        store = stores.get(separate.store_id)
+        if store is None:
+            raise InconsistentResult(f"store {separate.store_id} is not among the candidates")
+        stop = StopResponse(
+            store_id=separate.store_id,
+            name=store.name,
+            cost=_money(separate.purchase.cost),
+            extra_minutes=_quantity(separate.extra_minutes),
+            exceeds_max_stores=separate.exceeds_max_stores,
+        )
+    return MissingResponse(text=texts[line.line_id], reason=line.reason.value, stop=stop)
 
 
 def _data_as_of(
@@ -237,9 +338,15 @@ def _persist(
     query: RecommendationQuery,
     basket: BasketResult,
     data_as_of: datetime,
-    body: dict[str, Any],
+    response: RecommendationResponse,
 ) -> None:
     """Store the recommendation and its items anonymously (rounded origin, NFR-06)."""
+    # The exact origin is never stored: the request keeps the rounded cell and the result
+    # drops the route, which starts and ends at the origin.
+    request_body = dict(query.payload)
+    request_body["origin"] = _origin_cell(query.origin)
+    result_body = response.model_dump()
+    result_body.pop("route", None)
     session.execute(
         text(
             "insert into recommendation (id, data_as_of, engine_version, origin_cell, "
@@ -256,8 +363,8 @@ def _persist(
             "priority": query.priority_mode.value,
             "max_stores": query.max_stores,
             "lambda": basket.lambda_per_minute,
-            "request": json.dumps(query.payload, ensure_ascii=False),
-            "result": json.dumps(body, ensure_ascii=False),
+            "request": json.dumps(request_body, ensure_ascii=False),
+            "result": json.dumps(result_body, ensure_ascii=False),
             "total": basket.total_cost,
             "minutes": basket.minutes,
         },
@@ -299,15 +406,12 @@ def _origin_cell(origin: GeoPoint) -> str:
 
 def _money(value: Decimal) -> str:
     """Two decimals with a dot, as the API contract shows money."""
-    return f"{value.quantize(CENT, rounding=ROUND_HALF_UP):.2f}"
+    return f"{cents(value):.2f}"
 
 
 def _quantity(value: Decimal) -> str:
     """Decimal without trailing zeros as a string ("2.0000" -> "2")."""
-    rendered = format(value, "f")
-    if "." in rendered:
-        rendered = rendered.rstrip("0").rstrip(".")
-    return rendered or "0"
+    return decimal_text(value)
 
 
 def _iso(value: datetime) -> str:

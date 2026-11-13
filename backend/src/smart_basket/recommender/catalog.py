@@ -17,10 +17,12 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
-from smart_basket.preprocessor.text import fold
+from smart_basket.preprocessor.text import fold, words
 
-#: Minimum `partial_ratio` between the folded item text and a fallback product name.
+#: Minimum `token_set_ratio` between the folded item text and a fallback product name.
 FALLBACK_RATIO = 80
+#: Folded texts shorter than this are matched as whole words only, never as substrings.
+SHORT_TEXT = 4
 
 #: Columns of `brand`; `aliases` is read only when the column exists.
 _BRAND_COLUMNS_SQL = "select column_name from information_schema.columns where table_name = 'brand'"
@@ -87,31 +89,41 @@ def build_catalog(
     categories: Mapping[str, CategoryInfo],
     zone_ids: set[int],
 ) -> tuple[CatalogEntry, ...]:
-    """Resolve every item against the catalog of the candidate zones."""
+    """Resolve every item against the catalog of the candidate zones.
+
+    The products of every requested category and of the parent groups the fallback may need
+    are fetched once, not once per item.
+    """
     brands = _Brands(session)
-    return tuple(
-        _entry(session, index, item, categories.get(item.category_key), zone_ids, brands)
-        for index, item in enumerate(items)
-    )
+    resolved = [
+        (index, item, categories.get(item.category_key)) for index, item in enumerate(items)
+    ]
+    category_ids = {category.category_id for _, _, category in resolved if category is not None}
+    parent_ids = {
+        category.parent_id
+        for _, _, category in resolved
+        if category is not None and category.parent_id is not None
+    }
+    rows = _product_rows(session, category_ids | parent_ids, zone_ids)
+    return tuple(_entry(index, item, category, rows, brands) for index, item, category in resolved)
 
 
 def _entry(
-    session: Session,
     index: int,
     item: Item,
     category: CategoryInfo | None,
-    zone_ids: set[int],
+    rows: Sequence[Mapping[str, Any]],
     brands: _Brands,
 ) -> CatalogEntry:
     if category is None:
         return CatalogEntry(index, item.text, None, {}, {})
     brand_terms = brands.terms(item.brand) if item.brand else None
-    rows = _product_rows(session, category.category_id, zone_ids)
-    if not rows and category.parent_id is not None:
-        rows = _fallback_rows(session, category.parent_id, item.text, zone_ids)
+    item_rows = [row for row in rows if category.category_id in (row["ancestor_ids"] or [])]
+    if not item_rows and category.parent_id is not None:
+        item_rows = _fallback_rows(rows, category.parent_id, item.text)
     products: dict[int, list[Product]] = {}
     names: dict[int, str] = {}
-    for row in rows:
+    for row in item_rows:
         product = _product(row, category.category_id, brands)
         if product is None:
             continue
@@ -139,10 +151,10 @@ def _entry(
 
 
 def _product_rows(
-    session: Session, category_id: int, zone_ids: set[int]
+    session: Session, category_ids: set[int], zone_ids: set[int]
 ) -> list[Mapping[str, Any]]:
-    """Products mapped to `category_id` or a descendant, available with a price in each zone."""
-    if not zone_ids:
+    """Products mapped to any of `category_ids` or a descendant, priced in each zone."""
+    if not category_ids or not zone_ids:
         return []
     return list(
         session.execute(
@@ -165,28 +177,33 @@ def _product_rows(
                   and cpz.zone_id in :zones
                   and cc.category_id in (
                       select descendant_id from category_closure
-                      where ancestor_id = :category
+                      where ancestor_id = any(:ids)
                   )
                 order by cp.id, pc.zone_id
                 """
             ).bindparams(bindparam("zones", expanding=True)),
-            {"zones": sorted(zone_ids), "category": category_id},
+            {"zones": sorted(zone_ids), "ids": sorted(category_ids)},
         ).mappings()
     )
 
 
 def _fallback_rows(
-    session: Session, group_id: int, item_text: str, zone_ids: set[int]
+    rows: Sequence[Mapping[str, Any]], group_id: int, item_text: str
 ) -> list[Mapping[str, Any]]:
     """Products mapped directly to the parent group whose name resembles the item text."""
-    rows = _product_rows(session, group_id, zone_ids)
     folded = fold(item_text)
-    return [
-        row
-        for row in rows
-        if row["product_category_id"] == group_id
-        and fuzz.partial_ratio(folded, fold(row["name"])) >= FALLBACK_RATIO
-    ]
+    item_words = words(item_text)
+    short = len(folded) < SHORT_TEXT
+    matched = []
+    for row in rows:
+        if row["product_category_id"] != group_id:
+            continue
+        if short:
+            if _contains_words(words(row["name"]), item_words):
+                matched.append(row)
+        elif fuzz.token_set_ratio(folded, fold(row["name"])) >= FALLBACK_RATIO:
+            matched.append(row)
+    return matched
 
 
 def _product(row: Mapping[str, Any], canonical_id: int, brands: _Brands) -> Product | None:
@@ -208,8 +225,19 @@ def _product(row: Mapping[str, Any], canonical_id: int, brands: _Brands) -> Prod
 
 
 def _matches_brand(name: str, terms: set[str]) -> bool:
-    folded = fold(name)
-    return any(term in folded for term in terms)
+    """True when a brand name or alias appears as whole words of the product name."""
+    product_words = words(name)
+    return any(_contains_words(product_words, words(term)) for term in terms)
+
+
+def _contains_words(haystack: tuple[str, ...], needle: tuple[str, ...]) -> bool:
+    """True when `needle` appears as a run of whole tokens in `haystack`."""
+    if not needle or len(needle) > len(haystack):
+        return False
+    return any(
+        haystack[start : start + len(needle)] == needle
+        for start in range(len(haystack) - len(needle) + 1)
+    )
 
 
 class _Brands:
@@ -218,33 +246,28 @@ class _Brands:
     def __init__(self, session: Session) -> None:
         columns = set(session.execute(text(_BRAND_COLUMNS_SQL)).scalars())
         # `brand.aliases` does not exist in this branch yet: the name alone is used then.
-        self._has_aliases = "aliases" in columns
-        alias = "aliases" if self._has_aliases else "null::text[] as aliases"
-        self._brands = list(session.execute(text(f"select name, {alias} from brand")).mappings())
-        self._private_labels: dict[int, tuple[str, ...]] = {}
+        alias = "aliases" if "aliases" in columns else "null::text[] as aliases"
+        self._aliases: dict[str, tuple[str, ...]] = {}
+        self._private_labels: dict[int, list[tuple[str, ...]]] = {}
         for row in session.execute(
-            text(
-                "select name, owner_chain_id from brand "
-                "where is_private_label and owner_chain_id is not null"
-            )
+            text(f"select name, {alias}, is_private_label, owner_chain_id from brand")
         ).mappings():
             folded = fold(row["name"])
-            self._private_labels[row["owner_chain_id"]] = (
-                *self._private_labels.get(row["owner_chain_id"], ()),
-                folded,
-            )
+            self._aliases[folded] = tuple(fold(alias) for alias in (row["aliases"] or ()))
+            if row["is_private_label"] and row["owner_chain_id"] is not None:
+                self._private_labels.setdefault(row["owner_chain_id"], []).append(
+                    words(row["name"])
+                )
 
     def terms(self, brand: str) -> set[str]:
         """The folded brand name and the aliases of the matching brand."""
         target = fold(brand)
-        terms = {target}
-        for row in self._brands:
-            if fold(row["name"]) != target:
-                continue
-            terms.update(fold(alias) for alias in (row["aliases"] or ()))
-        return terms
+        return {target, *self._aliases.get(target, ())}
 
     def is_private_label(self, chain_id: int, product_name: str) -> bool:
-        """True when the product name contains one of its chain's private labels."""
-        folded = fold(product_name)
-        return any(label in folded for label in self._private_labels.get(chain_id, ()))
+        """True when the product name has one of its chain's private labels as whole words."""
+        product_words = words(product_name)
+        return any(
+            _contains_words(product_words, label)
+            for label in self._private_labels.get(chain_id, ())
+        )

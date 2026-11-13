@@ -128,13 +128,21 @@ def _seed(connection: Connection) -> dict[str, int]:
     ids["platano"] = _category(connection, "platano", "Plátano", 2, ids["fruta"], "kg")
     ids["huevos"] = _category(connection, "huevos", "Huevos", 1, base_unit="ud")
     ids["arroz"] = _category(connection, "arroz", "Arroz", 1, base_unit="kg")
-    for category in ("lacteos", "fruta", "huevos", "arroz"):
+    ids["panaderia"] = _category(connection, "panaderia", "Panadería", 1)
+    ids["pan"] = _category(connection, "pan", "Pan", 2, ids["panaderia"], "kg")
+    ids["refresco"] = _category(connection, "refresco", "Refresco", 1, base_unit="ud")
+    for category in ("lacteos", "fruta", "huevos", "arroz", "panaderia", "refresco"):
         _closure(connection, ids[category], ids[category], 0)
     for leaf in ("leche", "yogur", "queso"):
         _closure(connection, ids[leaf], ids[leaf], 0)
         _closure(connection, ids[leaf], ids["lacteos"], 1)
     _closure(connection, ids["platano"], ids["platano"], 0)
     _closure(connection, ids["platano"], ids["fruta"], 1)
+    _closure(connection, ids["pan"], ids["pan"], 0)
+    _closure(connection, ids["pan"], ids["panaderia"], 1)
+
+    _brand(connection, ids["chain"], "Hacendado", private_label=True)
+    _brand(connection, ids["chain"], "Dia")
 
     categories = {
         "leche": _chain_category(connection, ids["chain"], "121", "Leche", ids["leche"]),
@@ -142,6 +150,8 @@ def _seed(connection: Connection) -> dict[str, int]:
         "queso": _chain_category(connection, ids["chain"], "123", "Queso", ids["queso"]),
         "fruta": _chain_category(connection, ids["chain"], "13", "Fruta", ids["fruta"]),
         "huevos": _chain_category(connection, ids["chain"], "14", "Huevos", ids["huevos"]),
+        "panaderia": _chain_category(connection, ids["chain"], "15", "Panadería", ids["panaderia"]),
+        "refresco": _chain_category(connection, ids["chain"], "16", "Refresco", ids["refresco"]),
     }
     products = {
         "leche": ("L1", "Leche semidesnatada Hacendado", "1", "l", 1, "0.95", "1.00"),
@@ -151,25 +161,95 @@ def _seed(connection: Connection) -> dict[str, int]:
         "huevos": ("H1", "Huevos frescos Hacendado", "1", "ud", 12, "2.10", "2.20"),
     }
     for name, (sku, product_name, quantity, unit, pack, price_one, price_two) in products.items():
-        product_id = scalar(
+        _chain_product(
             connection,
-            "insert into chain_product (chain_id, chain_sku, name, base_quantity, base_unit, "
-            "pack_count, chain_category_id) values (:chain, :sku, :name, :quantity, :unit, "
-            ":pack, :category) returning id",
-            chain=ids["chain"],
-            sku=sku,
-            name=product_name,
-            quantity=Decimal(quantity),
-            unit=unit,
-            pack=pack,
-            category=categories[name],
+            ids,
+            categories[name],
+            sku,
+            product_name,
+            quantity,
+            unit,
+            pack,
+            price_one,
+            price_two,
         )
-        _price(connection, product_id, ids["z1"], Decimal(price_one), SEEN_ZONE_ONE)
-        _price(connection, product_id, ids["z2"], Decimal(price_two), SEEN_ZONE_TWO)
+    for sku, product_name, price_one, price_two in (
+        ("P1", "Pan de pueblo", "2.00", "2.10"),
+        ("S1", "Sartén antiadherente", "10.00", "11.00"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            categories["panaderia"],
+            sku,
+            product_name,
+            "1",
+            "kg",
+            1,
+            price_one,
+            price_two,
+        )
+    for sku, product_name, price_one, price_two in (
+        ("R1", "Refresco Dia cola", "2.00", "2.10"),
+        ("R2", "Refresco Diamante cola", "1.00", "1.10"),
+        ("R3", "Refresco media naranja", "1.50", "1.60"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            categories["refresco"],
+            sku,
+            product_name,
+            "1",
+            "ud",
+            1,
+            price_one,
+            price_two,
+        )
 
     _store(connection, ids["chain"], ids["z1"], "Mercadona", STORE_ONE)
     _store(connection, ids["chain"], ids["z2"], "Mercadona Centro", STORE_TWO)
     return ids
+
+
+def _brand(connection: Connection, chain_id: int, name: str, *, private_label: bool = False) -> int:
+    return scalar(
+        connection,
+        "insert into brand (name, is_private_label, owner_chain_id) "
+        "values (:name, :private_label, :owner) returning id",
+        name=name,
+        private_label=private_label,
+        owner=chain_id if private_label else None,
+    )
+
+
+def _chain_product(
+    connection: Connection,
+    ids: dict[str, int],
+    category_id: int,
+    sku: str,
+    name: str,
+    quantity: str,
+    unit: str,
+    pack: int,
+    price_one: str,
+    price_two: str,
+) -> None:
+    product_id = scalar(
+        connection,
+        "insert into chain_product (chain_id, chain_sku, name, base_quantity, base_unit, "
+        "pack_count, chain_category_id) values (:chain, :sku, :name, :quantity, :unit, "
+        ":pack, :category) returning id",
+        chain=ids["chain"],
+        sku=sku,
+        name=name,
+        quantity=Decimal(quantity),
+        unit=unit,
+        pack=pack,
+        category=category_id,
+    )
+    _price(connection, product_id, ids["z1"], Decimal(price_one), SEEN_ZONE_ONE)
+    _price(connection, product_id, ids["z2"], Decimal(price_two), SEEN_ZONE_TWO)
 
 
 def _zone(connection: Connection, chain_id: int, code: str, name: str) -> int:

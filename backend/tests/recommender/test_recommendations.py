@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import copy
+from datetime import date
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from smart_basket.api.recommendations import get_routing_engine
-from smart_basket.optimizer import ENGINE_VERSION
+from smart_basket.config import get_settings
+from smart_basket.optimizer import ENGINE_VERSION, PriorityMode, Unit
+from smart_basket.recommender import RecommendationQuery, recommend
+from smart_basket.recommender.catalog import Item
+from smart_basket.routing import GeoPoint, TravelMode
 
 from .conftest import FakeRouting
 
@@ -162,7 +169,21 @@ def test_recommendation_is_stored_with_a_rounded_origin(world):
         2,
     )
     assert row["request"]["items"][0]["category_key"] == "leche"
+    assert row["request"]["origin"] == "42.600,-5.565"
     assert row["result"]["total_cost"] == "11.70"
+    assert "route" not in row["result"]
+
+    request_text = world.connection.execute(
+        text("select request::text from recommendation where id = cast(:id as uuid)"),
+        {"id": body["id"]},
+    ).scalar_one()
+    result_text = world.connection.execute(
+        text("select result::text from recommendation where id = cast(:id as uuid)"),
+        {"id": body["id"]},
+    ).scalar_one()
+    for exact in ("42.5987", "-5.5671"):
+        assert exact not in request_text
+        assert exact not in result_text
 
     parts = (
         world.connection.execute(
@@ -184,3 +205,113 @@ def test_request_body_is_not_mutated_by_the_endpoint(world):
     original = copy.deepcopy(body)
     assert world.client.post("/api/recommendations", json=body).status_code == 200
     assert body == original
+
+
+def test_brand_filter_matches_whole_words_only(world):
+    response = world.client.post(
+        "/api/recommendations",
+        json=payload([item("refresco dia", "refresco", "1", "ud", brand="Dia")]),
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Refresco Dia cola"
+    assert body["total_cost"] == "2.00"
+
+
+def test_private_label_from_the_brand_table_is_excluded(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("leche semidesnatada", "leche", "2", "l", private_label_ok=False)]),
+    ).json()
+    assert body["stores"] == []
+    assert body["total_cost"] == "0"
+    assert body["minutes"] == "0"
+    assert body["route"] == []
+    assert body["data_as_of"] is None
+    assert body["missing"] == [
+        {"text": "leche semidesnatada", "reason": "not_available", "stop": None}
+    ]
+
+
+def test_short_item_does_not_fall_back_to_a_substring(world):
+    body = world.client.post(
+        "/api/recommendations", json=payload([item("pan", "pan", "1", "kg")])
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Pan de pueblo"
+    assert body["total_cost"] == "2.00"
+
+
+def test_no_line_with_products_gives_an_empty_answer(world):
+    body = world.client.post(
+        "/api/recommendations", json=payload([item("arroz redondo", "arroz", "1", "kg")])
+    ).json()
+    assert body["stores"] == []
+    assert body["total_cost"] == "0"
+    assert body["minutes"] == "0"
+    assert body["route"] == []
+    assert body["data_as_of"] is None
+    assert body["missing"] == [{"text": "arroz redondo", "reason": "not_available", "stop": None}]
+    assert body["explanation"] == (
+        "No hemos encontrado nada de tu lista en las tiendas cercanas. "
+        "No hemos encontrado «arroz redondo» en las tiendas cercanas."
+    )
+
+
+def test_unknown_categories_give_an_empty_answer(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("producto misterioso", "no-existe", "1", "ud")]),
+    ).json()
+    assert body["stores"] == []
+    assert body["total_cost"] == "0"
+    assert body["minutes"] == "0"
+    assert body["route"] == []
+    assert body["data_as_of"] is None
+    assert body["missing"] == [
+        {"text": "producto misterioso", "reason": "not_available", "stop": None}
+    ]
+    assert body["explanation"].startswith(
+        "No hemos encontrado nada de tu lista en las tiendas cercanas."
+    )
+
+
+def _query(return_to_origin: bool) -> RecommendationQuery:
+    return RecommendationQuery(
+        items=tuple(
+            Item(
+                text=line["text"],
+                category_key=line["category_key"],
+                quantity=Decimal(line["quantity"]),
+                unit=Unit(line["unit"]),
+            )
+            for line in FIVE_ITEMS
+        ),
+        origin=GeoPoint(42.5987, -5.5671),
+        mode=TravelMode.WALK,
+        max_stores=2,
+        priority_mode=PriorityMode.BALANCED,
+        return_to_origin=return_to_origin,
+        degraded=False,
+        payload={},
+    )
+
+
+def test_route_goes_origin_stores_origin_when_returning(world):
+    session = Session(bind=world.connection)
+    body = recommend(session, _query(True), FakeRouting(), date(2026, 11, 13), get_settings())
+    assert body.route == [
+        [42.5987, -5.5671],
+        [42.6, -5.57],
+        [42.5987, -5.5671],
+    ]
+
+
+def test_route_goes_origin_store_when_not_returning(world):
+    session = Session(bind=world.connection)
+    body = recommend(session, _query(False), FakeRouting(), date(2026, 11, 13), get_settings())
+    assert body.route == [
+        [42.5987, -5.5671],
+        [42.6, -5.57],
+    ]
