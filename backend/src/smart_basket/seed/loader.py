@@ -1,7 +1,8 @@
-"""Load the seed taxonomy, chains and zones into the transactional schema (decision 0007).
+"""Load the seed taxonomy, chains, brands and zones into the transactional schema.
 
 The load is idempotent: rows are upserted by their natural keys, the category closure is rebuilt
-from scratch and categories that disappear from the file are kept and reported as stale.
+from scratch and categories or brands that disappear from the file are kept and reported as
+stale.
 """
 
 from dataclasses import dataclass, field
@@ -11,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from smart_basket.seed.models import (
+    BrandsFile,
     ChainCategoriesFile,
     ChainsFile,
     TaxonomyFile,
@@ -20,6 +22,7 @@ from smart_basket.seed.models import (
 
 TAXONOMY_FILE = "taxonomy_es.json"
 CHAINS_FILE = "chains_es.json"
+BRANDS_FILE = "brands_es.json"
 CHAIN_CATEGORIES_DIR = "chain_categories"
 
 #: Kind and code of the zone the loader creates for the whole chain.
@@ -44,7 +47,9 @@ class SeedReport:
     category: TableCounts = field(default_factory=TableCounts)
     category_closure: TableCounts = field(default_factory=TableCounts)
     chain_category: TableCounts = field(default_factory=TableCounts)
+    brand: TableCounts = field(default_factory=TableCounts)
     stale_categories: list[str] = field(default_factory=list)
+    stale_brands: list[str] = field(default_factory=list)
 
     def __str__(self) -> str:
         lines = [
@@ -55,10 +60,13 @@ class SeedReport:
                 ("category", self.category),
                 ("category_closure", self.category_closure),
                 ("chain_category", self.chain_category),
+                ("brand", self.brand),
             ]
         ]
         stale = ", ".join(self.stale_categories) if self.stale_categories else "none"
         lines.append(f"stale categories: {stale}")
+        stale = ", ".join(self.stale_brands) if self.stale_brands else "none"
+        lines.append(f"stale brands: {stale}")
         return "\n".join(lines)
 
 
@@ -83,12 +91,13 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
     """
     taxonomy = TaxonomyFile.model_validate_json(_read(data_dir / TAXONOMY_FILE))
     chains = ChainsFile.model_validate_json(_read(data_dir / CHAINS_FILE))
+    brands = BrandsFile.model_validate_json(_read(data_dir / BRANDS_FILE))
     mapping_dir = data_dir / CHAIN_CATEGORIES_DIR
     mappings = {
         path.stem: ChainCategoriesFile.model_validate_json(_read(path))
         for path in sorted(mapping_dir.glob("*.json"))
     }
-    validate_seed(taxonomy, chains, mappings)
+    validate_seed(taxonomy, chains, mappings, brands)
 
     report = SeedReport()
     chain_ids: dict[str, int] = {}
@@ -121,6 +130,39 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
             CHAIN_WIDE_CODE,
             chain_wide.name if chain_wide else None,
         )
+
+    incoming_brands = {brand.name for brand in brands.brands}
+    for brand in brands.brands:
+        owner_chain_id = (
+            chain_ids[brand.private_label_of] if brand.private_label_of is not None else None
+        )
+        row = session.execute(
+            text(
+                "insert into brand "
+                "(name, is_private_label, owner_chain_id, aliases, implies_category, "
+                "match_name) "
+                "values (:name, :is_private_label, :owner_chain_id, :aliases, :implies, "
+                ":match_name) "
+                "on conflict (name) do update set "
+                "is_private_label = excluded.is_private_label, "
+                "owner_chain_id = excluded.owner_chain_id, aliases = excluded.aliases, "
+                "implies_category = excluded.implies_category, "
+                "match_name = excluded.match_name "
+                "returning (xmax = 0) as inserted"
+            ),
+            {
+                "name": brand.name,
+                "is_private_label": brand.private_label_of is not None,
+                "owner_chain_id": owner_chain_id,
+                "aliases": brand.aliases,
+                "implies": brand.implies,
+                "match_name": brand.match_name,
+            },
+        ).one()
+        _count(report.brand, row.inserted)
+
+    existing_brands = set(session.execute(text("select name from brand")).scalars())
+    report.stale_brands = sorted(existing_brands - incoming_brands)
 
     rows = taxonomy.rows()
     incoming_keys = {category.key for category in rows}

@@ -281,7 +281,7 @@ def test_category_seed_columns_downgrade_and_upgrade(engine):
     with engine.connect() as c:
         columns = set(c.execute(text(columns_sql)).scalars())
         assert {"key", "base_unit", "default_quantity", "forms", "is_vague"} <= columns
-        assert scalar(c, "select version_num from alembic_version") == "0003"
+        assert scalar(c, "select version_num from alembic_version") == "0004"
 
 
 def test_category_seed_columns_downgrade_and_upgrade_with_rows(engine):
@@ -304,6 +304,35 @@ def test_category_seed_columns_downgrade_and_upgrade_with_rows(engine):
     assert row.is_vague is False
 
 
+def test_brand_seed_columns_downgrade_and_upgrade(engine):
+    cfg = alembic_config(URL)
+    columns_sql = "select column_name from information_schema.columns where table_name = 'brand'"
+    command.downgrade(cfg, "0003")
+    with engine.connect() as c:
+        columns = set(c.execute(text(columns_sql)).scalars())
+    assert "aliases" not in columns
+    assert "implies_category" not in columns
+    assert "match_name" not in columns
+    command.upgrade(cfg, "head")
+    with engine.connect() as c:
+        columns = set(c.execute(text(columns_sql)).scalars())
+    assert {"aliases", "implies_category", "match_name"} <= columns
+    with engine.connect() as c:
+        row = c.execute(
+            text(
+                "insert into brand (name) values ('Demo') "
+                "returning aliases, implies_category, match_name, is_private_label"
+            )
+        ).one()
+        c.rollback()
+    assert row.aliases == []
+    assert row.implies_category is None
+    assert row.match_name is True
+    assert row.is_private_label is False
+    with engine.connect() as c:
+        assert scalar(c, "select version_num from alembic_version") == "0004"
+
+
 def test_downgrade_and_upgrade_again(engine):
     cfg = alembic_config(URL)
     command.downgrade(cfg, "base")
@@ -312,4 +341,4 @@ def test_downgrade_and_upgrade_again(engine):
         assert scalar(c, "select to_regnamespace('bi') is null")
     command.upgrade(cfg, "head")
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0003"
+        assert scalar(c, "select version_num from alembic_version") == "0004"

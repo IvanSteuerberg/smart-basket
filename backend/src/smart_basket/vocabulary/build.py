@@ -33,7 +33,10 @@ _CATEGORIES_SQL = text(
     "from category c where cardinality(c.forms) > 0 order by c.key"
 )
 
-_BRANDS_SQL = text("select id, name, is_private_label from brand order by name, id")
+_BRANDS_SQL = text(
+    "select id, name, is_private_label, aliases, implies_category, match_name "
+    "from brand order by name, id"
+)
 
 
 def build_lexicon(session: Session) -> InMemoryLexicon:
@@ -54,13 +57,26 @@ def build_lexicon(session: Session) -> InMemoryLexicon:
     brands = [
         BrandTerm(
             name=row.name,
-            aliases=(row.name.lower(),),
+            aliases=_brand_aliases(row.name, row.aliases, row.match_name),
             is_private_label=row.is_private_label,
             brand_id=row.id,
+            implies=row.implies_category,
         )
         for row in session.execute(_BRANDS_SQL)
     ]
     return InMemoryLexicon(generic, brands, _load_variants())
+
+
+def _brand_aliases(name: str, aliases: list[str] | None, match_name: bool) -> tuple[str, ...]:
+    """The matchable spellings: the lowercased name unless it must not be matched, plus the
+    explicit aliases, without duplicates."""
+    values = [name.strip().lower()] if match_name else []
+    values.extend(alias.strip().lower() for alias in (aliases or []))
+    unique: list[str] = []
+    for value in values:
+        if value and value not in unique:
+            unique.append(value)
+    return tuple(unique)
 
 
 def _load_variants(path: Path = VARIANTS_FILE) -> list[VariantTerm]:
