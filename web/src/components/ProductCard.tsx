@@ -1,6 +1,7 @@
 import type { Product } from "../api";
 import { formatEuro, formatUnitPrice } from "../format";
 import { productHash } from "../router";
+import { ChainLogo } from "./ChainLogo";
 import { ProductImage } from "./ProductImage";
 
 export interface ProductCardProps {
@@ -16,7 +17,7 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
       </a>
       <div className="flex flex-1 flex-col gap-1 p-3 text-slate-900">
         <p className="text-[0.68rem] font-semibold uppercase tracking-wide text-stone-500">
-          {product.brand ?? product.chain}
+          {product.brand ?? <ChainLogo chain={product.chain} className="h-4 w-auto" />}
         </p>
         <a
           href={productHash(product.id)}

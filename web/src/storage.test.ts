@@ -64,6 +64,8 @@ function cartLine(overrides: Partial<CartLine> = {}): CartLine {
     category_key: "leche-entera",
     category_name: "Leche entera",
     quantity: 2,
+    accept: "exact",
+    locked: false,
     ...overrides,
   };
 }
@@ -196,6 +198,36 @@ describe("cart storage", () => {
 
     expect(loadLists(storage)).toHaveLength(1);
     expect(loadCart(storage)).toEqual([]);
+  });
+
+  it("gives saved lines without accept or locked their old defaults", () => {
+    const storage = memoryStorage();
+    const concrete = {
+      id: "old-concrete",
+      product_id: 1,
+      name: "Leche entera 1 L",
+      brand: "Pascual",
+      packaging: null,
+      image_url: null,
+      category_key: "leche-entera",
+      category_name: "Leche entera",
+      quantity: 1,
+    };
+    const generic = {
+      ...concrete,
+      id: "old-generic",
+      product_id: null,
+      brand: null,
+    };
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ schema_version: SCHEMA_VERSION, lists: [], cart: [concrete, generic] }),
+    );
+
+    const loaded = loadCart(storage);
+
+    expect(loaded[0]).toMatchObject({ accept: "exact", locked: false });
+    expect(loaded[1]).toMatchObject({ accept: "equivalent", locked: false });
   });
 
   it("ignores cart lines that do not match the stored shape", () => {

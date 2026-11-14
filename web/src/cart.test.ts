@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { Product } from "./api";
+import type { CanonicalCard, Product } from "./api";
 import {
+  canonicalLine,
   cartItemCount,
   cartReducer,
   clampQuantity,
@@ -75,6 +76,78 @@ describe("genericLine", () => {
 
   it("is not possible without a canonical", () => {
     expect(genericLine(product({ canonical: null }))).toBeNull();
+  });
+});
+
+describe("accept mode and padlock", () => {
+  it("adds a specific product as exact, or as equivalent while the switch is on", () => {
+    expect(specificLine(product()).accept).toBe("exact");
+    expect(specificLine(product()).locked).toBe(false);
+    expect(specificLine(product(), true).accept).toBe("equivalent");
+  });
+
+  it("adds a generic line as equivalent", () => {
+    expect(genericLine(product())?.accept).toBe("equivalent");
+  });
+
+  it("builds a generic line from a canonical card", () => {
+    const card: CanonicalCard = {
+      id: 10,
+      name: "Leche entera",
+      category_key: "leche-entera",
+      category_name: "Leche entera",
+      image_url: "https://photos.test/leche.png",
+      from_price: "1.05",
+      from_unit_price: "1.05",
+      base_unit: "l",
+      product_count: 4,
+      chains: ["mercadona", "dia"],
+    };
+
+    const added = canonicalLine(card);
+
+    expect(added.product_id).toBeNull();
+    expect(added.name).toBe("Leche entera");
+    expect(added.category_key).toBe("leche-entera");
+    expect(added.image_url).toBe(card.image_url);
+    expect(added.accept).toBe("equivalent");
+    expect(added.locked).toBe(false);
+  });
+
+  it("changes the accept mode of one line", () => {
+    const current = [line({ id: "a" }), line({ id: "b", product_id: 2 })];
+    const next = cartReducer(current, { type: "setAccept", id: "a", accept: "equivalent" });
+
+    expect(next[0].accept).toBe("equivalent");
+    expect(next[1].accept).toBe("exact");
+  });
+
+  it("pins a line as this product and releases it without touching its choice", () => {
+    const current = [line({ id: "a", accept: "equivalent" })];
+    const pinned = cartReducer(current, { type: "toggleLock", id: "a" });
+
+    expect(pinned[0].locked).toBe(true);
+    expect(pinned[0].accept).toBe("exact");
+
+    const released = cartReducer(
+      cartReducer(pinned, { type: "setAccept", id: "a", accept: "equivalent" }),
+      { type: "toggleLock", id: "a" },
+    );
+    expect(released[0].locked).toBe(false);
+    expect(released[0].accept).toBe("equivalent");
+  });
+
+  it("leaves pinned and generic lines alone when any brand is on", () => {
+    const current = [
+      line({ id: "a" }),
+      line({ id: "b", product_id: 2, locked: true }),
+      line({ id: "c", product_id: null, category_key: "pan" }),
+    ];
+    const next = cartReducer(current, { type: "anyBrand" });
+
+    expect(next[0].accept).toBe("equivalent");
+    expect(next[1].accept).toBe("exact");
+    expect(next[2]).toBe(current[2]);
   });
 });
 
@@ -157,6 +230,14 @@ describe("draftItemsFromCart", () => {
     expect(request.brand).toBeNull();
     expect(request.quantity).toBe("2");
     expect(request.unit).toBe("ud");
+  });
+
+  it("carries the accept mode and the padlock of the line", () => {
+    const draft = draftItemFromCartLine(line({ accept: "equivalent", locked: true }));
+
+    expect(draft?.accept).toBe("equivalent");
+    expect(draft?.locked).toBe(true);
+    expect(toRequestItem(draft!).accept).toBe("equivalent");
   });
 
   it("sends a generic line without a brand", () => {

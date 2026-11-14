@@ -68,7 +68,11 @@ function isSavedList(value: unknown): value is SavedList {
   );
 }
 
-function isCartLine(value: unknown): value is CartLine {
+/** A line saved before `accept`/`locked` existed has them missing; the guard allows that. */
+type StoredCartLine = Omit<CartLine, "accept" | "locked"> &
+  Partial<Pick<CartLine, "accept" | "locked">>;
+
+function isCartLine(value: unknown): value is StoredCartLine {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&
@@ -81,8 +85,19 @@ function isCartLine(value: unknown): value is CartLine {
     (value.category_name === null || typeof value.category_name === "string") &&
     typeof value.quantity === "number" &&
     Number.isFinite(value.quantity) &&
-    value.quantity >= 1
+    value.quantity >= 1 &&
+    (value.accept === undefined || value.accept === "exact" || value.accept === "equivalent") &&
+    (value.locked === undefined || typeof value.locked === "boolean")
   );
+}
+
+/** Old concrete lines read as exact, old generic ones as equivalent, and nothing as pinned. */
+function withCartDefaults(line: StoredCartLine): CartLine {
+  return {
+    ...line,
+    accept: line.accept ?? (line.product_id === null ? "equivalent" : "exact"),
+    locked: line.locked ?? false,
+  };
 }
 
 function readStore(storage: Storage | null): StoredStore {
@@ -104,7 +119,9 @@ function readStore(storage: Storage | null): StoredStore {
       lists: payload.lists
         .filter(isSavedList)
         .map((list) => ({ ...list, items: list.items.map(withLineDefaults) })),
-      cart: Array.isArray(payload.cart) ? payload.cart.filter(isCartLine) : [],
+      cart: Array.isArray(payload.cart)
+        ? payload.cart.filter(isCartLine).map(withCartDefaults)
+        : [],
     };
   } catch {
     return { lists: [], cart: [] };
