@@ -262,14 +262,19 @@ def run(session: Session, *, dry_run: bool = False) -> MatchResult:
     assigned = review = unchanged = 0
 
     for product in products:
-        if product.id in pending or product.match_method in PROTECTED_METHODS:
+        if product.match_method in PROTECTED_METHODS:
             unchanged += 1
             continue
+        # A pending review is decided again: a better rule or seed may now resolve it.
+        was_pending = product.id in pending
 
         match = name_match(preprocessor, product.name)
         decision = decide(
             match, taxonomy.section(product.category_id), taxonomy.leaf_keys, taxonomy.top_of
         )
+        if decision.in_review and was_pending:
+            unchanged += 1
+            continue
         if decision.in_review:
             review += 1
             planned.append(
@@ -303,6 +308,8 @@ def run(session: Session, *, dry_run: bool = False) -> MatchResult:
             assigned += 1
             if not dry_run:
                 _assign(session, product.id, canonical_id, decision.confidence)
+                if was_pending:
+                    _drop_review(session, product.id)
         else:
             unchanged += 1
         by_leaf[leaf.key].append((product.id, product.name))
@@ -323,6 +330,14 @@ def run(session: Session, *, dry_run: bool = False) -> MatchResult:
         products=len(products), assigned=assigned, review=review, unchanged=unchanged
     )
     return MatchResult(summary=summary, leaves=leaves, review=review_items)
+
+
+def _drop_review(session: Session, product_id: int) -> None:
+    """Remove a pending review the rules now resolve: no human has decided it."""
+    session.execute(
+        text("delete from match_review where chain_product_id = :product and status = 'pending'"),
+        {"product": product_id},
+    )
 
 
 def pending_reviews(

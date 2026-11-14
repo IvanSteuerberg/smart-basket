@@ -269,3 +269,27 @@ def test_an_unknown_variant_or_product_is_an_error(catalog, tmp_path):
     )
     with pytest.raises(DecisionFileError, match="line 1: product 999999 does not exist"):
         import_decisions(catalog.session, path)
+
+
+def test_a_pending_review_the_rules_now_resolve_is_assigned_and_dropped(catalog):
+    # A review opened by an older rule: the next run decides the product again.
+    product = catalog.products["M1"]
+    catalog.session.execute(
+        text("insert into match_review (chain_product_id, candidates) values (:p, '[]')"),
+        {"p": product},
+    )
+    result = run(catalog.session)
+
+    assert assignment(catalog.session, "M1")["category_key"] == "platano"
+    assert product not in {item.product_id for item in result.review}
+    pending = catalog.session.execute(
+        text("select count(*) from match_review where chain_product_id = :p"), {"p": product}
+    ).scalar_one()
+    assert pending == 0
+
+
+def test_a_pending_review_still_in_doubt_stays_and_counts_as_unchanged(catalog):
+    run(catalog.session)
+    second = run(catalog.session)
+    assert second.summary.unchanged == second.summary.products
+    assert {item.product_id for item in second.review} >= {catalog.products["M5"]}
