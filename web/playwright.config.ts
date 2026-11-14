@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// E2E_PORT lets two checkouts run their mocked suites at the same time.
+const port = Number(process.env.E2E_PORT ?? 5174);
+
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/*.e2e.ts",
@@ -8,7 +11,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   use: {
-    baseURL: "http://localhost:5174",
+    baseURL: `http://localhost:${port}`,
   },
   projects: [
     {
@@ -17,8 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run dev -- --port 5174 --strictPort",
-    url: "http://localhost:5174",
+    command: `npm run dev -- --port ${port} --strictPort`,
+    url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
   },
 });
