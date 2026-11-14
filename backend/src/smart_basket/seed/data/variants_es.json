@@ -4,6 +4,7 @@
     {
       "key": "sin_lactosa",
       "name": "sin lactosa",
+      "canonical": true,
       "forms": [
         "sin lactosa"
       ]
@@ -11,6 +12,7 @@
     {
       "key": "sin_gluten",
       "name": "sin gluten",
+      "canonical": true,
       "forms": [
         "sin gluten"
       ]
@@ -33,6 +35,7 @@
     {
       "key": "integral",
       "name": "integral",
+      "canonical": true,
       "forms": [
         "integral",
         "integrales"
@@ -50,6 +53,7 @@
     {
       "key": "desnatada",
       "name": "desnatada",
+      "canonical": true,
       "forms": [
         "desnatada",
         "desnatado",
@@ -60,6 +64,7 @@
     {
       "key": "semidesnatada",
       "name": "semidesnatada",
+      "canonical": true,
       "forms": [
         "semidesnatada",
         "semidesnatado",
@@ -70,6 +75,7 @@
     {
       "key": "entera",
       "name": "entera",
+      "canonical": true,
       "forms": [
         "entera",
         "entero",
@@ -111,6 +117,7 @@
     {
       "key": "ecologico",
       "name": "ecológico",
+      "canonical": true,
       "forms": [
         "ecológico",
         "ecológica",
