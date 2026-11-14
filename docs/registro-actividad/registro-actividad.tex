@@ -210,12 +210,19 @@
 		\actividad{Investigación}{Análisis de la competencia: QuéFalta (listas por supermercado con 20 cadenas y 40.000 usuarios, que compara precios solo producto a producto), Soysuper, Carritus, Tiendeo y OkLista. Ninguna reparte la compra entre varias tiendas físicas teniendo en cuenta el tiempo y la ruta, que es el hueco del proyecto.}{Documento de competidores en \texttt{knowledge/product}, base para el DAFO.}
 	\end{description}
 
+	\subsection*{Viernes 13 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Iteración de implementación de la demo de punta a punta con Mercadona, planificada en seis entregas y repartida entre implementadores de IA (DeepSeek V4.1 Flash y Gemini 3.8 Flash), con revisión de cada entrega por otro modelo (Gemini o Claude Sonnet). Las entregas son: supermercados de León desde OpenStreetMap, semilla de marcas, API de catálogo, interpretación y geocodificación, API de recomendación, web con el flujo lista → revisión → salida → cesta con mapa, y prueba de punta a punta con Playwright en la integración continua.}{Seis entregas integradas en la rama de la iteración; 950 pruebas del backend superadas.}
+	\end{description}
+
+	\subsection*{Sábado 14 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Análisis}{Prueba real con el sistema completo en el portátil: 126 marcas y 41 supermercados de León cargados, y las dos listas reales del autor recomendadas a pie y en coche desde un origen en León. Todas las líneas se interpretan; la recomendación tarda 0,1--0,2 s y la interpretación de la lista larga (17 líneas) unos 6,5 s, por encima de los 5 s del requisito. La revisión final encuentra fallos de privacidad (la dirección escrita llegaba a los registros del servidor) y de elección de producto, que se corrigen.}{Decisiones 0017 (recomendación con una cadena) y 0018 (tiendas de OpenStreetMap y geocodificación a través del servidor).}
+	\end{description}
+
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Corregir el optimizador (parada aparte) y el preprocesador (números en los nombres y alternativas con barra).
-		\item Taxonomía semilla del producto canónico (decisión 0007).
-		\item Primer adaptador de recogida de datos (Mercadona) y vocabulario del preprocesador a partir del catálogo.
-		\item Reunir listas reales para la segunda pasada de la prueba de modelos de IA.
+		\item Revisión por el autor de las decisiones 0017 y 0018 y de la demo en el navegador.
 		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}

@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
 
+    overpass_url: str = "https://overpass-api.de/api/interpreter"
+    stores_bbox: str = "42.56,-5.62,42.63,-5.52"
+    nominatim_url: str = "https://nominatim.openstreetmap.org/search"
+    #: Stores looked at per recommendation, and how far the shopper is willing to go.
+    candidate_stores: int = 10
+    walk_radius_m: int = 3000
+    car_radius_m: int = 20000
+
     data_dir: Path = Path("data")
     mercadona_warehouses: str = "3683"
     ingest_delay_seconds: float = 1.5

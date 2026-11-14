@@ -45,6 +45,8 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0014 Rule-based preprocessor v1](/decisions/0014-rule-based-preprocessor.md) - Normalization pipeline, resolution criteria, the lexicon interface with a synthetic fixture, and the LLM provider protocol for unresolved lines.
 * [0015 Seed taxonomy](/decisions/0015-seed-taxonomy.md) - Three levels of interchangeable product types covering the whole Mercadona catalog, with forms for the preprocessor, loaded idempotently after every migration.
 * [0016 Ingestion adapters](/decisions/0016-ingestion-adapters.md) - One adapter per chain, shared persistence with change-only prices, run bookkeeping that survives failures and safeguards before marking products unavailable.
+* [0017 Single-chain recommendation end to end](/decisions/0017-single-chain-recommendation.md) - The API routes, one provisional comparable product per list line with unit, name and brand guards, the brand seed, a template explanation and an anonymous record without the origin.
+* [0018 Stores from OpenStreetMap and geocoding through the backend](/decisions/0018-osm-stores-and-backend-geocoding.md) - Supermarkets of the ten chains imported monthly from Overpass, and typed addresses geocoded with Nominatim through the backend, kept out of logs.
 
 ## Evaluation
 

@@ -23,4 +23,5 @@ def test_worker_schedules_the_placeholder_jobs():
         "match_products",
         "refresh_bi",
         "ensure_price_history_partitions",
+        "import_stores",
     }

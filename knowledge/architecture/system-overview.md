@@ -44,8 +44,10 @@ Docker Compose services `db`, `migrate` (one-shot), `api`, `worker`, `routing`, 
 | Rule-based preprocessor v1 (`smart_basket.preprocessor`) with a lexicon interface, LLM provider protocol with Ollama and Gemini (`smart_basket.llm`) | Done with a synthetic lexicon, not yet wired to the API (2026-11-03, [0014](/decisions/0014-rule-based-preprocessor.md)) |
 | Seed taxonomy, chains and zones loaded after every migration (`smart_basket.seed`, [0015](/decisions/0015-seed-taxonomy.md)) | Done, taxonomy reviewed by the author (2026-11-09) |
 | Mercadona catalog and price ingestion (`smart_basket.ingestion`, [0016](/decisions/0016-ingestion-adapters.md)), daily in the worker | Done (2026-11-09) |
-| Preprocessor lexicon built from the database (`smart_basket.vocabulary`) | Done, no brands yet (2026-11-09) |
-| Other chains, matching, BI refresh, recommendation endpoint, list UI | Pending |
+| Preprocessor lexicon built from the database (`smart_basket.vocabulary`), with the brand seed | Done (2026-11-09, brands 2026-11-14) |
+| Stores of the ten chains from OpenStreetMap (`smart_basket.stores`), monthly in the worker; geocoding through the backend ([0018](/decisions/0018-osm-stores-and-backend-geocoding.md)) | Done (2026-11-14) |
+| API for categories, search, interpretation and single-chain recommendations (`smart_basket.api`, `smart_basket.recommender`, [0017](/decisions/0017-single-chain-recommendation.md)); web flow list → review → origin → basket with a Leaflet map; Playwright end-to-end test in CI | Done for Mercadona (2026-11-14) |
+| Other chains, canonical products and matching, BI refresh, LLM-written explanation | Pending |
 
 # Open points
 
