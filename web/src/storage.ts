@@ -1,7 +1,7 @@
 // Versioned browser storage for the user's saved lists (data model, browser storage).
 
 import type { CartLine } from "./cart";
-import { isUnit, newId, type DraftItem } from "./draft";
+import { isUnit, newId, withLineDefaults, type DraftItem } from "./draft";
 
 export const STORAGE_KEY = "smart-basket.lists";
 /** Version 2 added the cart next to the saved lists; version 1 is still read. */
@@ -101,7 +101,9 @@ function readStore(storage: Storage | null): StoredStore {
       return { lists: [], cart: [] };
     }
     return {
-      lists: payload.lists.filter(isSavedList),
+      lists: payload.lists
+        .filter(isSavedList)
+        .map((list) => ({ ...list, items: list.items.map(withLineDefaults) })),
       cart: Array.isArray(payload.cart) ? payload.cart.filter(isCartLine) : [],
     };
   } catch {

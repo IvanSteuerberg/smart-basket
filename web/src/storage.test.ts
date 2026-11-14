@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CartLine } from "./cart";
-import { newId, type DraftItem } from "./draft";
+import { GENERIC_DEFAULTS, newId, type DraftItem } from "./draft";
 import {
   createSavedList,
   loadCart,
@@ -41,6 +41,7 @@ function item(overrides: Partial<DraftItem> = {}): DraftItem {
     unit: "ud",
     brand: "",
     privateLabelOk: true,
+    ...GENERIC_DEFAULTS,
     ...overrides,
   };
 }

@@ -1,7 +1,7 @@
 // The cart is the user's list: catalog products added before choosing an origin.
 
 import type { Product } from "./api";
-import { newId, type DraftItem } from "./draft";
+import { GENERIC_DEFAULTS, newId, type DraftItem } from "./draft";
 
 export const MIN_QUANTITY = 1;
 export const MAX_QUANTITY = 99;
@@ -111,6 +111,10 @@ export function draftItemFromCartLine(line: CartLine): DraftItem | null {
     unit: "ud",
     brand: isGenericLine(line) ? "" : (line.brand ?? ""),
     privateLabelOk: true,
+    ...GENERIC_DEFAULTS,
+    productId: line.product_id,
+    accept: isGenericLine(line) ? "equivalent" : "exact",
+    imageUrl: line.image_url,
   };
 }
 

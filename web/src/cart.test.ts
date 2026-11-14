@@ -143,15 +143,20 @@ describe("cartItemCount", () => {
 });
 
 describe("draftItemsFromCart", () => {
-  it("sends the canonical category and the brand of a specific line", () => {
-    const draft = draftItemFromCartLine(line({ quantity: 2 }));
+  it("sends a specific line as that product, exact, in packs", () => {
+    const source = line({ quantity: 2 });
+    const draft = draftItemFromCartLine(source);
 
     expect(draft).not.toBeNull();
     expect(draft?.categoryKey).toBe("leche-entera");
     expect(draft?.categoryName).toBe("Leche entera");
-    expect(toRequestItem(draft!).brand).toBe("Pascual");
-    expect(toRequestItem(draft!).quantity).toBe("2");
-    expect(toRequestItem(draft!).unit).toBe("ud");
+    const request = toRequestItem(draft!);
+    expect(request.product_id).toBe(source.product_id);
+    expect(request.accept).toBe("exact");
+    expect(request.category_key).toBeUndefined();
+    expect(request.brand).toBeNull();
+    expect(request.quantity).toBe("2");
+    expect(request.unit).toBe("ud");
   });
 
   it("sends a generic line without a brand", () => {
