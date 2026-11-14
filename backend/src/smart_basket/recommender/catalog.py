@@ -19,6 +19,7 @@ from rapidfuzz import fuzz
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
+from smart_basket.brands import Brands, contains_words, matches_brand
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
 from smart_basket.preprocessor.text import fold, same_word, tokenize, words
 from smart_basket.seed import DEFAULT_DATA_DIR
@@ -53,9 +54,6 @@ PROCESSED_PHRASES = (("al", "ajillo"), ("a", "la", "plancha"), ("finas", "hierba
 PROCESSED: tuple[tuple[tuple[str, ...], ...], ...] = tuple(
     tuple((stem + ending,) for ending in ("o", "a", "os", "as")) for stem in PROCESSED_STEMS
 ) + tuple((phrase,) for phrase in PROCESSED_PHRASES)
-
-#: Columns of `brand`; `aliases` is read only when the column exists.
-_BRAND_COLUMNS_SQL = "select column_name from information_schema.columns where table_name = 'brand'"
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,7 +125,7 @@ def build_catalog(
     The products of every requested category and of the parent groups the fallback may need
     are fetched once, not once per item.
     """
-    brands = _Brands(session)
+    brands = Brands(session)
     resolved = [
         (index, item, categories.get(item.category_key)) for index, item in enumerate(items)
     ]
@@ -146,7 +144,7 @@ def _entry(
     item: Item,
     category: CategoryInfo | None,
     rows: Sequence[Mapping[str, Any]],
-    brands: _Brands,
+    brands: Brands,
 ) -> CatalogEntry:
     if category is None:
         return CatalogEntry(index, item.text, None, {}, {})
@@ -164,7 +162,7 @@ def _entry(
             continue
         if not item.private_label_ok and product.is_private_label:
             continue
-        if brand_terms is not None and not _matches_brand(row["name"], brand_terms):
+        if brand_terms is not None and not matches_brand(row["name"], brand_terms):
             continue
         candidates.append((row, product))
     # Name preference before the processed filter: in "carne picada" every product named like
@@ -243,7 +241,7 @@ def _fallback_rows(
         if row["product_category_id"] != group_id:
             continue
         if short:
-            if _contains_words(words(row["name"]), item_words):
+            if contains_words(words(row["name"]), item_words):
                 matched.append(row)
         elif fuzz.token_set_ratio(folded, fold(row["name"])) >= FALLBACK_RATIO:
             matched.append(row)
@@ -254,7 +252,7 @@ def _product(
     row: Mapping[str, Any],
     canonical_id: int,
     leaf_base_unit: str | None,
-    brands: _Brands,
+    brands: Brands,
 ) -> Product | None:
     """Optimizer product, or None when it cannot satisfy the line or has no size to compare by."""
     quantity, unit = row["base_quantity"], row["base_unit"]
@@ -392,57 +390,3 @@ def _shared_words(name: str, content: tuple[str, ...]) -> int:
     """How many content words of the line a product name has as whole words (plural tolerated)."""
     product_words = tuple(token.key for token in tokenize(name) if token.kind == "word")
     return sum(any(same_word(word, other) for other in product_words) for word in content)
-
-
-def _matches_brand(name: str, terms: set[str]) -> bool:
-    """True when a brand name or alias appears as whole words of the product name."""
-    product_words = words(name)
-    return any(_contains_words(product_words, words(term)) for term in terms)
-
-
-def _contains_words(haystack: tuple[str, ...], needle: tuple[str, ...]) -> bool:
-    """True when `needle` appears as a run of whole tokens in `haystack`."""
-    if not needle or len(needle) > len(haystack):
-        return False
-    return any(
-        haystack[start : start + len(needle)] == needle
-        for start in range(len(haystack) - len(needle) + 1)
-    )
-
-
-class _Brands:
-    """Brand names, their aliases and the private labels of each chain, read once per request."""
-
-    def __init__(self, session: Session) -> None:
-        columns = set(session.execute(text(_BRAND_COLUMNS_SQL)).scalars())
-        # `brand.aliases` does not exist in this branch yet: the name alone is used then.
-        alias = "aliases" if "aliases" in columns else "null::text[] as aliases"
-        self._aliases: dict[str, tuple[str, ...]] = {}
-        self._private_labels: dict[int, list[tuple[str, ...]]] = {}
-        for row in session.execute(
-            text(f"select name, {alias}, is_private_label, owner_chain_id from brand")
-        ).mappings():
-            folded = fold(row["name"])
-            aliases = tuple(fold(value) for value in (row["aliases"] or ()))
-            terms = (folded, *aliases)
-            # A brand written as an alias must reach the same terms as its name.
-            self._aliases[folded] = terms
-            for value in aliases:
-                self._aliases[value] = terms
-            if row["is_private_label"] and row["owner_chain_id"] is not None:
-                self._private_labels.setdefault(row["owner_chain_id"], []).append(
-                    words(row["name"])
-                )
-
-    def terms(self, brand: str) -> set[str]:
-        """The folded brand name and the aliases of the matching brand."""
-        target = fold(brand)
-        return {target, *self._aliases.get(target, ())}
-
-    def is_private_label(self, chain_id: int, product_name: str) -> bool:
-        """True when the product name has one of its chain's private labels as whole words."""
-        product_words = words(product_name)
-        return any(
-            _contains_words(product_words, label)
-            for label in self._private_labels.get(chain_id, ())
-        )
