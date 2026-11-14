@@ -14,6 +14,35 @@ from smart_basket.routing.base import GeoPoint, RoutingError, StoreLocation, Tra
 
 COSTING = {TravelMode.WALK: "pedestrian", TravelMode.CAR: "auto"}
 MINUTE_STEP = Decimal("0.01")
+#: Valhalla encodes its route shapes with six decimals of precision.
+SHAPE_PRECISION = 6
+
+
+def decode_polyline(encoded: str, precision: int = SHAPE_PRECISION) -> list[tuple[float, float]]:
+    """Decode an encoded polyline into `[lat, lon]` pairs (latitude first, as Valhalla)."""
+    factor = 10**precision
+    coordinates: list[tuple[float, float]] = []
+    index = 0
+    lat = lon = 0
+    while index < len(encoded):
+        for axis in ("lat", "lon"):
+            value = shift = 0
+            while True:
+                if index >= len(encoded):
+                    raise RoutingError("unexpected valhalla response: truncated polyline")
+                chunk = ord(encoded[index]) - 63
+                index += 1
+                value |= (chunk & 0x1F) << shift
+                shift += 5
+                if chunk < 0x20:
+                    break
+            delta = ~(value >> 1) if value & 1 else value >> 1
+            if axis == "lat":
+                lat += delta
+            else:
+                lon += delta
+        coordinates.append((lat / factor, lon / factor))
+    return coordinates
 
 
 class ValhallaClient:
@@ -47,6 +76,34 @@ class ValhallaClient:
             store_ids=tuple(s.store_id for s in stores),
             minutes=self._parse(data, len(nodes)),
         )
+
+    def route_shape(
+        self, points: Sequence[GeoPoint], mode: TravelMode
+    ) -> list[tuple[float, float]]:
+        """Route through `points` in order, as `[lat, lon]` pairs of every leg's shape."""
+        body = {
+            "locations": [{"lat": p.latitude, "lon": p.longitude} for p in points],
+            "costing": COSTING[mode],
+            "units": "kilometers",
+        }
+        try:
+            response = self._client.post("/route", json=body)
+            response.raise_for_status()
+            data = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            raise RoutingError(f"valhalla route request failed: {exc}") from exc
+        legs = (data.get("trip") or {}).get("legs")
+        if not isinstance(legs, list) or not legs:
+            raise RoutingError("unexpected valhalla response: no trip legs")
+        shape: list[tuple[float, float]] = []
+        for leg in legs:
+            encoded = leg.get("shape") if isinstance(leg, dict) else None
+            if not isinstance(encoded, str):
+                raise RoutingError("unexpected valhalla response: leg without shape")
+            shape.extend(decode_polyline(encoded))
+        if len(shape) < 2:
+            raise RoutingError("unexpected valhalla response: route shape too short")
+        return shape
 
     @staticmethod
     def _parse(data: dict[str, Any], n: int) -> tuple[tuple[Decimal | None, ...], ...]:

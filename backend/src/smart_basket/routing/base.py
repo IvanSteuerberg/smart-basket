@@ -37,3 +37,9 @@ class RoutingEngine(Protocol):
     ) -> TravelTimes:
         """Minutes between the origin (index 0) and every store, in both directions."""
         ...
+
+    def route_shape(
+        self, points: Sequence[GeoPoint], mode: TravelMode
+    ) -> list[tuple[float, float]]:
+        """Geometry of the route through `points` in order, as `[lat, lon]` pairs."""
+        ...

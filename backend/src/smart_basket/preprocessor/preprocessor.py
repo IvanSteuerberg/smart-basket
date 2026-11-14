@@ -116,7 +116,7 @@ class Preprocessor:
             key=lambda fv: -len(fv[0]),
         )
         self.brands: list[tuple[str, BrandTerm]] = sorted(
-            ((self._compact(words(a)), b) for b in lexicon.brands() for a in (b.name, *b.aliases)),
+            ((self._compact(words(a)), b) for b in lexicon.brands() for a in b.aliases),
             key=lambda ab: -len(ab[0]),
         )
         #: Lexicon forms with a number in their name ("omega 3", "7 cereales"): there the
@@ -221,8 +221,8 @@ class Preprocessor:
             _find(keys, list(p)) is not None for p in R.AMBIGUITY_PHRASES
         )
 
-        qty, rest = self._extract_quantity(tokens)
-        brand, rest = self._find_brand(rest)
+        qty, tokens_after_qty = self._extract_quantity(tokens)
+        brand, rest, brand_tokens = self._find_brand(tokens_after_qty)
         # "pasta/espaguetis", "pasta o espaguetis": either will do. Match the first one
         # that names a specific product, else the first one found, else the first.
         groups = _alternatives(rest)
@@ -241,6 +241,16 @@ class Preprocessor:
                 qty.container = []
         if generic is None and brand is not None and brand.implies in self.generic_by_key:
             generic = self.generic_by_key[brand.implies]
+        elif generic is None and brand is not None and len(groups) == 1:
+            # The brand swallowed the whole line ("gallo", "pastas gallo") and says nothing
+            # about the product: try the generic match again with the brand tokens back in.
+            generic2, span2, rest2 = self._match_generic(tokens_after_qty)
+            if generic2 is not None:
+                brand_ids = {id(t) for t in brand_tokens}
+                generic, span = generic2, span2
+                rest_after = [t for t in rest2 if id(t) not in brand_ids]
+                seq = tokens_after_qty
+                brand = None
 
         attributes, rest_after = self._match_variants(rest_after)
         unknown, context = self._leftovers(rest_after)
@@ -523,14 +533,14 @@ class Preprocessor:
 
     # Brands, generic terms, variants ------------------------------------------
 
-    def _find_brand(self, tokens: list[Token]) -> tuple[BrandTerm | None, list[Token]]:
+    def _find_brand(self, tokens: list[Token]) -> tuple[BrandTerm | None, list[Token], list[Token]]:
         for size in (3, 2, 1):
             for i in range(len(tokens) - size + 1):
                 compact = self._compact([t.key for t in tokens[i : i + size]])
                 for alias, brand in self.brands:
                     if alias == compact:
-                        return brand, tokens[:i] + tokens[i + size :]
-        return None, tokens
+                        return brand, tokens[:i] + tokens[i + size :], tokens[i : i + size]
+        return None, tokens, []
 
     def _match_generic(
         self, tokens: list[Token]

@@ -82,6 +82,12 @@ jobs:
         run: npm run typecheck
       - name: Build
         run: npm run build
+      - name: Unit tests
+        run: npm run test
+      - name: End-to-end tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
 
   compose:
     name: Compose and images

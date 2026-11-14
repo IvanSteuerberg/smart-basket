@@ -5,6 +5,7 @@ from datetime import date
 
 from sqlalchemy import text
 
+from smart_basket import stores
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
 from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
@@ -30,6 +31,22 @@ def ingest_catalogs() -> None:
             )
         finally:
             adapter.close()
+
+
+def import_stores() -> None:
+    """Refresh the store locations of the ten chains from OpenStreetMap (decision 0002).
+
+    A failing download is logged and skipped so the other scheduled jobs keep running (NFR-09).
+    """
+    settings = get_settings()
+    try:
+        bbox = stores.BoundingBox.parse(settings.stores_bbox)
+        with stores.OverpassClient(url=settings.overpass_url) as client:
+            observations = stores.fetch_stores(client, bbox)
+        summary = stores.import_stores(observations, bbox)
+        stores.log_store_summary(summary)
+    except Exception:
+        log.exception("store import failed; other jobs keep running")
 
 
 def match_products() -> None:
