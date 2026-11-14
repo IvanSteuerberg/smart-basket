@@ -100,6 +100,9 @@ export default function App() {
   const [anyBrand, setAnyBrand] = useState(false);
   const [store] = useState<ProfileStore>(() => indexedDbProfileStore());
   const profileRef = useRef<Profile>(emptyProfile());
+  // Resolves once the saved profile is in `profileRef`; every change waits for it, so a tap
+  // made while IndexedDB is still loading neither overwrites nor is overwritten by the load.
+  const profileLoaded = useRef<Promise<void>>(Promise.resolve());
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([]);
   const [catalogSectionsError, setCatalogSectionsError] = useState<string | null>(null);
@@ -158,7 +161,7 @@ export default function App() {
   // the switch and the chains.
   useEffect(() => {
     let cancelled = false;
-    store
+    profileLoaded.current = store
       .load()
       .then((loaded) => {
         if (cancelled) return;
@@ -182,9 +185,14 @@ export default function App() {
     );
   }
 
-  function commitProfile(profile: Profile) {
-    profileRef.current = profile;
-    void store.save(profile);
+  /** Applies a change on top of the loaded profile, saves it and shows its preferences. */
+  function commitProfile(change: (profile: Profile) => Profile) {
+    void profileLoaded.current.then(() => {
+      const next = change(profileRef.current);
+      profileRef.current = next;
+      applyPreferences(next);
+      return store.save(next);
+    });
   }
 
   function handleAnyBrandChange(value: boolean) {
@@ -192,25 +200,27 @@ export default function App() {
     if (value) dispatch({ type: "anyBrand" });
     const now = new Date();
     const key = { scope_kind: "global", scope_key: "any_brand", kind: "any_brand" } as const;
-    commitProfile(
+    commitProfile((profile) =>
       value
-        ? setPreference(profileRef.current, { ...key, value: true }, now)
-        : removePreference(profileRef.current, key, now),
+        ? setPreference(profile, { ...key, value: true }, now)
+        : removePreference(profile, key, now),
     );
   }
 
   function handleChainFilterChange(chains: string[] | null) {
     setChainFilter(chains);
     const now = new Date();
-    let profile = profileRef.current;
-    for (const { code } of CHAINS) {
-      const key = { scope_kind: "chain", scope_key: code, kind: "chain_include" } as const;
-      profile =
-        chains !== null && chains.includes(code)
-          ? setPreference(profile, { ...key, value: true }, now)
-          : removePreference(profile, key, now);
-    }
-    commitProfile(profile);
+    commitProfile((current) => {
+      let profile = current;
+      for (const { code } of CHAINS) {
+        const key = { scope_kind: "chain", scope_key: code, kind: "chain_include" } as const;
+        profile =
+          chains !== null && chains.includes(code)
+            ? setPreference(profile, { ...key, value: true }, now)
+            : removePreference(profile, key, now);
+      }
+      return profile;
+    });
   }
 
   function handleAcceptChange(id: string, accept: Accept) {
@@ -225,26 +235,28 @@ export default function App() {
     const now = new Date();
     const key = { scope_kind: "category", scope_key: line.category_key, kind: "brand_pin" } as const;
     if (line.locked) {
-      commitProfile(removePreference(profileRef.current, key, now));
+      commitProfile((profile) => removePreference(profile, key, now));
       return;
     }
 
-    const pinned = setPreference(
-      profileRef.current,
-      { ...key, value: { product_id: line.product_id, brand: line.brand } },
-      now,
-    );
-    commitProfile(
-      appendEvent(pinned, {
-        id: uuidv7(now.getTime()),
-        term: line.category_name ?? line.name,
-        action: "pinned",
-        canonical_id: null,
-        product_id: line.product_id,
-        brand: line.brand,
-        chain: null,
-        date: now.toISOString(),
-      }),
+    commitProfile((profile) =>
+      appendEvent(
+        setPreference(
+          profile,
+          { ...key, value: { product_id: line.product_id, brand: line.brand } },
+          now,
+        ),
+        {
+          id: uuidv7(now.getTime()),
+          term: line.category_name ?? line.name,
+          action: "pinned",
+          canonical_id: null,
+          product_id: line.product_id,
+          brand: line.brand,
+          chain: null,
+          date: now.toISOString(),
+        },
+      ),
     );
   }
 
@@ -261,9 +273,7 @@ export default function App() {
   }
 
   function handleImportProfile(json: string) {
-    const next = importProfile(json, profileRef.current);
-    commitProfile(next);
-    applyPreferences(next);
+    commitProfile((profile) => importProfile(json, profile));
   }
 
   async function handleInterpret() {
