@@ -50,6 +50,13 @@ def normalize_size(size: object, size_format: str | None) -> tuple[Decimal | Non
     return ((quantity / divisor).quantize(QUANTITY_STEP, rounding=ROUND_HALF_UP), unit)
 
 
+def valid_image_url(value: object) -> str | None:
+    """Keep only an absolute https photo URL; anything else stores null."""
+    if isinstance(value, str) and value.startswith("https://"):
+        return value
+    return None
+
+
 def parse_product(raw: Mapping[str, Any], category_code: str) -> ProductObservation | None:
     """Turn one API product into an observation, or None when it is unpublished or unusable."""
     return parse_product_or_reason(raw, category_code)[0]
@@ -89,6 +96,7 @@ def parse_product_or_reason(
         pack_count=_pack_count(instructions),
         price=price,
         price_per_unit=_decimal(instructions.get("bulk_price"), PER_UNIT_STEP),
+        image_url=valid_image_url(raw.get("thumbnail")),
     )
     return (observation, None)
 
@@ -117,13 +125,10 @@ def parse_section(
     records them without becoming partial unless there are too many; unpublished products are
     skipped silently.
     """
-    for section in payload.get("categories") or []:
-        code = section.get("id")
-        if code is None or not section.get("name"):
-            continue
-        code = str(code)
+    for section in _sections(payload):
+        code = str(section["id"])
         yield CategoryObservation(code=code, name=str(section["name"]), parent_code=parent_code)
-        for raw in section.get("products") or []:
+        for raw in _products(section):
             product, reason = parse_product_or_reason(raw, code)
             if product is not None:
                 yield product
@@ -133,6 +138,37 @@ def parse_section(
                     url=page_url,
                     error=f"product {sku if sku is not None else '?'} skipped: {reason}",
                 )
+
+
+def iter_raw_products(payload: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
+    """Yield every product object of a level 2 page, whether it parses or not.
+
+    The backfill reads archived responses with it: a product kept from an earlier run may lack a
+    price in this response and still carry the photo.
+    """
+    for section in _sections(payload):
+        for raw in _products(section):
+            if isinstance(raw, Mapping):
+                yield raw
+
+
+def iter_product_images(payload: Mapping[str, Any]) -> Iterator[tuple[str, str]]:
+    """Yield (`sku`, `photo url`) of the products of a level 2 page that have a usable thumbnail."""
+    for raw in iter_raw_products(payload):
+        sku = raw.get("id")
+        image = valid_image_url(raw.get("thumbnail"))
+        if sku is not None and image is not None:
+            yield (str(sku), image)
+
+
+def _sections(payload: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
+    for section in payload.get("categories") or []:
+        if section.get("id") is not None and section.get("name"):
+            yield section
+
+
+def _products(section: Mapping[str, Any]) -> Iterator[Any]:
+    yield from section.get("products") or []
 
 
 class MercadonaAdapter:

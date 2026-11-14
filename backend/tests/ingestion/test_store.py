@@ -6,6 +6,7 @@ warehouse zone are seeded with plain SQL, the way `smart-basket-seed` will.
 
 import gzip
 import hashlib
+import json
 import os
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from smart_basket.ingestion import (
     IngestSetupError,
     ProductObservation,
     RawResponse,
+    backfill_images,
     ingest_catalog,
     store,
 )
@@ -107,6 +109,7 @@ def product(
     base_quantity: str = "1",
     base_unit: str = "l",
     pack_count: int = 1,
+    image_url: str | None = None,
 ) -> ProductObservation:
     return ProductObservation(
         sku=sku,
@@ -119,7 +122,20 @@ def product(
         pack_count=pack_count,
         price=D(price),
         price_per_unit=D(price_per_unit or price),
+        image_url=image_url,
     )
+
+
+def photo(db: Db, sku: str = "100") -> str | None:
+    return scalar(db, "select image_url from chain_product where chain_sku = :sku", sku=sku)
+
+
+def image_page(*images: tuple[str, str]) -> bytes:
+    """A level 2 page as Mercadona sends it, with just what the photo backfill reads."""
+    products = [{"id": sku, "thumbnail": url} for sku, url in images]
+    return json.dumps(
+        {"categories": [{"id": 420, "name": "Aceite de oliva", "products": products}]}
+    ).encode()
 
 
 def run(db: Db, observations: tuple, now: datetime, data_dir: Path, **kwargs):
@@ -309,6 +325,133 @@ def test_sizes_are_stored_normalized(db, tmp_path):
     assert stored.base_quantity == D("0.25")
     assert stored.base_unit == "l"
     assert stored.pack_count == 4
+
+
+def test_product_photo_is_stored_updated_and_cleared(db, tmp_path):
+    run(
+        db,
+        (*CATEGORIES, product("100", "1.00", image_url="https://cdn.test/a.jpg")),
+        T1,
+        tmp_path,
+    )
+    assert photo(db) == "https://cdn.test/a.jpg"
+
+    run(
+        db,
+        (*CATEGORIES, product("100", "1.00", image_url="https://cdn.test/b.jpg")),
+        T2,
+        tmp_path,
+    )
+    assert photo(db) == "https://cdn.test/b.jpg"
+
+    run(db, (*CATEGORIES, product("100", "1.00")), T3, tmp_path)
+    assert photo(db) is None
+
+
+def test_backfill_takes_each_photo_from_the_newest_response_that_has_it(db, tmp_path):
+    older = image_page(("100", "https://cdn.test/old.jpg"), ("200", "https://cdn.test/200.jpg"))
+    newer = image_page(("100", "https://cdn.test/new.jpg"))
+    run(
+        db,
+        (
+            *CATEGORIES,
+            product("100", "1.00"),
+            product("200", "2.00"),
+            RawResponse("https://example.test/api/categories/112/", 200, older),
+        ),
+        T1,
+        tmp_path,
+    )
+    run(
+        db,
+        (
+            *CATEGORIES,
+            product("100", "1.00"),
+            product("200", "2.00"),
+            RawResponse("https://example.test/api/categories/112/", 200, newer),
+        ),
+        T2,
+        tmp_path,
+    )
+
+    summary = backfill_images("mercadona", data_dir=tmp_path, database_url=db.url)
+
+    assert (summary.updated, summary.unchanged, summary.missing) == (2, 0, 0)
+    assert photo(db, "100") == "https://cdn.test/new.jpg"
+    assert photo(db, "200") == "https://cdn.test/200.jpg"
+    # The backfill reads the archive only: prices and sightings stay as the crawl left them.
+    assert scalar(db, "select last_seen from chain_product where chain_sku = '100'") == T2
+    assert scalar(db, "select count(*) from price_history") == 0
+
+
+def test_backfill_is_idempotent(db, tmp_path):
+    body = image_page(("100", "https://cdn.test/a.jpg"))
+    run(
+        db,
+        (
+            *CATEGORIES,
+            product("100", "1.00"),
+            RawResponse("https://example.test/api/categories/112/", 200, body),
+        ),
+        T1,
+        tmp_path,
+    )
+
+    backfill_images("mercadona", data_dir=tmp_path, database_url=db.url)
+    again = backfill_images("mercadona", data_dir=tmp_path, database_url=db.url)
+
+    assert (again.updated, again.unchanged, again.missing) == (0, 1, 0)
+    assert photo(db) == "https://cdn.test/a.jpg"
+
+
+def test_backfill_skips_a_missing_response_file(db, tmp_path, caplog):
+    caplog.set_level("WARNING", logger="smart_basket.ingestion")
+    summary = run(db, (*CATEGORIES, product("100", "1.00")), T1, tmp_path)
+    with db.engine.begin() as conn:
+        conn.execute(
+            text(
+                "insert into raw_response (run_id, url, fetched_at, status_code, sha256, path) "
+                "values (:run, 'https://example.test/api/categories/', :at, 200, :sha, :path)"
+            ),
+            {
+                "run": summary.run_id,
+                "at": T1,
+                "sha": "0" * 64,
+                "path": "raw/mercadona/2026-01-01/missing.json.gz",
+            },
+        )
+
+    backfilled = backfill_images("mercadona", data_dir=tmp_path, database_url=db.url)
+
+    assert (backfilled.updated, backfilled.unchanged, backfilled.missing) == (0, 0, 1)
+    assert backfilled.responses_skipped == 1
+    assert "skipping missing or unreadable raw response" in caplog.text
+
+
+def test_backfill_never_reads_a_response_outside_the_data_directory(db, tmp_path, caplog):
+    caplog.set_level("WARNING", logger="smart_basket.ingestion")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    summary = run(db, (*CATEGORIES, product("100", "1.00")), T1, data_dir)
+    outside = tmp_path / "outside.json.gz"
+    with gzip.open(outside, "wt", encoding="utf-8") as body:
+        body.write(image_page(("100", "https://cdn.test/outside.jpg")).decode())
+    with db.engine.begin() as conn:
+        for path in ("../outside.json.gz", str(outside)):
+            conn.execute(
+                text(
+                    "insert into raw_response (run_id, url, fetched_at, status_code, sha256, path) "
+                    "values (:run, 'https://example.test/api/categories/', :at, 200, :sha, :path)"
+                ),
+                {"run": summary.run_id, "at": T1, "sha": "0" * 64, "path": path},
+            )
+
+    backfilled = backfill_images("mercadona", data_dir=data_dir, database_url=db.url)
+
+    assert (backfilled.updated, backfilled.unchanged, backfilled.missing) == (0, 0, 1)
+    assert backfilled.responses_skipped == 2
+    assert photo(db) is None
+    assert caplog.text.count("skipping raw response outside the data directory") == 2
 
 
 def test_price_per_unit_change_closes_the_old_interval(db, tmp_path):

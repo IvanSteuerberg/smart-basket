@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from smart_basket.config import Settings
-from smart_basket.ingestion import IngestSetupError
+from smart_basket.ingestion import ImageBackfillSummary, IngestSetupError
 from smart_basket.ingestion import __main__ as cli
 
 
@@ -28,6 +28,33 @@ def test_negative_max_categories_is_rejected(monkeypatch):
         cli.main(["mercadona", "--max-categories", "-1"])
 
     assert exit_info.value.code == 2
+
+
+@pytest.mark.parametrize("conflict", [["--max-categories", "2"], ["--dry-run"]])
+def test_backfill_images_is_exclusive_with_the_crawl_modes(monkeypatch, conflict):
+    with pytest.raises(SystemExit) as exit_info:
+        cli.main(["mercadona", "--backfill-images", *conflict])
+
+    assert exit_info.value.code == 2
+
+
+def test_backfill_images_prints_the_summary_without_creating_an_adapter(monkeypatch, capsys):
+    calls = []
+
+    def fake_backfill(chain, *, data_dir):
+        calls.append((chain, data_dir))
+        return ImageBackfillSummary(updated=3, unchanged=1, missing=0, responses_skipped=0)
+
+    def no_adapter(**kwargs):
+        raise AssertionError("the backfill must not build a network adapter")
+
+    monkeypatch.setattr(cli, "get_settings", lambda: Settings(_env_file=None, data_dir="data"))
+    monkeypatch.setattr(cli, "backfill_images", fake_backfill)
+    monkeypatch.setattr(cli, "MercadonaAdapter", no_adapter)
+
+    assert cli.main(["mercadona", "--backfill-images"]) == 0
+    assert calls[0][0] == "mercadona"
+    assert capsys.readouterr().out.strip() == "images: 3 updated, 1 unchanged, 0 without image"
 
 
 def test_setup_error_prints_one_line_and_exits_with_code_two(monkeypatch, capsys):

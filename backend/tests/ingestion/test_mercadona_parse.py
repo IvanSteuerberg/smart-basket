@@ -6,6 +6,7 @@ import pytest
 
 from smart_basket.ingestion.base import CategoryObservation, ProductObservation
 from smart_basket.ingestion.mercadona import (
+    iter_product_images,
     normalize_size,
     parse_product,
     parse_section,
@@ -24,6 +25,7 @@ def make_product(
     is_pack: bool = False,
     total_units: object = None,
     published: bool = True,
+    thumbnail: object = None,
 ) -> dict[str, object]:
     return {
         "id": sku,
@@ -31,6 +33,7 @@ def make_product(
         "packaging": "Botella",
         "share_url": f"https://example.test/product/{sku}",
         "published": published,
+        "thumbnail": thumbnail,
         "price_instructions": {
             "unit_price": unit_price,
             "bulk_price": bulk_price,
@@ -105,6 +108,38 @@ def test_unpublished_product_is_skipped():
 
 def test_product_without_a_price_is_skipped():
     assert parse_product(make_product(unit_price=" "), "420") is None
+
+
+def test_https_thumbnail_becomes_the_product_photo():
+    observation = parse_product(
+        make_product(thumbnail="https://prod-mercadona.imgix.net/images/abc.jpg?w=300"), "420"
+    )
+    assert observation is not None
+    assert observation.image_url == "https://prod-mercadona.imgix.net/images/abc.jpg?w=300"
+
+
+@pytest.mark.parametrize("thumbnail", [None, "", "http://cdn.test/photo.jpg", 12, {"url": "x"}])
+def test_missing_or_non_https_thumbnail_stores_no_photo(thumbnail):
+    observation = parse_product(make_product(thumbnail=thumbnail), "420")
+    assert observation is not None
+    assert observation.image_url is None
+
+
+def test_iter_product_images_keeps_only_https_thumbnails():
+    payload = {
+        "categories": [
+            {
+                "id": 420,
+                "name": "Aceite de oliva",
+                "products": [
+                    make_product(sku="1", thumbnail="https://cdn.test/1.jpg?w=300"),
+                    make_product(sku="2"),
+                    make_product(sku="3", thumbnail="http://cdn.test/3.jpg"),
+                ],
+            }
+        ]
+    }
+    assert list(iter_product_images(payload)) == [("1", "https://cdn.test/1.jpg?w=300")]
 
 
 def test_parse_tree_emits_both_levels(load_fixture):
