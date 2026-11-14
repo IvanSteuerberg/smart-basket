@@ -218,11 +218,16 @@
 	\subsection*{Sábado 14 de noviembre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
 		\actividad{Análisis}{Prueba real con el sistema completo en el portátil: 126 marcas y 41 supermercados de León cargados, y las dos listas reales del autor recomendadas a pie y en coche desde un origen en León. Todas las líneas se interpretan; la recomendación tarda 0,1--0,2 s y la interpretación de la lista larga (17 líneas) unos 6,5 s, por encima de los 5 s del requisito. La revisión final encuentra fallos de privacidad (la dirección escrita llegaba a los registros del servidor) y de elección de producto, que se corrigen.}{Decisiones 0017 (recomendación con una cadena) y 0018 (tiendas de OpenStreetMap y geocodificación a través del servidor).}
+		\actividad{Análisis}{Prueba del autor con una lista suya desde la Universidad: la cesta le mandaba a un Mercadona lejano (el cercano solo está en OpenStreetMap como edificio) y elegía mal los productos (pechuga empanada en lugar de fresca, pasta normal en lugar de integral). Se corrige la importación de tiendas, la comparación por precio por kilo, las variantes pedidas y los productos elaborados. Comparación de diseño con QuéFalta.}{Iteración 11 fusionada en la rama principal; nueva lista real del autor para evaluar.}
+		\actividad{Tarea}{Primera tanda de la iteración 12, con implementadores de IA y revisión de cada entrega por Gemini: fotos de los 4.307 productos, clasificador de productos en productos canónicos (categoría más variantes como sin lactosa o integral, sin marca ni tamaño), API de catálogo y catálogo web con aspecto de supermercado (fotos, precio por kilo, ficha de producto, lista como carrito y logos de las cadenas), hecho con Tailwind CSS.}{Catálogo navegable con fotos; 1.051 pruebas superadas.}
+		\actividad{Decisión}{Revisión con el autor de la clasificación del catálogo real, propuesta por Gemini y consolidada por Claude: se parten las categorías que mezclaban productos no intercambiables (pollo en pechuga, muslo, alitas, entero y carcasa; naranja y mandarina; embutidos; pescados; zumos), se crean las que faltaban (especias, verduras, frutas, atún fresco) y se fijan las variantes que distinguen productos.}{99,9~\% de los productos con su producto canónico (717 canónicos).}
+		\actividad{Análisis}{Criterios de uso con el autor para la siguiente tanda: navegar por supermercado o por producto genérico, pasar toda la lista a «cualquier marca» de un gesto y fijar marcas sueltas con un toque, y la lista escrita a mano con los mínimos pasos. Se abre una decisión aparte sobre dónde guardar las preferencias del usuario (con o sin cuentas) y si una base de datos de grafos está justificada.}{Plan de la segunda tanda de la iteración 12.}
 	\end{description}
 
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Revisión por el autor de las decisiones 0017 y 0018 y de la demo en el navegador.
+		\item Segunda tanda de la iteración 12: recomendador sobre productos canónicos, lista y cesta rediseñadas con los criterios de uso acordados, y evaluación con las tres listas reales.
+		\item Decisión sobre las preferencias del usuario (Señal de Tiempo con dos fuentes).
 		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
