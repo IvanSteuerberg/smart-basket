@@ -8,6 +8,7 @@ and marking the rest as unresolved, to be sent to the LLM. Deterministic and off
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
@@ -15,7 +16,13 @@ from typing import Any
 from rapidfuzz.distance import DamerauLevenshtein
 
 from smart_basket.preprocessor import rules_es as R
-from smart_basket.preprocessor.lexicon import BrandTerm, GenericTerm, Lexicon, UnitTerm
+from smart_basket.preprocessor.lexicon import (
+    BrandTerm,
+    GenericTerm,
+    Lexicon,
+    UnitTerm,
+    VariantTerm,
+)
 from smart_basket.preprocessor.text import Token, fold, join, same_word, tokenize, words
 
 UNITS = ("ud", "kg", "g", "l", "ml")
@@ -79,6 +86,16 @@ class PreprocessResult:
     def llm_input(self) -> str:
         """The unresolved lines, one per row: all the LLM receives (NFR-06)."""
         return "\n".join(i.raw for i in self.items if i.needs_llm)
+
+
+@dataclass(frozen=True, slots=True)
+class GenericHit:
+    """A generic term named in a line, with the span of the form that matched."""
+
+    term: GenericTerm
+    tokens: tuple[Token, ...]
+    #: Content words of the form ("leche condensada" -> 2), to rank the most specific one.
+    length: int
 
 
 @dataclass(slots=True)
@@ -222,7 +239,7 @@ class Preprocessor:
         )
 
         qty, tokens_after_qty = self._extract_quantity(tokens)
-        brand, rest, brand_tokens = self._find_brand(tokens_after_qty)
+        brand, rest, brand_tokens = self.find_brand(tokens_after_qty)
         # "pasta/espaguetis", "pasta o espaguetis": either will do. Match the first one
         # that names a specific product, else the first one found, else the first.
         groups = _alternatives(rest)
@@ -252,7 +269,7 @@ class Preprocessor:
                 seq = tokens_after_qty
                 brand = None
 
-        attributes, rest_after = self._match_variants(rest_after)
+        attributes, rest_after = self.find_variants(rest_after)
         unknown, context = self._leftovers(rest_after)
         # The other alternatives are shown, not resolved: their unknown words do not block.
         texts: list[str] = []
@@ -262,7 +279,7 @@ class Preprocessor:
                 texts.append(self._item_text(generic, span, seq, attributes))
                 continue
             other, other_span, other_rest = matches[k]
-            other_attributes, other_rest = self._match_variants(other_rest)
+            other_attributes, other_rest = self.find_variants(other_rest)
             context = context or self._leftovers(other_rest)[1]
             text = self._item_text(other, other_span, group, other_attributes)
             if text:
@@ -287,7 +304,7 @@ class Preprocessor:
             quantity=qty.value,
             unit=qty.unit,
             brand=brand.name if brand else None,
-            attributes=tuple(name for name, _ in attributes),
+            attributes=tuple(term.name for term, _ in attributes),
             ambiguous=ambiguous,
             resolved=not reasons,
             reasons=tuple(reasons),
@@ -533,7 +550,8 @@ class Preprocessor:
 
     # Brands, generic terms, variants ------------------------------------------
 
-    def _find_brand(self, tokens: list[Token]) -> tuple[BrandTerm | None, list[Token], list[Token]]:
+    def find_brand(self, tokens: list[Token]) -> tuple[BrandTerm | None, list[Token], list[Token]]:
+        """The brand of a line, the line without it and the tokens of the brand."""
         for size in (3, 2, 1):
             for i in range(len(tokens) - size + 1):
                 compact = self._compact([t.key for t in tokens[i : i + size]])
@@ -542,41 +560,57 @@ class Preprocessor:
                         return brand, tokens[:i] + tokens[i + size :], tokens[i : i + size]
         return None, tokens, []
 
-    def _match_generic(
-        self, tokens: list[Token]
-    ) -> tuple[GenericTerm | None, list[Token], list[Token]]:
-        # Numbers left after the quantity belong to the name ("omega 3").
+    def generic_hits(self, tokens: Sequence[Token]) -> tuple[GenericHit, ...]:
+        """Every generic term named in the tokens, with the span of the form that matched."""
+        return tuple(
+            GenericHit(term, tuple(tokens[start:end]), -rank[0])
+            for rank, start, end, term in self._walk_generic(tokens)
+        )
+
+    def _walk_generic(
+        self, tokens: Sequence[Token]
+    ) -> list[tuple[tuple[int, int, int], int, int, GenericTerm]]:
+        """Every generic form in the tokens: its rank, its token span and its term.
+
+        The rank sorts the matches `_match_generic` picks between: longest form first, then
+        the earliest, then the lexicon order. Numbers left after the quantity belong to the
+        name ("omega 3"), so they count as content.
+        """
         content = [
             i
             for i, t in enumerate(tokens)
             if t.kind in ("word", "num") and t.key not in R.CONNECTORS
         ]
         keys = [tokens[i].key for i in content]
-        best = None
+        found = []
         for form, order, term in self.generic_forms:
             n = len(form)
             for pos in range(len(keys) - n + 1):
                 if all(same_word(keys[pos + k], form[k]) for k in range(n)):
-                    rank = (-n, pos, order)
-                    if best is None or rank < best[0]:
-                        best = (rank, pos, n, term)
+                    found.append(((-n, pos, order), content[pos], content[pos + n - 1] + 1, term))
                     break
-        if best is None:
+        return found
+
+    def _match_generic(
+        self, tokens: list[Token]
+    ) -> tuple[GenericTerm | None, list[Token], list[Token]]:
+        found = self._walk_generic(tokens)
+        if not found:
             return None, [], tokens
-        _, pos, n, term = best
-        start, end = content[pos], content[pos + n - 1] + 1
+        _rank, start, end, term = min(found, key=lambda match: match[0])
         return term, tokens[start:end], tokens[:start] + tokens[end:]
 
-    def _match_variants(
+    def find_variants(
         self, rest: list[Token]
-    ) -> tuple[list[tuple[str, list[Token]]], list[Token]]:
-        found: list[tuple[str, list[Token]]] = []
+    ) -> tuple[list[tuple[VariantTerm, list[Token]]], list[Token]]:
+        """The equivalence variants named in the tokens, and the tokens left after them."""
+        found: list[tuple[VariantTerm, list[Token]]] = []
         for form, variant in self.variant_forms:
-            if any(name == variant.name for name, _ in found):
+            if any(term.name == variant.name for term, _ in found):
                 continue
             at = _find([t.key for t in rest], list(form), plural=True)
             if at is not None:
-                found.append((variant.name, rest[at : at + len(form)]))
+                found.append((variant, rest[at : at + len(form)]))
                 rest = rest[:at] + rest[at + len(form) :]
         return found, rest
 
@@ -606,7 +640,7 @@ class Preprocessor:
         generic: GenericTerm | None,
         span: list[Token],
         seq: list[Token],
-        attributes: list[tuple[str, list[Token]]],
+        attributes: list[tuple[VariantTerm, list[Token]]],
     ) -> str:
         """The user's own words for the item, corrected: the product and its variants, with
         the connectors between them ("helado de chocolate") and the numbers of its name

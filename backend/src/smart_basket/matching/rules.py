@@ -77,31 +77,41 @@ def decide(match: NameMatch, section: Section, leaf_keys: frozenset[str]) -> Dec
 def _from_leaves(leaves: tuple[Hit, ...], section: Section) -> Decision:
     """The name names at least one leaf: only an unambiguous leaf inside the section wins.
 
-    Leaves are ranked by the length of the form that matched, so "leche condensada" beats
-    "leche"; two leaves matched with equally long forms are a tie for the review queue.
+    Leaves inside the section are preferred, so a word the section files elsewhere does not
+    drag an otherwise clear product to the review queue. Leaves are ranked by the length of
+    the form that matched, so "leche condensada" beats "leche"; two leaves inside the section
+    matched with equally long forms are a tie for the review queue.
     """
-    longest = max(hit.length for hit in leaves)
-    tied = [hit for hit in leaves if hit.length == longest]
-    if len(tied) > 1:
-        return Decision(
-            category_key=None,
-            confidence=None,
-            candidates=_unique(
-                Candidate(key, "the name names this leaf as one of several equally specific ones")
-                for key in sorted(hit.key for hit in tied)
+    inside = tuple(hit for hit in leaves if hit.key in section.allowed_leaves)
+    if inside:
+        tied = _most_specific(inside)
+        if len(tied) > 1:
+            return _review_with(
+                tied,
+                "the name names this leaf as one of several equally specific ones",
+                section,
             )
-            + _section_candidates(section),
-        )
-    hit = tied[0]
-    if hit.key in section.allowed_leaves:
-        return Decision(category_key=hit.key, confidence=LEAF_CONFIDENCE)
+        return Decision(category_key=tied[0].key, confidence=LEAF_CONFIDENCE)
+    return _review_with(
+        _most_specific(leaves),
+        "the name names this leaf, outside the section's subtree",
+        section,
+    )
+
+
+def _most_specific(hits: tuple[Hit, ...]) -> tuple[Hit, ...]:
+    """The hits with the longest matched form, so "leche condensada" beats "leche"."""
+    longest = max(hit.length for hit in hits)
+    return tuple(hit for hit in hits if hit.length == longest)
+
+
+def _review_with(hits: tuple[Hit, ...], why: str, section: Section) -> Decision:
+    """A review naming the `hits` and the section's own leaf, without duplicate keys."""
     return Decision(
         category_key=None,
         confidence=None,
-        candidates=(
-            Candidate(hit.key, "the name names this leaf, outside the section's subtree"),
-            *_section_candidates(section),
-        ),
+        candidates=_unique(Candidate(hit.key, why) for hit in sorted(hits, key=lambda h: h.key))
+        + _section_candidates(section),
     )
 
 

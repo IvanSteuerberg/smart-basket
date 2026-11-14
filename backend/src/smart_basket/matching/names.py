@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from smart_basket.preprocessor import Preprocessor
 from smart_basket.preprocessor import rules_es as R
-from smart_basket.preprocessor.text import Token, same_word, tokenize
+from smart_basket.preprocessor.text import Token, tokenize
 
 #: Prefix of a detected flavour ("sabor:fresa"); the rest is the folded flavour.
 FLAVOUR = "sabor"
@@ -38,60 +38,59 @@ def name_match(preprocessor: Preprocessor, name: str) -> NameMatch:
     """Match a product name against the lexicon terms and its equivalence variants.
 
     Brands are removed first, as in `Preprocessor.preprocess`; forms, plurals and connectors
-    are the preprocessor's, so a name matches exactly what a shopper's line would match.
+    are the preprocessor's, so a name matches exactly what a shopper's line would match. The
+    words of a flavour ("sabor fresa") name the variant, not the leaves those words would
+    otherwise hit.
     """
-    _, without_brand, _ = preprocessor._find_brand(tokenize(name))
-    variants, _ = preprocessor._match_variants(without_brand)
-    return NameMatch(
-        hits=_hits(preprocessor, without_brand),
-        variant_keys=_variant_keys(preprocessor, variants, without_brand),
-    )
+    tokens = tokenize(name)
+    _, without_brand, brand_tokens = preprocessor.find_brand(tokens)
+    variants, _ = preprocessor.find_variants(without_brand)
+    keys = [term.key for term, _matched in variants if term.canonical]
+    # The flavour stops where an equivalence variant or the brand starts.
+    stop = {id(token) for token in brand_tokens}
+    stop |= {id(token) for term, matched in variants if term.canonical for token in matched}
+    flavour, flavour_tokens = _flavour(tokens, stop)
+    if flavour is not None:
+        keys.append(f"{FLAVOUR}:{flavour}")
+    masked = [token for token in without_brand if id(token) not in flavour_tokens]
+    return NameMatch(hits=_hits(preprocessor, masked), variant_keys=tuple(sorted(set(keys))))
 
 
 def _hits(preprocessor: Preprocessor, tokens: Sequence[Token]) -> tuple[Hit, ...]:
     """Every generic term whose form appears in the name, longest matched form per term."""
-    keys = [
-        token.key
-        for token in tokens
-        if token.kind in ("word", "num") and token.key not in R.CONNECTORS
-    ]
     lengths: dict[str, int] = {}
-    for form, _order, term in preprocessor.generic_forms:
-        size = len(form)
-        for start in range(len(keys) - size + 1):
-            if all(same_word(keys[start + i], form[i]) for i in range(size)):
-                lengths[term.key] = max(lengths.get(term.key, 0), size)
-                break
+    for hit in preprocessor.generic_hits(tokens):
+        lengths[hit.term.key] = max(lengths.get(hit.term.key, 0), hit.length)
     return tuple(Hit(key, length) for key, length in sorted(lengths.items()))
 
 
-def _variant_keys(
-    preprocessor: Preprocessor, found: Sequence[tuple[str, list[Token]]], tokens: Sequence[Token]
-) -> tuple[str, ...]:
-    """The equivalence-changing variants of the name, plus its flavour, sorted and unique."""
-    canonical = {
-        term.name: term.key for _form, term in preprocessor.variant_forms if term.canonical
-    }
-    keys = [canonical[name] for name, _matched in found if name in canonical]
-    # The flavour stops where an equivalence variant starts ("sabor fresa sin lactosa").
-    taken = {id(token) for name, matched in found if name in canonical for token in matched}
-    flavour = _flavour(tokens, taken)
-    if flavour is not None:
-        keys.append(f"{FLAVOUR}:{flavour}")
-    return tuple(sorted(set(keys)))
+def _flavour(tokens: Sequence[Token], stop: set[int]) -> tuple[str | None, set[int]]:
+    """ "sabor <words>" up to the end, an equivalence variant or a brand, folded.
 
-
-def _flavour(tokens: Sequence[Token], taken: set[int]) -> str | None:
-    """ "sabor <words>" up to the next connector or the end of the name, folded."""
+    An introductory "a" or "de" is skipped ("sabor a fresa"), "y" and "con" stay inside the
+    flavour ("sabor fresa y platano"), and the tokens it consumed are returned so its words
+    do not also name a leaf.
+    """
     keys = [token.key for token in tokens]
     if FLAVOUR not in keys:
-        return None
+        return None, set()
+    start = keys.index(FLAVOUR)
+    consumed = {id(tokens[start])}
     words: list[str] = []
-    for token in tokens[keys.index(FLAVOUR) + 1 :]:
-        if token.kind != "word" or token.key in R.CONNECTORS or id(token) in taken:
+    index = start + 1
+    if index < len(tokens) and tokens[index].key in ("a", "de"):
+        consumed.add(id(tokens[index]))
+        index += 1
+    for token in tokens[index:]:
+        if id(token) in stop or token.kind != "word":
+            break
+        if token.key in R.CONNECTORS and token.key not in ("y", "con"):
             break
         words.append(token.key)
-    return " ".join(words) or None
+        consumed.add(id(token))
+    while words and words[-1] in ("y", "con"):
+        words.pop()
+    return (" ".join(words) or None), consumed
 
 
 def variant_key(keys: Sequence[str]) -> str:

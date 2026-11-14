@@ -33,6 +33,7 @@ def pp() -> Preprocessor:
             GenericTerm("leche", "Leche", ("leche", "leche sin lactosa")),
             GenericTerm("leche_condensada", "Leche condensada", ("leche condensada",)),
             GenericTerm("platano", "Plátano", ("plátano", "banana")),
+            GenericTerm("fresa", "Fresa", ("fresa",)),
             GenericTerm("petit_suisse", "Petit suisse", ("petit suisse", "petit")),
             GenericTerm("yogur", "Yogur", ("yogur",)),
             GenericTerm("fruta", "Fruta", ("fruta",), vague=True),
@@ -71,6 +72,28 @@ def test_marketing_variants_do_not_change_the_equivalence(pp: Preprocessor):
 
 def test_a_flavour_creates_a_variant(pp: Preprocessor):
     assert name_match(pp, "Petit sabor fresa").variant_keys == ("sabor:fresa",)
+
+
+def test_an_introductory_a_or_de_is_skipped(pp: Preprocessor):
+    assert name_match(pp, "Yogur sabor a fresa").variant_keys == ("sabor:fresa",)
+    assert name_match(pp, "Yogur sabor de fresa").variant_keys == ("sabor:fresa",)
+
+
+def test_and_and_con_join_a_two_word_flavour(pp: Preprocessor):
+    assert name_match(pp, "Petit sabor fresa y plátano").variant_keys == ("sabor:fresa y platano",)
+    assert name_match(pp, "Petit sabor fresa con plátano").variant_keys == (
+        "sabor:fresa con platano",
+    )
+
+
+def test_a_flavour_word_does_not_name_its_leaf(pp: Preprocessor):
+    assert name_match(pp, "Yogur sabor fresa").hits == (Hit("yogur", 1),)
+
+
+def test_a_two_word_flavour_names_neither_leaf(pp: Preprocessor):
+    match = name_match(pp, "Petit sabor fresa y plátano")
+    assert match.hits == (Hit("petit_suisse", 1),)
+    assert match.variant_keys == ("sabor:fresa y platano",)
 
 
 def test_the_flavour_stops_where_an_equivalence_variant_starts(pp: Preprocessor):

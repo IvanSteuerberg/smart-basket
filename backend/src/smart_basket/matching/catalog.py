@@ -360,12 +360,14 @@ def import_decisions(session: Session, path: Path) -> int:
         raise DecisionFileError("the decisions file must be a JSON array")
     taxonomy = load_taxonomy(session)
     variant_names = _variant_names(session)
+    product_ids = set(session.execute(text("select id from chain_product")).scalars())
+    canonical_ids = _load_canonicals(session)
     applied = 0
     for line, entry in enumerate(data, start=1):
         if not isinstance(entry, dict):
             raise DecisionFileError(f"line {line}: expected an object")
         product_id = entry.get("product_id")
-        if not isinstance(product_id, int) or not _product_exists(session, product_id):
+        if not isinstance(product_id, int) or product_id not in product_ids:
             raise DecisionFileError(f"line {line}: product {product_id!r} does not exist")
         leaf = taxonomy.leaves.get(entry.get("category_key"))
         if leaf is None:
@@ -375,9 +377,10 @@ def import_decisions(session: Session, path: Path) -> int:
         keys = _variant_keys(entry.get("variant_key", ""), line, variant_names)
         name = canonical_name(leaf.name, keys, variant_names)
         key = (leaf.id, name, variant_key(keys))
-        canonical_id = _find_canonical(session, key) or _insert_canonical(
-            session, leaf, name, key[2]
-        )
+        canonical_id = canonical_ids.get(key)
+        if canonical_id is None:
+            canonical_id = _insert_canonical(session, leaf, name, key[2])
+            canonical_ids[key] = canonical_id
         _assign(session, product_id, canonical_id, 1.0, method="review")
         session.execute(
             text(
@@ -427,16 +430,6 @@ def _load_canonicals(session: Session) -> dict[tuple[int, str, str], int]:
             text("select id, category_id, name, variant_key from canonical_product")
         )
     }
-
-
-def _find_canonical(session: Session, key: tuple[int, str, str]) -> int | None:
-    return session.execute(
-        text(
-            "select id from canonical_product "
-            "where category_id = :category and name = :name and variant_key = :variant"
-        ),
-        {"category": key[0], "name": key[1], "variant": key[2]},
-    ).scalar_one_or_none()
 
 
 def _insert_canonical(session: Session, leaf: Node, name: str, variants: str) -> int:
@@ -524,15 +517,6 @@ def _clear_rule_assignment(session: Session, product_id: int) -> None:
             "  match_confidence = null where id = :product and match_method = 'rule'"
         ),
         {"product": product_id},
-    )
-
-
-def _product_exists(session: Session, product_id: int) -> bool:
-    return (
-        session.execute(
-            text("select 1 from chain_product where id = :product"), {"product": product_id}
-        ).first()
-        is not None
     )
 
 
