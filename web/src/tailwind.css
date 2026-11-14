@@ -1,0 +1,17 @@
+/*
+ * Tailwind for the catalog pages. The four-step flow keeps its hand-written
+ * styles.css, wrapped in the `legacy` layer so utilities can override it on the
+ * new pages while both stylesheets keep applying.
+ */
+@layer theme, base, components, legacy, utilities;
+
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #2f6f4e;
+  --color-brand-dark: #24583d;
+  --color-brand-soft: #e8f1ec;
+  --color-price: #c2410c;
+  --color-price-soft: #fff2e7;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}

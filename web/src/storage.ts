@@ -1,9 +1,12 @@
 // Versioned browser storage for the user's saved lists (data model, browser storage).
 
+import type { CartLine } from "./cart";
 import { isUnit, newId, type DraftItem } from "./draft";
 
 export const STORAGE_KEY = "smart-basket.lists";
-export const SCHEMA_VERSION = 1;
+/** Version 2 added the cart next to the saved lists; version 1 is still read. */
+export const SCHEMA_VERSION = 2;
+const LEGACY_SCHEMA_VERSION = 1;
 
 export interface SavedList {
   id: string;
@@ -18,6 +21,12 @@ export interface SavedList {
 interface StoredPayload {
   schema_version: number;
   lists: SavedList[];
+  cart: CartLine[];
+}
+
+interface StoredStore {
+  lists: SavedList[];
+  cart: CartLine[];
 }
 
 function defaultStorage(): Storage | null {
@@ -59,33 +68,71 @@ function isSavedList(value: unknown): value is SavedList {
   );
 }
 
-export function loadLists(storage: Storage | null = defaultStorage()): SavedList[] {
-  if (!storage) return [];
+function isCartLine(value: unknown): value is CartLine {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" &&
+    (value.product_id === null || typeof value.product_id === "number") &&
+    typeof value.name === "string" &&
+    (value.brand === null || typeof value.brand === "string") &&
+    (value.packaging === null || typeof value.packaging === "string") &&
+    (value.image_url === null || typeof value.image_url === "string") &&
+    (value.category_key === null || typeof value.category_key === "string") &&
+    (value.category_name === null || typeof value.category_name === "string") &&
+    typeof value.quantity === "number" &&
+    Number.isFinite(value.quantity) &&
+    value.quantity >= 1
+  );
+}
+
+function readStore(storage: Storage | null): StoredStore {
+  if (!storage) return { lists: [], cart: [] };
   try {
     const raw = storage.getItem(STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) return { lists: [], cart: [] };
     const payload: unknown = JSON.parse(raw);
-    if (
-      !isRecord(payload) ||
-      payload.schema_version !== SCHEMA_VERSION ||
-      !Array.isArray(payload.lists)
-    ) {
-      return [];
+    if (!isRecord(payload) || !Array.isArray(payload.lists)) {
+      return { lists: [], cart: [] };
     }
-    return payload.lists.filter(isSavedList);
+    if (
+      payload.schema_version !== SCHEMA_VERSION &&
+      payload.schema_version !== LEGACY_SCHEMA_VERSION
+    ) {
+      return { lists: [], cart: [] };
+    }
+    return {
+      lists: payload.lists.filter(isSavedList),
+      cart: Array.isArray(payload.cart) ? payload.cart.filter(isCartLine) : [],
+    };
   } catch {
-    return [];
+    return { lists: [], cart: [] };
   }
 }
 
-export function saveLists(lists: SavedList[], storage: Storage | null = defaultStorage()): void {
+function writeStore(store: StoredStore, storage: Storage | null): void {
   if (!storage) return;
-  const payload: StoredPayload = { schema_version: SCHEMA_VERSION, lists };
+  const payload: StoredPayload = { schema_version: SCHEMA_VERSION, ...store };
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
-    // Storage full or unavailable: the lists stay in memory for this session.
+    // Storage full or unavailable: the content stays in memory for this session.
   }
+}
+
+export function loadLists(storage: Storage | null = defaultStorage()): SavedList[] {
+  return readStore(storage).lists;
+}
+
+export function saveLists(lists: SavedList[], storage: Storage | null = defaultStorage()): void {
+  writeStore({ lists, cart: readStore(storage).cart }, storage);
+}
+
+export function loadCart(storage: Storage | null = defaultStorage()): CartLine[] {
+  return readStore(storage).cart;
+}
+
+export function saveCart(cart: CartLine[], storage: Storage | null = defaultStorage()): void {
+  writeStore({ lists: readStore(storage).lists, cart }, storage);
 }
 
 export function createSavedList(

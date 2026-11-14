@@ -1,5 +1,6 @@
 import { searchProducts, type SearchResult, type SectionCategory } from "../api";
 import { draftFromSearchResult, type DraftItem } from "../draft";
+import { askListName } from "../listName";
 import type { SavedList } from "../storage";
 import { PRODUCT_SEARCH_PLACEHOLDER } from "../texts";
 import { CategoryTree } from "./CategoryTree";
@@ -41,11 +42,8 @@ export function ListStep({
   onLoadList,
 }: ListStepProps) {
   function saveList() {
-    const name = window.prompt("Nombre de la lista");
-    if (name === null) return;
-    const trimmed = name.trim();
-    if (trimmed === "") return;
-    onSaveList(trimmed);
+    const name = askListName();
+    if (name !== null) onSaveList(name);
   }
 
   return (

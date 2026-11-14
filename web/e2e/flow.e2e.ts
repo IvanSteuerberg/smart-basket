@@ -7,11 +7,7 @@ import type {
   Recommendation,
   SearchResponse,
 } from "../src/api";
-
-const TRANSPARENT_1X1_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-  "base64",
-);
+import { blockUnmocked, mockJson, TRANSPARENT_1X1_PNG } from "./mock";
 
 const mockHealth: Health = {
   status: "ok",
@@ -165,20 +161,8 @@ const mockRecommendation: Recommendation = {
 const LIST = "2 l de leche\npan de molde\ncolacao";
 const ROUTE_ERROR = "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.";
 
-async function mockJson(page: Page, url: string, body: unknown, status = 200): Promise<void> {
-  await page.route(url, (route) =>
-    route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }),
-  );
-}
-
 test.beforeEach(async ({ page }) => {
-  // Routes registered later take precedence. First block everything that is not the
-  // dev server, and any /api call without a fixture, so nothing reaches the network.
-  await page.route(
-    (url) => url.hostname !== "localhost",
-    (route) => route.abort(),
-  );
-  await page.route("**/api/**", (route) => route.abort());
+  await blockUnmocked(page);
   // Map tiles: a transparent 1x1 PNG.
   await page.route(/tile\.openstreetmap\.org/, (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_1X1_PNG }),
@@ -192,7 +176,7 @@ test.beforeEach(async ({ page }) => {
 
 /** Writes the list, interprets it, continues the review and picks the origin on the map. */
 async function goToOriginStep(page: Page): Promise<void> {
-  await page.goto("/");
+  await page.goto("/#/lista");
   await page.getByRole("textbox", { name: "Tu lista de la compra" }).fill(LIST);
   const interpreted = page.waitForRequest("**/api/interpret");
   await page.getByRole("button", { name: "Interpretar" }).click();

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { CartLine } from "./cart";
 import { newId, type DraftItem } from "./draft";
 import {
   createSavedList,
+  loadCart,
   loadLists,
+  saveCart,
   saveLists,
   SCHEMA_VERSION,
   STORAGE_KEY,
@@ -45,6 +48,21 @@ function item(overrides: Partial<DraftItem> = {}): DraftItem {
 function list(overrides: Partial<SavedList> = {}): SavedList {
   return {
     ...createSavedList("Semanal", "pan de molde", [item()], new Date("2026-11-13T10:00:00Z")),
+    ...overrides,
+  };
+}
+
+function cartLine(overrides: Partial<CartLine> = {}): CartLine {
+  return {
+    id: newId(),
+    product_id: 1,
+    name: "Leche entera 1 L",
+    brand: "Pascual",
+    packaging: "Botella 1 L",
+    image_url: null,
+    category_key: "leche-entera",
+    category_name: "Leche entera",
+    quantity: 2,
     ...overrides,
   };
 }
@@ -143,5 +161,77 @@ describe("createSavedList", () => {
     expect(created.created_at).toBe("2026-11-13T10:00:00.000Z");
     expect(created.updated_at).toBe(created.created_at);
     expect(created.id).not.toBe("");
+  });
+});
+
+describe("cart storage", () => {
+  it("round-trips the cart next to the lists", () => {
+    const storage = memoryStorage();
+    const savedList = list();
+    const cart = [cartLine()];
+
+    saveLists([savedList], storage);
+    saveCart(cart, storage);
+
+    expect(loadCart(storage)).toEqual(cart);
+    // Saving the cart did not drop the lists.
+    expect(loadLists(storage)).toEqual([savedList]);
+  });
+
+  it("keeps the cart when the lists are saved again", () => {
+    const storage = memoryStorage();
+    const cart = [cartLine()];
+    saveCart(cart, storage);
+
+    saveLists([list()], storage);
+
+    expect(loadCart(storage)).toEqual(cart);
+  });
+
+  it("migrates a version 1 payload: the lists survive, the cart starts empty", () => {
+    const storage = memoryStorage();
+    const legacy = { schema_version: 1, lists: [list()] };
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    expect(loadLists(storage)).toHaveLength(1);
+    expect(loadCart(storage)).toEqual([]);
+  });
+
+  it("ignores cart lines that do not match the stored shape", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schema_version: SCHEMA_VERSION,
+        lists: [],
+        cart: [cartLine(), { id: "rota" }, { ...cartLine(), quantity: 0 }],
+      }),
+    );
+
+    expect(loadCart(storage)).toHaveLength(1);
+  });
+
+  it("returns an empty cart when storage throws or version is unknown", () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+    } as unknown as Storage;
+    expect(loadCart(blocked)).toEqual([]);
+
+    const storage = memoryStorage();
+    storage.setItem(STORAGE_KEY, JSON.stringify({ schema_version: 99, lists: [], cart: [] }));
+    expect(loadCart(storage)).toEqual([]);
+  });
+
+  it("does not throw when the cart cannot be written", () => {
+    const storage = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota");
+      },
+    } as unknown as Storage;
+
+    expect(() => saveCart([cartLine()], storage)).not.toThrow();
   });
 });

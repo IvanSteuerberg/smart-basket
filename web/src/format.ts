@@ -23,6 +23,11 @@ export function formatEuro(value: Decimal): string {
   return `${formatNumber(value, 2)} €`;
 }
 
+/** Price per unit as the catalog shows it: «1,15 €/kg». */
+export function formatUnitPrice(unitPrice: Decimal, baseUnit: string): string {
+  return `${formatEuro(unitPrice)}/${baseUnit}`;
+}
+
 /** Amount without unit, for sentences that already carry one. */
 export function formatAmount(value: Decimal): string {
   return formatNumber(value, 2);
