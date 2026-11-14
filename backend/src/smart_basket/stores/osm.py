@@ -49,6 +49,13 @@ STORE_FORMATS: dict[str, str] = {
     "laplazadedia": "La Plaza",
 }
 
+#: OSM `shop` values that already describe a whole supermarket.
+STORE_SHOPS = frozenset({"supermarket", "hypermarket"})
+
+# Brand or name spellings a chain is known by, for the Overpass regex that finds a chain-named
+# building without a `shop` tag. It may over-match: `chain_for_tags` filters the aliases exactly.
+CHAIN_SEARCH = "merc[aá]dona|d[ií]a|alimerka|lidl|alcampo|leclerc|lupa|carrefour|gadis|claudio|aldi"
+
 # Fallback `name` when OSM does not name the store (same names as the seed).
 CHAIN_NAMES: dict[str, str] = {
     "mercadona": "Mercadona",
@@ -102,11 +109,13 @@ class BoundingBox:
         return cls(south=south, west=west, north=north, east=east)
 
     def query(self) -> str:
-        """The Overpass QL query: supermarkets and hypermarkets, with their centre and tags."""
+        """The Overpass QL query: supermarkets, hypermarkets and chain-named buildings."""
         corners = f"{self.south},{self.west},{self.north},{self.east}"
         return (
             f"[out:json][timeout:{OVERPASS_QUERY_TIMEOUT_SECONDS}];\n"
             f'nwr["shop"~"^(supermarket|hypermarket)$"]({corners});\n'
+            f'nwr["building"]["brand"~"{CHAIN_SEARCH}",i]({corners});\n'
+            f'nwr["building"]["name"~"{CHAIN_SEARCH}",i]({corners});\n'
             "out center tags;"
         )
 
@@ -146,14 +155,23 @@ def build_address(tags: dict[str, str]) -> str | None:
     return ", ".join(part for part in (street, locality) if part) or None
 
 
+def is_store(tags: dict[str, str]) -> bool:
+    """True for an OSM supermarket, or for a chain-named building without a `shop` tag."""
+    if "shop" in tags:
+        return tags["shop"] in STORE_SHOPS
+    return "building" in tags
+
+
 def parse_elements(elements: Iterable[dict[str, Any]]) -> tuple[StoreObservation, ...]:
-    """Keep the supermarkets and hypermarkets of the ten chains; anything else is ignored."""
+    """Keep the supermarkets of the ten chains, and their buildings tagged only by name."""
     observations: dict[str, StoreObservation] = {}
     for element in elements:
         kind, element_id = element.get("type"), element.get("id")
         if not kind or element_id is None:
             continue
         tags = element.get("tags") or {}
+        if not is_store(tags):
+            continue
         chain_code = chain_for_tags(tags)
         if chain_code is None:
             continue
@@ -166,7 +184,8 @@ def parse_elements(elements: Iterable[dict[str, Any]]) -> tuple[StoreObservation
             osm_id=osm_id,
             chain_code=chain_code,
             name=(tags.get("name") or "").strip() or CHAIN_NAMES[chain_code],
-            format=store_format(tags),
+            # A building without a `shop` tag does not know its format.
+            format=None if "shop" not in tags else store_format(tags),
             address=build_address(tags),
             lon=lon,
             lat=lat,

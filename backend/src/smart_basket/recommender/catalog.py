@@ -8,9 +8,11 @@ without products falls back to the products of its parent group whose name resem
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import json
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
+from functools import lru_cache
 from typing import Any
 
 from rapidfuzz import fuzz
@@ -19,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
 from smart_basket.preprocessor.text import fold, same_word, tokenize, words
+from smart_basket.seed import DEFAULT_DATA_DIR
 
 #: Minimum `token_set_ratio` between the folded item text and a fallback product name.
 FALLBACK_RATIO = 80
@@ -31,6 +34,25 @@ CONNECTORS = frozenset({"de", "del", "la", "el", "los", "las", "y", "con", "para
 _DIMENSIONS = {"kg": "mass", "g": "mass", "l": "volume", "ml": "volume"}
 #: Shorter words of a line ("d", "l", "kg") are abbreviations or units, not product words.
 MIN_CONTENT_WORD = 3
+#: General Spanish variants shipped with the seed; their forms tell "integral" from "tiburón".
+VARIANTS_FILE = DEFAULT_DATA_DIR / "variants_es.json"
+#: Stems of the adjectives that mark a product as prepared rather than fresh.
+PROCESSED_STEMS = (
+    "empanad",
+    "rebozad",
+    "marinad",
+    "adobad",
+    "precocinad",
+    "preparad",
+    "rellen",
+)
+#: Processing phrases that act as one preparation ("al ajillo", "finas hierbas").
+PROCESSED_PHRASES = (("al", "ajillo"), ("a", "la", "plancha"), ("finas", "hierbas"))
+
+#: Each processing word as its word forms: masculine and feminine, singular and plural.
+PROCESSED: tuple[tuple[tuple[str, ...], ...], ...] = tuple(
+    tuple((stem + ending,) for ending in ("o", "a", "os", "as")) for stem in PROCESSED_STEMS
+) + tuple((phrase,) for phrase in PROCESSED_PHRASES)
 
 #: Columns of `brand`; `aliases` is read only when the column exists.
 _BRAND_COLUMNS_SQL = "select column_name from information_schema.columns where table_name = 'brand'"
@@ -145,9 +167,12 @@ def _entry(
         if brand_terms is not None and not _matches_brand(row["name"], brand_terms):
             continue
         candidates.append((row, product))
+    candidates = _without_processed(candidates, item.text)
+    candidates = _with_variants(candidates, item.text)
+    chosen = _prefer_named(candidates, item.text)
     products: dict[int, list[Product]] = {}
     names: dict[int, str] = {}
-    for row, product in _prefer_named(candidates, item.text):
+    for row, product in chosen:
         products.setdefault(row["zone_id"], []).append(product)
         names[row["product_id"]] = row["name"]
     line = Line(
@@ -156,7 +181,7 @@ def _entry(
         quantity=item.quantity,
         unit=item.unit,
         preferences=LinePreferences(private_label_ok=item.private_label_ok),
-        default_quantity=category.default_quantity,
+        default_quantity=_default_quantity(item, category, chosen),
     )
     return CatalogEntry(
         item_index=index,
@@ -266,6 +291,88 @@ def _prefer_named(
     if best == 0:
         return list(rows)
     return [row for row, score in zip(rows, scores, strict=True) if score == best]
+
+
+def _default_quantity(
+    item: Item,
+    category: CategoryInfo,
+    rows: Sequence[tuple[Mapping[str, Any], Product]],
+) -> Decimal | None:
+    """The leaf's usual quantity, or the median pack for a counted line of a weighed leaf.
+
+    A line without a quantity ("pollo") counts units of a product sold by kg or l: its candidate
+    products give the typical pack, and the optimizer compares their price per kilo within the
+    normal band (decision 0010).
+    """
+    if category.default_quantity is not None:
+        return category.default_quantity
+    if item.unit is not Unit.UD or category.base_unit not in (BaseUnit.KG.value, BaseUnit.L.value):
+        return None
+    quantities = sorted({row["product_id"]: row["base_quantity"] for row, _ in rows}.values())
+    if not quantities:
+        return None
+    # The lower median is one of the sizes actually on sale when the count is even.
+    return quantities[(len(quantities) - 1) // 2]
+
+
+def _without_processed(
+    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
+) -> list[tuple[Mapping[str, Any], Product]]:
+    """Drop prepared products unless the line asks for one of their preparations."""
+    line_words = words(item_text)
+    asked = {group for group in PROCESSED if _contains_any(line_words, group)}
+    kept = []
+    for row, product in rows:
+        name_words = words(row["name"])
+        found = {group for group in PROCESSED if _contains_any(name_words, group)}
+        if found and not found & asked:
+            continue
+        kept.append((row, product))
+    # A leaf whose products are all prepared ("carne picada") still offers them.
+    return kept or list(rows)
+
+
+def _with_variants(
+    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
+) -> list[tuple[Mapping[str, Any], Product]]:
+    """Keep the products matching every variant written in the line, when a variant is sold.
+
+    "pasta integral" keeps the wholemeal pasta; a variant no product carries ("huevos eco")
+    filters nothing.
+    """
+    line_words = words(item_text)
+    kept = list(rows)
+    for forms in _variant_forms():
+        if not _contains_any(line_words, forms):
+            continue
+        matching = [row for row in kept if _contains_any(words(row[0]["name"]), forms)]
+        kept = matching or kept
+    return kept
+
+
+@lru_cache(maxsize=1)
+def _variant_forms() -> tuple[tuple[tuple[str, ...], ...], ...]:
+    """The word forms of every general variant, read from the seed once per process."""
+    data = json.loads(VARIANTS_FILE.read_text(encoding="utf-8"))
+    return tuple(
+        tuple(words(form) for form in variant.get("forms") or [variant.get("name", variant["key"])])
+        for variant in data.get("variants", [])
+    )
+
+
+def _contains_any(haystack: tuple[str, ...], forms: Iterable[tuple[str, ...]]) -> bool:
+    """True when any form appears as whole words of `haystack`, plural tolerated."""
+    return any(_contains_form(haystack, form) for form in forms)
+
+
+def _contains_form(haystack: tuple[str, ...], form: tuple[str, ...]) -> bool:
+    """True when `form` appears as a run of whole words of `haystack`."""
+    if not form or len(form) > len(haystack):
+        return False
+    return any(
+        all(same_word(haystack[start + offset], word) for offset, word in enumerate(form))
+        for start in range(len(haystack) - len(form) + 1)
+    )
 
 
 def _content_words(text: str) -> tuple[str, ...]:

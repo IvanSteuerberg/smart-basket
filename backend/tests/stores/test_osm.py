@@ -167,6 +167,48 @@ def test_elements_without_a_position_or_of_other_brands_are_skipped():
     assert parse_elements([relation, other]) == ()
 
 
+def test_a_building_named_after_a_chain_becomes_a_store():
+    # The Mercadona next to Avenida Mariano Andrés is mapped only as a building.
+    relation = {
+        "type": "relation",
+        "id": 16193745,
+        "center": {"lat": 42.6, "lon": -5.57},
+        "tags": {"building": "commercial", "name": "Mercadona"},
+    }
+
+    (observation,) = parse_elements([relation])
+
+    assert observation.osm_id == "relation/16193745"
+    assert observation.chain_code == "mercadona"
+    assert observation.name == "Mercadona"
+    assert observation.format is None
+
+
+def test_a_building_whose_name_only_contains_a_chain_is_ignored():
+    building = {
+        "type": "way",
+        "id": 7,
+        "center": {"lat": 42.6, "lon": -5.57},
+        "tags": {"building": "yes", "name": "Edificio Mercadona Viejo"},
+    }
+
+    assert parse_elements([building]) == ()
+
+
+def test_a_building_with_a_shop_tag_is_not_imported_twice():
+    building = {
+        "type": "way",
+        "id": 8,
+        "center": {"lat": 42.6, "lon": -5.57},
+        "tags": {"shop": "supermarket", "building": "commercial", "brand": "Mercadona"},
+    }
+
+    (observation,) = parse_elements([building, building])
+
+    assert observation.osm_id == "way/8"
+    assert observation.format == "supermarket"
+
+
 def test_the_chain_name_replaces_a_missing_osm_name():
     node = {
         "type": "node",
@@ -197,10 +239,12 @@ def test_a_malformed_bbox_is_rejected(value, message):
         BoundingBox.parse(value)
 
 
-def test_the_query_asks_for_supermarkets_and_hypermarkets_inside_the_bbox():
+def test_the_query_asks_for_supermarkets_and_chain_named_buildings_inside_the_bbox():
     query = BBOX.query()
 
     assert 'nwr["shop"~"^(supermarket|hypermarket)$"](42.56,-5.62,42.63,-5.52)' in query
+    assert 'nwr["building"]["name"~' in query
+    assert "merc[aá]dona" in query
     assert query.endswith("out center tags;")
 
 
