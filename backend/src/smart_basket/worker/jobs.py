@@ -1,4 +1,4 @@
-"""Worker jobs. Ingestion, matching and the BI refresh are placeholders until their deliveries."""
+"""Worker jobs. Ingestion and matching run; the BI refresh is a placeholder until its delivery."""
 
 import logging
 from datetime import date
@@ -10,6 +10,7 @@ from smart_basket.config import get_settings
 from smart_basket.db import session_scope
 from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
 from smart_basket.ingestion.store import log_ingest_summary
+from smart_basket.matching import run as run_matching
 
 log = logging.getLogger(__name__)
 
@@ -20,17 +21,26 @@ def ingest_catalogs() -> None:
     A failing warehouse is logged and skipped so the scheduled chain jobs keep running (NFR-09).
     """
     settings = get_settings()
+    ingested = False
     for warehouse in settings.mercadona_warehouse_codes:
         adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
         try:
             summary = ingest_catalog(adapter, warehouse, data_dir=settings.data_dir)
             log_ingest_summary(summary)
+            ingested = ingested or summary.status == "succeeded"
         except Exception:
             log.exception(
                 "catalog ingestion failed for warehouse %s; other chains keep running", warehouse
             )
         finally:
             adapter.close()
+    # The new products need a canonical product before the recommender can price them, and
+    # one pass after every warehouse classifies them all.
+    if ingested:
+        try:
+            match_products()
+        except Exception:
+            log.exception("product classification failed")
 
 
 def import_stores() -> None:
@@ -50,8 +60,10 @@ def import_stores() -> None:
 
 
 def match_products() -> None:
-    """Placeholder: assign new chain products to canonical products (decisions 0004, 0007)."""
-    log.info("match_products: matching not implemented yet, nothing to do")
+    """Assign chain products to canonical products and queue the doubtful ones (0004, 0007)."""
+    with session_scope() as session:
+        result = run_matching(session)
+    log.info("match_products: %s", result.summary)
 
 
 def refresh_bi() -> None:

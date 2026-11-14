@@ -46,11 +46,16 @@ class BrandTerm:
 
 @dataclass(frozen=True, slots=True)
 class VariantTerm:
-    """An equivalence-changing variant ("sin lactosa", "integral", "zero")."""
+    """A product variant ("sin lactosa", "integral", "zero").
+
+    `canonical` marks the variants that change the equivalence, so they are part of the
+    canonical product (decision 0007, point 1); the rest are marketing and only refine a line.
+    """
 
     key: str
     name: str
     forms: tuple[str, ...]
+    canonical: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +139,7 @@ class InMemoryLexicon:
                 key=v["key"],
                 name=v.get("name", v["key"]),
                 forms=tuple(v.get("forms", [v.get("name", v["key"])])),
+                canonical=v.get("canonical", False),
             )
             for v in data.get("variants", [])
         ]
