@@ -1,22 +1,46 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import {
   describeError,
   getCategories,
   getHealth,
+  getSections,
   interpretText,
   requestRecommendation,
+  type CatalogSection,
   type Health,
   type LatLon,
+  type Product,
   type Recommendation,
   type SearchResult,
   type SectionCategory,
 } from "./api";
+import {
+  cartItemCount,
+  cartReducer,
+  draftItemsFromCart,
+  genericLine,
+  specificLine,
+} from "./cart";
 import { draftFromInterpreted, toRequestItem, type DraftItem } from "./draft";
-import { createSavedList, loadLists, saveLists, upsertSavedList, type SavedList } from "./storage";
+import { CATALOG_HASH, LIST_HASH, navigate, useRoute } from "./router";
+import {
+  createSavedList,
+  loadCart,
+  loadLists,
+  saveCart,
+  saveLists,
+  upsertSavedList,
+  type SavedList,
+} from "./storage";
 import { BasketStep } from "./components/BasketStep";
+import { CartDrawer } from "./components/CartDrawer";
+import { CatalogPage } from "./components/CatalogPage";
+import { HomePage } from "./components/HomePage";
 import { ListStep } from "./components/ListStep";
 import { DEFAULT_OPTIONS, OriginStep, type RouteOptions } from "./components/OriginStep";
+import { ProductPage } from "./components/ProductPage";
 import { ReviewStep } from "./components/ReviewStep";
+import { SiteHeader } from "./components/SiteHeader";
 
 type Step = "list" | "review" | "origin" | "basket";
 
@@ -48,6 +72,14 @@ function HealthFooter() {
 }
 
 export default function App() {
+  const route = useRoute();
+
+  const [cart, dispatch] = useReducer(cartReducer, null, () => loadCart());
+  const [cartOpen, setCartOpen] = useState(false);
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([]);
+  const [catalogSectionsError, setCatalogSectionsError] = useState<string | null>(null);
+
   const [step, setStep] = useState<Step>("list");
 
   const [text, setText] = useState("");
@@ -81,6 +113,22 @@ export default function App() {
       });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getSections(controller.signal)
+      .then((response) => {
+        if (!controller.signal.aborted) setCatalogSections(response.sections);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) setCatalogSectionsError(describeError(error));
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    saveCart(cart);
+  }, [cart]);
 
   async function handleInterpret() {
     if (interpretingRef.current) return;
@@ -135,6 +183,14 @@ export default function App() {
 
   function handleSaveList(name: string) {
     const next = upsertSavedList(lists, createSavedList(name, text, addedItems));
+    setLists(next);
+    saveLists(next);
+  }
+
+  function handleSaveCartList(name: string) {
+    const cartItems = draftItemsFromCart(cart);
+    const cartText = cartItems.map((item) => item.text).join("\n");
+    const next = upsertSavedList(lists, createSavedList(name, cartText, cartItems));
     setLists(next);
     saveLists(next);
   }
@@ -197,16 +253,39 @@ export default function App() {
     setStep("list");
   }
 
-  return (
-    <main className="page">
-      <header className="hero">
-        <img src="/favicon.svg" alt="" width={48} height={48} />
-        <div>
-          <h1>Smart Basket</h1>
-          <p>Tu cesta de la compra más barata en León, con el menor tiempo de desplazamiento.</p>
-        </div>
-      </header>
+  function handleSearch(query: string) {
+    setCatalogQuery(query);
+    setCartOpen(false);
+    navigate(CATALOG_HASH);
+  }
 
+  function handleAddSpecific(product: Product) {
+    dispatch({ type: "add", line: specificLine(product) });
+  }
+
+  function handleAddGeneric(product: Product) {
+    const line = genericLine(product);
+    if (line) dispatch({ type: "add", line });
+  }
+
+  /** The cart becomes the list: straight to the origin step, no review. */
+  function handleCalculateFromCart() {
+    const cartItems = draftItemsFromCart(cart);
+    if (cartItems.length === 0) return;
+    setText("");
+    setAddedItems([]);
+    setItems(cartItems);
+    setDegraded(false);
+    setInterpretError(null);
+    setCalcError(null);
+    setRecommendation(null);
+    setStep("origin");
+    setCartOpen(false);
+    navigate(LIST_HASH);
+  }
+
+  const flow = (
+    <main className="page">
       {step === "list" && (
         <ListStep
           text={text}
@@ -261,5 +340,62 @@ export default function App() {
 
       <HealthFooter />
     </main>
+  );
+
+  return (
+    <>
+      <SiteHeader
+        cartCount={cartItemCount(cart)}
+        query={catalogQuery}
+        onSearch={handleSearch}
+        onOpenCart={() => setCartOpen(true)}
+      />
+
+      {route.name === "home" && (
+        <div className="min-h-screen bg-stone-50 text-slate-900">
+          <HomePage
+            sections={catalogSections}
+            sectionsError={catalogSectionsError}
+            onSearch={handleSearch}
+            onWriteList={() => setStep("list")}
+          />
+        </div>
+      )}
+
+      {route.name === "catalog" && (
+        <div className="min-h-screen bg-stone-50 text-slate-900">
+          <CatalogPage
+            section={route.section}
+            sections={catalogSections}
+            sectionsError={catalogSectionsError}
+            query={catalogQuery}
+            onQueryChange={setCatalogQuery}
+            onAdd={handleAddSpecific}
+          />
+        </div>
+      )}
+
+      {route.name === "product" && (
+        <div className="min-h-screen bg-stone-50 text-slate-900">
+          <ProductPage
+            id={route.id}
+            onAddSpecific={handleAddSpecific}
+            onAddGeneric={handleAddGeneric}
+          />
+        </div>
+      )}
+
+      {route.name === "list" && flow}
+
+      <CartDrawer
+        open={cartOpen}
+        lines={cart}
+        onClose={() => setCartOpen(false)}
+        onQuantityChange={(id, quantity) => dispatch({ type: "setQuantity", id, quantity })}
+        onRemove={(id) => dispatch({ type: "remove", id })}
+        onSaveList={handleSaveCartList}
+        onCalculate={handleCalculateFromCart}
+      />
+    </>
   );
 }

@@ -72,6 +72,66 @@ export interface InterpretResponse {
   degraded: boolean;
 }
 
+/** Base unit the price per unit is expressed in, as the catalog returns it. */
+export type BaseUnit = "kg" | "l" | "ud";
+export type ProductSort = "unit_price" | "price" | "name";
+
+/** The catalog product a product is an option of. */
+export interface CanonicalProduct {
+  id: number;
+  name: string;
+  category_key: string;
+  category_name: string;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  brand: string | null;
+  private_label: boolean;
+  packaging: string | null;
+  image_url: string | null;
+  chain: string;
+  price: Decimal;
+  unit_price: Decimal;
+  base_unit: BaseUnit;
+  base_quantity: Decimal | null;
+  canonical: CanonicalProduct | null;
+}
+
+export interface ProductDetail extends Product {
+  /** Other products of the same canonical, cheapest per unit first. */
+  alternatives: Product[];
+}
+
+/** A top-level section of the catalog, with a representative photo. */
+export interface CatalogSection {
+  key: string;
+  name: string;
+  products: number;
+  image_url: string | null;
+}
+
+export interface SectionsResponse {
+  sections: CatalogSection[];
+}
+
+export interface ProductsPage {
+  items: Product[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface ProductsQuery {
+  section?: string | null;
+  category?: string | null;
+  q?: string | null;
+  sort?: ProductSort;
+  page?: number;
+  size?: number;
+}
+
 export interface GeocodeResult {
   label: string;
   lat: number;
@@ -231,6 +291,29 @@ export function interpretText(text: string, signal?: AbortSignal): Promise<Inter
 export function geocode(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
   const path = `/api/geocode?q=${encodeURIComponent(query)}`;
   return request<GeocodeResponse>(path, { signal }).then((body) => body.results);
+}
+
+export function getSections(signal?: AbortSignal): Promise<SectionsResponse> {
+  return request<SectionsResponse>("/api/sections", { signal });
+}
+
+export function getProducts(
+  query: ProductsQuery = {},
+  signal?: AbortSignal,
+): Promise<ProductsPage> {
+  const params = new URLSearchParams();
+  if (query.section) params.set("section", query.section);
+  if (query.category) params.set("category", query.category);
+  if (query.q) params.set("q", query.q);
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page !== undefined) params.set("page", String(query.page));
+  if (query.size !== undefined) params.set("size", String(query.size));
+  const search = params.toString();
+  return request<ProductsPage>(`/api/products${search === "" ? "" : `?${search}`}`, { signal });
+}
+
+export function getProduct(id: number, signal?: AbortSignal): Promise<ProductDetail> {
+  return request<ProductDetail>(`/api/products/${id}`, { signal });
 }
 
 export function requestRecommendation(

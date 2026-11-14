@@ -5,6 +5,7 @@ import {
   formatEuro,
   formatMinutes,
   formatQuantity,
+  formatUnitPrice,
   parseDecimal,
 } from "./format";
 
@@ -30,6 +31,18 @@ describe("money formatting", () => {
 
   it("keeps the raw value when it cannot be parsed", () => {
     expect(formatEuro("n/d")).toBe("n/d €");
+  });
+});
+
+describe("unit price formatting", () => {
+  it("adds the base unit after the price", () => {
+    expect(formatUnitPrice("1.15", "kg")).toBe("1,15 €/kg");
+    expect(formatUnitPrice("0.95", "l")).toBe("0,95 €/l");
+    expect(formatUnitPrice(2, "ud")).toBe("2,00 €/ud");
+  });
+
+  it("keeps the raw value when it cannot be parsed", () => {
+    expect(formatUnitPrice("n/d", "kg")).toBe("n/d €/kg");
   });
 });
 

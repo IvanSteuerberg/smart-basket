@@ -1,3 +1,5 @@
+/* The four-step flow. Layered so Tailwind utilities on the catalog pages win. */
+@layer legacy {
 :root {
   --bg: #f6f7f2;
   --surface: #ffffff;
@@ -114,9 +116,10 @@ body {
 
 /* Controls */
 
-input,
-select,
-textarea {
+/* Element rules are scoped to the flow so they do not reach the catalog pages. */
+:where(.page) input,
+:where(.page) select,
+:where(.page) textarea {
   width: 100%;
   padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
@@ -126,15 +129,15 @@ textarea {
   font: inherit;
 }
 
-input[type="checkbox"],
-input[type="radio"] {
+:where(.page) input[type="checkbox"],
+:where(.page) input[type="radio"] {
   width: auto;
   accent-color: var(--accent);
 }
 
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+:where(.page) input:focus-visible,
+:where(.page) select:focus-visible,
+:where(.page) textarea:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 1px;
 }
@@ -168,7 +171,7 @@ textarea:focus-visible {
   margin: 0.75rem 0;
 }
 
-button {
+:where(.page) button {
   width: 100%;
   min-height: 3rem;
   border: 0;
@@ -180,12 +183,12 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+:where(.page) button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-button:focus-visible {
+:where(.page) button:focus-visible {
   outline: 3px solid var(--text);
   outline-offset: 2px;
 }
@@ -483,4 +486,5 @@ button.link-button {
   color: var(--muted);
   font-size: 0.8rem;
   text-align: center;
+}
 }
