@@ -37,6 +37,7 @@ class ProductObservation:
     pack_count: int
     price: Decimal
     price_per_unit: Decimal | None
+    image_url: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

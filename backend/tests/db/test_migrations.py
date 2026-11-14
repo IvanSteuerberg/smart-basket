@@ -281,7 +281,7 @@ def test_category_seed_columns_downgrade_and_upgrade(engine):
     with engine.connect() as c:
         columns = set(c.execute(text(columns_sql)).scalars())
         assert {"key", "base_unit", "default_quantity", "forms", "is_vague"} <= columns
-        assert scalar(c, "select version_num from alembic_version") == "0004"
+        assert scalar(c, "select version_num from alembic_version") == "0005"
 
 
 def test_category_seed_columns_downgrade_and_upgrade_with_rows(engine):
@@ -330,7 +330,21 @@ def test_brand_seed_columns_downgrade_and_upgrade(engine):
     assert row.match_name is True
     assert row.is_private_label is False
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0004"
+        assert scalar(c, "select version_num from alembic_version") == "0005"
+
+
+def test_product_image_column_downgrade_and_upgrade(engine):
+    cfg = alembic_config(URL)
+    columns_sql = (
+        "select column_name from information_schema.columns where table_name = 'chain_product'"
+    )
+    command.downgrade(cfg, "0004")
+    with engine.connect() as c:
+        assert "image_url" not in set(c.execute(text(columns_sql)).scalars())
+    command.upgrade(cfg, "head")
+    with engine.connect() as c:
+        assert "image_url" in set(c.execute(text(columns_sql)).scalars())
+        assert scalar(c, "select version_num from alembic_version") == "0005"
 
 
 def test_downgrade_and_upgrade_again(engine):
@@ -341,4 +355,4 @@ def test_downgrade_and_upgrade_again(engine):
         assert scalar(c, "select to_regnamespace('bi') is null")
     command.upgrade(cfg, "head")
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0004"
+        assert scalar(c, "select version_num from alembic_version") == "0005"

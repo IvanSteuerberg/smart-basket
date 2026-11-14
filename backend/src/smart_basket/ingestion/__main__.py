@@ -5,6 +5,7 @@ import logging
 import sys
 
 from smart_basket.config import get_settings
+from smart_basket.ingestion.backfill import backfill_images
 from smart_basket.ingestion.base import collect
 from smart_basket.ingestion.mercadona import MercadonaAdapter
 from smart_basket.ingestion.store import IngestSetupError, ingest_catalog, log_ingest_summary
@@ -27,16 +28,22 @@ def main(argv: list[str] | None = None) -> int:
         "--warehouse",
         help="warehouse code; defaults to MERCADONA_WAREHOUSES",
     )
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--max-categories",
         type=_non_negative_int,
         default=None,
         help="crawl only the first N level 2 categories (the run is then incomplete)",
     )
-    parser.add_argument(
+    mode.add_argument(
         "--dry-run",
         action="store_true",
         help="crawl and parse without touching the database",
+    )
+    mode.add_argument(
+        "--backfill-images",
+        action="store_true",
+        help="fill product photos from the saved raw responses, without crawling",
     )
     args = parser.parse_args(argv)
 
@@ -45,6 +52,10 @@ def main(argv: list[str] | None = None) -> int:
         level=settings.log_level,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    if args.backfill_images:
+        summary = backfill_images(args.chain, data_dir=settings.data_dir)
+        print(summary.message())
+        return 0
     warehouses = [args.warehouse] if args.warehouse else settings.mercadona_warehouse_codes
     adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
     failed = False

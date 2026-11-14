@@ -1,5 +1,6 @@
 """Catalog ingestion: one adapter per chain and shared persistence (decisions 0006, 0007)."""
 
+from smart_basket.ingestion.backfill import ImageBackfillSummary, backfill_images
 from smart_basket.ingestion.base import (
     CategoryObservation,
     ChainAdapter,
@@ -21,12 +22,14 @@ __all__ = [
     "CrawlResult",
     "FetchError",
     "Fetcher",
+    "ImageBackfillSummary",
     "IngestSetupError",
     "IngestSummary",
     "MercadonaAdapter",
     "Observation",
     "ProductObservation",
     "RawResponse",
+    "backfill_images",
     "collect",
     "ingest_catalog",
 ]

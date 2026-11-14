@@ -24,6 +24,7 @@ def make_product(
     is_pack: bool = False,
     total_units: object = None,
     published: bool = True,
+    thumbnail: object = None,
 ) -> dict[str, object]:
     return {
         "id": sku,
@@ -31,6 +32,7 @@ def make_product(
         "packaging": "Botella",
         "share_url": f"https://example.test/product/{sku}",
         "published": published,
+        "thumbnail": thumbnail,
         "price_instructions": {
             "unit_price": unit_price,
             "bulk_price": bulk_price,
@@ -105,6 +107,21 @@ def test_unpublished_product_is_skipped():
 
 def test_product_without_a_price_is_skipped():
     assert parse_product(make_product(unit_price=" "), "420") is None
+
+
+def test_https_thumbnail_becomes_the_product_photo():
+    observation = parse_product(
+        make_product(thumbnail="https://prod-mercadona.imgix.net/images/abc.jpg?w=300"), "420"
+    )
+    assert observation is not None
+    assert observation.image_url == "https://prod-mercadona.imgix.net/images/abc.jpg?w=300"
+
+
+@pytest.mark.parametrize("thumbnail", [None, "", "http://cdn.test/photo.jpg", 12, {"url": "x"}])
+def test_missing_or_non_https_thumbnail_stores_no_photo(thumbnail):
+    observation = parse_product(make_product(thumbnail=thumbnail), "420")
+    assert observation is not None
+    assert observation.image_url is None
 
 
 def test_parse_tree_emits_both_levels(load_fixture):
