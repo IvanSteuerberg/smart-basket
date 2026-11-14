@@ -16,10 +16,11 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from rapidfuzz import fuzz
-from sqlalchemy import Row, text
+from sqlalchemy import Row, bindparam, text
 from sqlalchemy.orm import Session
 
 from smart_basket.api.lexicon_cache import preprocessor_for, search_forms_for
+from smart_basket.api.products import _unit_price
 from smart_basket.config import get_settings
 from smart_basket.db.engine import get_session
 from smart_basket.geo.nominatim import GeocodingError, NominatimGeocoder
@@ -220,6 +221,16 @@ class InterpretRequest(BaseModel):
     text: str = Field(min_length=1, max_length=2000)
 
 
+class OptionOut(BaseModel):
+    """One choice a vague category offers: a leaf, its cheapest unit price and a photo."""
+
+    category_key: str
+    name: str
+    image_url: str | None
+    from_unit_price: str
+    base_unit: str | None
+
+
 class InterpretedItem(BaseModel):
     line: int
     text: str
@@ -232,6 +243,7 @@ class InterpretedItem(BaseModel):
     alternatives: list[str]
     resolved: bool
     needs_llm: bool
+    options: list[OptionOut]
 
 
 class InterpretResponse(BaseModel):
@@ -283,10 +295,11 @@ def _interpreted_item(
     item: dict[str, Any],
     source: PreprocessedItem | None,
     line: int,
+    key: str | None,
+    vague: bool,
+    options: Sequence[OptionOut],
 ) -> InterpretedItem:
     text = str(item.get("item", ""))
-    # A rule-resolved line already knows its category; only LLM items are parsed again.
-    key = source.generic_key if source is not None else _category_key(preprocessor, text)
     term = preprocessor.generic_by_key.get(key) if key is not None else None
     return InterpretedItem(
         line=line,
@@ -298,9 +311,157 @@ def _interpreted_item(
         category_name=term.name if term is not None else None,
         brand=source.brand if source is not None else item.get("brand"),
         alternatives=list(source.alternatives) if source is not None else [],
-        resolved=source.resolved if source is not None else True,
+        resolved=(source.resolved if source is not None else True) and not vague,
         needs_llm=source.needs_llm if source is not None else False,
+        options=list(options),
     )
+
+
+def _item_key(
+    preprocessor: Preprocessor, item: dict[str, Any], source: PreprocessedItem | None
+) -> str | None:
+    # A rule-resolved line already knows its category; only LLM items are parsed again.
+    if source is not None:
+        return source.generic_key
+    return _category_key(preprocessor, str(item.get("item", "")))
+
+
+def _child_counts(session: Session, parent_ids: Sequence[int]) -> dict[int, list[Row]]:
+    """Direct children of the given nodes with the number of priced products below them."""
+    if not parent_ids:
+        return {}
+    rows = session.execute(
+        text(
+            """
+            select p.id as parent_id, c.id as child_id, c.key, c.name,
+                   count(distinct cp.id) as products
+            from category p
+            join category c on c.parent_id = p.id
+            join category_closure cl on cl.ancestor_id = c.id
+            join (
+                select cp.id, coalesce(canon.category_id, ccat.category_id) as category_id
+                from chain_product cp
+                left join canonical_product canon on canon.id = cp.canonical_id
+                left join chain_category ccat on ccat.id = cp.chain_category_id
+                where cp.is_active
+            ) cp on cp.category_id = cl.descendant_id
+            join chain_product_zone cpz
+              on cpz.chain_product_id = cp.id and cpz.is_available
+            join price_current pc
+              on pc.chain_product_id = cp.id and pc.zone_id = cpz.zone_id
+            where p.id in :parents
+            group by p.id, c.id, c.key, c.name
+            having count(distinct cp.id) > 0
+            """
+        ).bindparams(bindparam("parents", expanding=True)),
+        {"parents": list(parent_ids)},
+    ).mappings()
+    grouped: dict[int, list[Row]] = defaultdict(list)
+    for row in rows:
+        grouped[row["parent_id"]].append(row)
+    return grouped
+
+
+def _option_prices(session: Session, keys: set[str]) -> dict[str, dict[str, Any]]:
+    """Cheapest priced product per category (and descendants): unit price, photo and base unit."""
+    if not keys:
+        return {}
+    rows = session.execute(
+        text(
+            """
+            select opt.key as option_key, opt.name as option_name,
+                   opt.base_unit as option_base_unit,
+                   cp.id as product_id, cp.name, cp.base_quantity, cp.base_unit,
+                   cp.image_url, pc.price
+            from category opt
+            join category_closure cl on cl.ancestor_id = opt.id
+            join (
+                select cp.id, coalesce(canon.category_id, ccat.category_id) as category_id
+                from chain_product cp
+                left join canonical_product canon on canon.id = cp.canonical_id
+                left join chain_category ccat on ccat.id = cp.chain_category_id
+                where cp.is_active
+            ) eff on eff.category_id = cl.descendant_id
+            join chain_product cp on cp.id = eff.id
+            join chain_product_zone cpz
+              on cpz.chain_product_id = cp.id and cpz.is_available
+            join price_current pc
+              on pc.chain_product_id = cp.id and pc.zone_id = cpz.zone_id
+            where opt.key in :keys
+            """
+        ).bindparams(bindparam("keys", expanding=True)),
+        {"keys": sorted(keys)},
+    ).mappings()
+    best: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        price = _unit_price(row["price"], row["base_quantity"], row["base_unit"])
+        if price is None:
+            continue
+        candidate = {
+            "price": Decimal(price),
+            "product_id": row["product_id"],
+            "image_url": row["image_url"],
+            "base_unit": row["option_base_unit"] or row["base_unit"],
+            "name": row["option_name"],
+            "from_unit_price": price,
+        }
+        current = best.get(row["option_key"])
+        if current is None or (candidate["price"], candidate["product_id"]) < (
+            current["price"],
+            current["product_id"],
+        ):
+            best[row["option_key"]] = candidate
+    return best
+
+
+def _category_options(session: Session, keys: set[str]) -> dict[str, list[OptionOut]]:
+    """The options each vague category offers, with the cheapest unit price and its photo.
+
+    An explicit `options` list keeps its order; a vague node without one offers at most eight
+    direct children with priced products, most products first and then by name.
+    """
+    if not keys:
+        return {}
+    rows = (
+        session.execute(
+            text(
+                "select id, key, name, base_unit, options from category where key in :keys"
+            ).bindparams(bindparam("keys", expanding=True)),
+            {"keys": sorted(keys)},
+        )
+        .mappings()
+        .all()
+    )
+    children = _child_counts(session, [row["id"] for row in rows if not row["options"]])
+    option_keys: dict[str, list[str]] = {}
+    for row in rows:
+        if row["options"]:
+            option_keys[row["key"]] = list(row["options"])
+            continue
+        candidates = sorted(
+            children.get(row["id"], []),
+            key=lambda child: (-child["products"], fold(child["name"]), child["key"]),
+        )
+        option_keys[row["key"]] = [child["key"] for child in candidates[:8]]
+    prices = _option_prices(session, {key for keys_ in option_keys.values() for key in keys_})
+    options: dict[str, list[OptionOut]] = {}
+    for key, category_keys in option_keys.items():
+        offered = []
+        for category_key in category_keys:
+            price = prices.get(category_key)
+            if price is None:
+                continue
+            offered.append(
+                OptionOut(
+                    category_key=category_key,
+                    name=price["name"],
+                    image_url=price["image_url"],
+                    from_unit_price=price["from_unit_price"],
+                    base_unit=price["base_unit"],
+                )
+            )
+        options[key] = offered
+    return options
 
 
 @router.post("/interpret", response_model=InterpretResponse)
@@ -316,9 +477,27 @@ def interpret(
     session.close()
     interpretation = interpret_unresolved(result, provider)
     sources = _source_items(result, interpretation)
+    keys = [
+        _item_key(preprocessor, item, source)
+        for item, (source, _) in zip(interpretation.items, sources, strict=True)
+    ]
+    vague_keys = {
+        key
+        for key in keys
+        if key is not None and getattr(preprocessor.generic_by_key.get(key), "vague", False)
+    }
+    options = _category_options(session, vague_keys)
     items = [
-        _interpreted_item(preprocessor, item, source, line)
-        for item, (source, line) in zip(interpretation.items, sources, strict=True)
+        _interpreted_item(
+            preprocessor,
+            item,
+            source,
+            line,
+            key,
+            key in vague_keys,
+            options.get(key, ()),
+        )
+        for item, key, (source, line) in zip(interpretation.items, keys, sources, strict=True)
     ]
     return InterpretResponse(
         items=items, llm_used=interpretation.llm_used, degraded=interpretation.degraded

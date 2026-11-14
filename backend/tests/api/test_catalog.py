@@ -31,7 +31,8 @@ def test_categories_are_sections_groups_and_leaves(client):
     assert set(section) == {"key", "name", "children"}
     group = node(section["children"], "pan")
     assert set(group) == {"key", "name", "vague", "products", "children"}
-    assert group["vague"] is True
+    assert group["vague"] is False
+    assert node(sections, "yogures")["vague"] is True
     leaf = node(group["children"], "pan_molde")
     assert set(leaf) == {"key", "name", "base_unit", "products"}
     assert leaf["base_unit"] == "kg"

@@ -22,16 +22,34 @@ from .conftest import FakeRouting
 pytestmark = pytest.mark.db
 
 
-def item(text: str, category_key: str, quantity: str, unit: str, **extra) -> dict:
-    return {
+def item(
+    text: str,
+    category_key: str | None = None,
+    quantity: str = "1",
+    unit: str = "ud",
+    *,
+    product_id: int | None = None,
+    accept: str = "equivalent",
+    variants: list[str] | None = None,
+    **extra,
+) -> dict:
+    body: dict = {
         "text": text,
-        "category_key": category_key,
         "quantity": quantity,
         "unit": unit,
         "brand": None,
         "private_label_ok": True,
         **extra,
     }
+    if category_key is not None:
+        body["category_key"] = category_key
+    if product_id is not None:
+        body["product_id"] = product_id
+    if accept != "equivalent":
+        body["accept"] = accept
+    if variants is not None:
+        body["variants"] = variants
+    return body
 
 
 FIVE_ITEMS = [
@@ -57,6 +75,16 @@ def payload(items: list[dict], **overrides) -> dict:
     return body
 
 
+def product_row(world, sku: str):
+    return (
+        world.connection.execute(
+            text("select id, canonical_id from chain_product where chain_sku = :sku"), {"sku": sku}
+        )
+        .mappings()
+        .one()
+    )
+
+
 def test_five_item_basket_has_prices_minutes_and_route(world):
     response = world.client.post("/api/recommendations", json=payload(FIVE_ITEMS))
     assert response.status_code == 200
@@ -68,6 +96,7 @@ def test_five_item_basket_has_prices_minutes_and_route(world):
     assert body["minutes"] == "8.5"
     assert body["missing"] == []
     assert body["degraded"] is False
+    assert body["flex_savings"] is None
 
     assert len(body["stores"]) == 1
     store = body["stores"][0]
@@ -80,6 +109,7 @@ def test_five_item_basket_has_prices_minutes_and_route(world):
     assert store["subtotal"] == "11.70"
 
     assert [line["text"] for line in store["lines"]] == [i["text"] for i in FIVE_ITEMS]
+    assert [line["line_id"] for line in store["lines"]] == [0, 1, 2, 3, 4]
     lines = [
         (line["product_name"], line["packs"], line["quantity_bought"], line["cost"])
         for line in store["lines"]
@@ -91,6 +121,17 @@ def test_five_item_basket_has_prices_minutes_and_route(world):
         ("Queso curado Hacendado", 1, "0.5", "5.00"),
         ("Huevos frescos Hacendado", 1, "12", "2.10"),
     ]
+
+    leche = store["lines"][0]
+    leche_row = product_row(world, "L1")
+    assert leche["product_id"] == leche_row["id"]
+    assert leche["canonical_id"] == leche_row["canonical_id"]
+    assert leche["brand"] == "Hacendado"
+    assert leche["image_url"] == "https://example.test/l1.jpg"
+
+    platano = store["lines"][2]
+    assert platano["brand"] is None
+    assert platano["image_url"] is None
 
     assert body["route"] == [
         [42.5987, -5.5671],
@@ -105,13 +146,15 @@ def test_five_item_basket_has_prices_minutes_and_route(world):
 def test_line_without_products_is_missing_with_its_reason(world):
     response = world.client.post(
         "/api/recommendations",
-        json=payload([*FIVE_ITEMS, item("arroz redondo", "arroz", "1", "kg")]),
+        json=payload([*FIVE_ITEMS, item("producto raro", "vacio", "1", "ud")]),
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["missing"] == [{"text": "arroz redondo", "reason": "not_available", "stop": None}]
+    assert body["missing"] == [
+        {"line_id": 5, "text": "producto raro", "reason": "not_available", "stop": None}
+    ]
     assert body["explanation"].endswith(
-        "No hemos encontrado «arroz redondo» en las tiendas cercanas."
+        "No hemos encontrado «producto raro» en las tiendas cercanas."
     )
 
 
@@ -198,7 +241,7 @@ def test_recommendation_is_stored_with_a_rounded_origin(world):
         .one()
     )
     assert parts["total"] == 5
-    assert parts["with_canonical"] == 0
+    assert parts["with_canonical"] == 5
 
 
 def test_request_body_is_not_mutated_by_the_endpoint(world):
@@ -230,7 +273,9 @@ def test_private_label_from_the_brand_table_is_excluded(world):
     assert body["minutes"] == "0"
     assert body["route"] == []
     assert body["data_as_of"] is None
-    assert body["missing"] == [{"text": "yogur natural", "reason": "not_available", "stop": None}]
+    assert body["missing"] == [
+        {"line_id": 0, "text": "yogur natural", "reason": "not_available", "stop": None}
+    ]
 
 
 def test_short_item_does_not_fall_back_to_a_substring(world):
@@ -242,19 +287,30 @@ def test_short_item_does_not_fall_back_to_a_substring(world):
     assert body["total_cost"] == "2.00"
 
 
+def test_a_chain_category_without_canonicals_only_offers_the_matched_product(world):
+    body = world.client.post(
+        "/api/recommendations", json=payload([item("papel de horno", "papel_horno", "1", "ud")])
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == "Papel de horno Bosque Verde"
+    assert body["total_cost"] == "1.20"
+
+
 def test_no_line_with_products_gives_an_empty_answer(world):
     body = world.client.post(
-        "/api/recommendations", json=payload([item("arroz redondo", "arroz", "1", "kg")])
+        "/api/recommendations", json=payload([item("producto raro", "vacio", "1", "ud")])
     ).json()
     assert body["stores"] == []
     assert body["total_cost"] == "0"
     assert body["minutes"] == "0"
     assert body["route"] == []
     assert body["data_as_of"] is None
-    assert body["missing"] == [{"text": "arroz redondo", "reason": "not_available", "stop": None}]
+    assert body["missing"] == [
+        {"line_id": 0, "text": "producto raro", "reason": "not_available", "stop": None}
+    ]
     assert body["explanation"] == (
         "No hemos encontrado nada de tu lista en las tiendas cercanas. "
-        "No hemos encontrado «arroz redondo» en las tiendas cercanas."
+        "No hemos encontrado «producto raro» en las tiendas cercanas."
     )
 
 
@@ -269,7 +325,7 @@ def test_unknown_categories_give_an_empty_answer(world):
     assert body["route"] == []
     assert body["data_as_of"] is None
     assert body["missing"] == [
-        {"text": "producto misterioso", "reason": "not_available", "stop": None}
+        {"line_id": 0, "text": "producto misterioso", "reason": "not_available", "stop": None}
     ]
     assert body["explanation"].startswith(
         "No hemos encontrado nada de tu lista en las tiendas cercanas."
@@ -299,7 +355,9 @@ def test_a_brand_without_products_is_reported_as_missing(world):
         "/api/recommendations",
         json=payload([item("leche puleva", "leche", "1", "l", brand="Puleva")]),
     ).json()
-    assert body["missing"] == [{"text": "leche puleva", "reason": "not_available", "stop": None}]
+    assert body["missing"] == [
+        {"line_id": 0, "text": "leche puleva", "reason": "not_available", "stop": None}
+    ]
 
 
 def test_brand_alias_finds_the_brand_products(world):
@@ -314,43 +372,14 @@ def test_brand_alias_finds_the_brand_products(world):
 def test_product_of_another_dimension_is_not_offered(world):
     body = world.client.post(
         "/api/recommendations",
-        json=payload([item("leche", "leche", "1", "ud")]),
+        json=payload([item("leche semidesnatada", "leche", "1", "ud")]),
     ).json()
     assert body["missing"] == []
     assert body["stores"][0]["lines"][0]["product_name"] == "Leche semidesnatada Hacendado"
     assert body["total_cost"] == "0.95"
 
 
-def test_product_named_like_the_line_wins(world):
-    body = world.client.post(
-        "/api/recommendations",
-        json=payload([item("papel de horno", "papel_horno", "1", "ud")]),
-    ).json()
-    assert body["stores"][0]["lines"][0]["product_name"] == "Papel de horno Bosque Verde"
-    assert body["total_cost"] == "1.20"
-
-
-def test_products_sharing_most_words_win(world):
-    # No product has both words; the ones with "papel" beat the raffia bag.
-    body = world.client.post(
-        "/api/recommendations",
-        json=payload([item("papel d encerado", "papel_horno", "1", "ud")]),
-    ).json()
-    assert body["stores"][0]["lines"][0]["product_name"] != "Bolsa de rafia"
-
-
-def test_counted_leaf_accepts_weighed_products(world):
-    # Bread or paper sold by kg still answers a leaf counted in units.
-    body = world.client.post(
-        "/api/recommendations",
-        json=payload([item("papel vegetal", "papel_horno", "1", "ud")]),
-    ).json()
-    assert body["missing"] == []
-    assert body["stores"][0]["lines"][0]["product_name"] == "Papel vegetal a granel"
-
-
 def test_counted_line_of_a_weighed_leaf_picks_by_price_per_kilo(world):
-    # The 0.46 kg pack costs less in total but more per kilo than the 0.63 kg one.
     body = world.client.post(
         "/api/recommendations",
         json=payload([item("pollo", "pollo", "1", "ud")]),
@@ -368,6 +397,133 @@ def test_line_without_a_matching_name_keeps_every_product(world):
     ).json()
     assert body["stores"][0]["lines"][0]["product_name"] == "Muslo de pavo"
     assert body["total_cost"] == "2.50"
+
+
+def test_chains_filter_limits_the_candidate_stores(world):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("arroz redondo", "arroz", "1", "kg")], chains=["carrefour"]),
+    ).json()
+    assert body["missing"] == []
+    assert [store["chain"] for store in body["stores"]] == ["Carrefour"]
+    assert body["total_cost"] == "1.30"
+
+    only_mercadona = world.client.post(
+        "/api/recommendations",
+        json=payload([item("arroz redondo", "arroz", "1", "kg")], chains=["mercadona"]),
+    ).json()
+    assert only_mercadona["stores"] == []
+    assert only_mercadona["missing"][0]["text"] == "arroz redondo"
+
+
+def test_an_unknown_chain_that_leaves_no_stores_returns_422(world):
+    response = world.client.post(
+        "/api/recommendations",
+        json=payload(FIVE_ITEMS, chains=["no-existe"]),
+    )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "No hay tiendas con precios cerca de este punto."}
+
+
+def test_a_vague_line_is_rejected_before_calculating_the_basket(world):
+    response = world.client.post(
+        "/api/recommendations",
+        json=payload([item("pollo preparado", "vague", "1", "kg")]),
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": {
+            "code": "VAGUE_LINE",
+            "line_id": 0,
+            "category_key": "vague",
+            "message": "Elige qué pollo preparado quieres antes de calcular la cesta.",
+        }
+    }
+
+
+def test_a_line_needs_exactly_one_of_category_and_product(world):
+    both = item("leche", "leche", "1", "l", product_id=1)
+    neither = item("leche", "1", "l")
+    for line in (both, neither):
+        assert world.client.post("/api/recommendations", json=payload([line])).status_code == 422
+
+
+def test_an_unknown_product_is_rejected(world):
+    response = world.client.post(
+        "/api/recommendations",
+        json=payload([item("no existe", product_id=999999, quantity="1", unit="ud")]),
+    )
+    assert response.status_code == 422
+    assert response.json() == {"detail": "Producto desconocido."}
+
+
+def test_a_concrete_line_counts_units_and_unknown_variants_are_rejected(world):
+    puleva = product_row(world, "L1")["id"]
+    bad_unit = item("leche", product_id=puleva, quantity="1", unit="l")
+    unknown_variant = item("leche", "leche", "1", "l", variants=["no-existe"])
+    for line in (bad_unit, unknown_variant):
+        assert world.client.post("/api/recommendations", json=payload([line])).status_code == 422
+
+
+def test_an_exact_concrete_line_reports_what_equivalents_would_save(world):
+    row = product_row(world, "L4")
+    product_id, canonical_id = row["id"], row["canonical_id"]
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [
+                item(
+                    "leche sin lactosa",
+                    product_id=product_id,
+                    accept="exact",
+                    quantity="1",
+                    unit="ud",
+                )
+            ]
+        ),
+    ).json()
+    assert body["missing"] == []
+    line = body["stores"][0]["lines"][0]
+    assert line["line_id"] == 0
+    assert line["product_id"] == product_id
+    assert line["canonical_id"] == canonical_id
+    assert line["product_name"] == "Leche sin lactosa Hacendado"
+    assert line["packs"] == 1
+    assert body["total_cost"] == "1.05"
+    assert body["flex_savings"] == {
+        "total": "0.15",
+        "lines": [{"line_id": 0, "savings": "0.15"}],
+    }
+
+
+def test_exact_lines_do_not_offer_savings_without_a_cheaper_equivalent(world):
+    product_id = product_row(world, "L1")["id"]
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [
+                item(
+                    "leche semidesnatada",
+                    product_id=product_id,
+                    accept="exact",
+                    quantity="1",
+                    unit="ud",
+                )
+            ]
+        ),
+    ).json()
+    assert body["total_cost"] == "0.95"
+    assert body["flex_savings"] is None
+
+
+def test_an_equivalent_concrete_line_offers_no_flex_savings(world):
+    product_id = product_row(world, "L4")["id"]
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("leche sin lactosa", product_id=product_id, quantity="1", unit="ud")]),
+    ).json()
+    assert body["total_cost"] == "0.90"
+    assert body["flex_savings"] is None
 
 
 def _query(return_to_origin: bool) -> RecommendationQuery:

@@ -9,6 +9,7 @@
           "key": "yogures",
           "name": "Yogures",
           "vague": true,
+          "options": ["yogur_griego", "yogur_natural"],
           "forms": ["yogur", "yogures"],
           "children": [
             {
