@@ -110,5 +110,9 @@ Without accounts, personal data lives in the user's browser. It is stored as ver
 | `accepted_basket` | recommendation_id, accepted_at, total_cost, savings |
 | `loyalty_card` | chain_id |
 | `not_found` | store_id, chain_product_id, reported_at |
+| `preference` | id (uuidv7), scope_kind, scope_key, kind (brand_pin, term_choice, chain_include, chain_exclude, dietary_rule, seasonal_rule), value, origin (explicit, imported), consent_ref, created_at, updated_at, deleted_at ([0019](/decisions/0019-shopper-preferences.md)) |
+| `choice_event` | id (uuidv7), term, action (accepted, replaced, removed, pinned), canonical_id, chain_product_id, brand_id, chain_id, at ([0019](/decisions/0019-shopper-preferences.md)) |
+
+Learned defaults are derived from `choice_event` and `preference` and kept only as a cache; they are not stored as entities.
 
 A `schema_version` field lets the app migrate stored data when the structure changes.

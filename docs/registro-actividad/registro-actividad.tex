@@ -222,12 +222,12 @@
 		\actividad{Tarea}{Primera tanda de la iteración 12, con implementadores de IA y revisión de cada entrega por Gemini: fotos de los 4.307 productos, clasificador de productos en productos canónicos (categoría más variantes como sin lactosa o integral, sin marca ni tamaño), API de catálogo y catálogo web con aspecto de supermercado (fotos, precio por kilo, ficha de producto, lista como carrito y logos de las cadenas), hecho con Tailwind CSS.}{Catálogo navegable con fotos; 1.051 pruebas superadas.}
 		\actividad{Decisión}{Revisión con el autor de la clasificación del catálogo real, propuesta por Gemini y consolidada por Claude: se parten las categorías que mezclaban productos no intercambiables (pollo en pechuga, muslo, alitas, entero y carcasa; naranja y mandarina; embutidos; pescados; zumos), se crean las que faltaban (especias, verduras, frutas, atún fresco) y se fijan las variantes que distinguen productos.}{99,9~\% de los productos con su producto canónico (717 canónicos).}
 		\actividad{Análisis}{Criterios de uso con el autor para la siguiente tanda: navegar por supermercado o por producto genérico, pasar toda la lista a «cualquier marca» de un gesto y fijar marcas sueltas con un toque, y la lista escrita a mano con los mínimos pasos. Se abre una decisión aparte sobre dónde guardar las preferencias del usuario (con o sin cuentas) y si una base de datos de grafos está justificada.}{Plan de la segunda tanda de la iteración 12.}
+		\actividad{Decisión}{Dónde y cómo se guardan y aprenden las preferencias del comprador (elección habitual, marcas fijadas, cadenas y reglas como ``sin lactosa''), en el MVP sin cuentas y en un posible producto con cuentas y suscripciones, y si eso justifica Neo4j. Se comparan un perfil en el navegador, tablas de PostgreSQL, Apache AGE y Neo4j con Claude y DeepSeek como fuentes. No se añade un grafo: el perfil tiene la misma forma en el navegador y en el servidor, las preferencias restringen la cesta sin entrar en su coste, y las reglas dietéticas, posibles datos de salud, solo las fija el usuario.}{Señal de Tiempo 8, decisión 0019 (borrador) y nota posterior al MVP en el alcance.}
 	\end{description}
 
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
 		\item Segunda tanda de la iteración 12: recomendador sobre productos canónicos, lista y cesta rediseñadas con los criterios de uso acordados, y evaluación con las tres listas reales.
-		\item Decisión sobre las preferencias del usuario (Señal de Tiempo con dos fuentes).
 		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
