@@ -142,6 +142,12 @@ def _seed(connection: Connection) -> dict[str, int]:
     )
     ids["aves"] = _category(connection, "aves", "Aves", 1, base_unit="kg")
     ids["pasta"] = _category(connection, "pasta", "Pasta", 1, base_unit="kg")
+    ids["arroz_variedad"] = _category(connection, "arroz_variedad", "Arroz", 1, base_unit="kg")
+    ids["atun"] = _category(connection, "atun", "Atún", 1, base_unit="ud")
+    ids["cerveza"] = _category(connection, "cerveza", "Cerveza", 1, base_unit="ud")
+    ids["refresco_cola"] = _category(
+        connection, "refresco_cola", "Refresco de cola", 1, base_unit="ud"
+    )
     ids["pollo"] = _category(connection, "pollo", "Pollo", 1, base_unit="kg")
     ids["carne"] = _category(connection, "carne", "Carne", 1, base_unit="kg")
     ids["vague"] = _category(
@@ -157,6 +163,10 @@ def _seed(connection: Connection) -> dict[str, int]:
         "refresco",
         "drogueria",
         "pasta",
+        "arroz_variedad",
+        "atun",
+        "cerveza",
+        "refresco_cola",
         "pollo",
         "carne",
         "vague",
@@ -195,6 +205,14 @@ def _seed(connection: Connection) -> dict[str, int]:
         "pasta": _chain_category(connection, ids["chain"], "19", "Pasta", ids["pasta"]),
         "pollo": _chain_category(connection, ids["chain"], "20", "Pollo", ids["pollo"]),
         "carne": _chain_category(connection, ids["chain"], "21", "Carne", ids["carne"]),
+        "arroz_variedad": _chain_category(
+            connection, ids["chain"], "22", "Arroz", ids["arroz_variedad"]
+        ),
+        "atun": _chain_category(connection, ids["chain"], "23", "Atún", ids["atun"]),
+        "cerveza": _chain_category(connection, ids["chain"], "24", "Cerveza", ids["cerveza"]),
+        "refresco_cola": _chain_category(
+            connection, ids["chain"], "25", "Refresco de cola", ids["refresco_cola"]
+        ),
     }
     yogur = _canonical(connection, ids["yogur"], "Yogur", "", "ud")
     products = {
@@ -357,6 +375,127 @@ def _seed(connection: Connection) -> dict[str, int]:
         "0.90",
         "0.95",
         canonical_id=sin_lactosa,
+    )
+    # Products of one canonical that a content word tells apart: the plain choice is the
+    # cheaper one, and "arroz basmati" must still pick the basmati.
+    arroz_variedad = _canonical(connection, ids["arroz_variedad"], "Arroz", "", "kg")
+    for sku, product_name, price_one, price_two in (
+        ("B1", "Arroz redondo Hacendado", "1.00", "1.10"),
+        ("B2", "Arroz basmati Hacendado", "1.50", "1.60"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            ids["arroz_variedad"],
+            sku,
+            product_name,
+            "1",
+            "kg",
+            1,
+            price_one,
+            price_two,
+            canonical_id=arroz_variedad,
+            chain_category=categories["arroz_variedad"],
+        )
+    for sku, product_name, price_one, price_two in (
+        ("PA4", "Espaguetis Hacendado", "1.20", "1.30"),
+        ("PA5", "Estrellas de pasta Hacendado", "0.90", "1.00"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            ids["pasta"],
+            sku,
+            product_name,
+            "0.5",
+            "kg",
+            1,
+            price_one,
+            price_two,
+            canonical_category=ids["pasta"],
+            chain_category=categories["pasta"],
+        )
+    # A plain canonical of tinned tuna, next to two variants a line may ask for.
+    atun = _canonical(connection, ids["atun"], "Atún", "", "ud")
+    atun_natural = _canonical(connection, ids["atun"], "Atún al natural", "al_natural", "ud")
+    atun_aceite = _canonical(
+        connection, ids["atun"], "Atún en aceite de oliva", "en_aceite_oliva", "ud"
+    )
+    for sku, product_name, canonical_id, price_one, price_two in (
+        ("AT1", "Atún en tomate Hacendado", atun, "1.00", "1.10"),
+        ("AT2", "Atún al natural Hacendado", atun_natural, "2.00", "2.10"),
+        ("AT3", "Atún en aceite de oliva Hacendado", atun_aceite, "2.50", "2.60"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            ids["atun"],
+            sku,
+            product_name,
+            "1",
+            "ud",
+            1,
+            price_one,
+            price_two,
+            canonical_id=canonical_id,
+            chain_category=categories["atun"],
+        )
+    # "sin alcohol" is a canonical variant a line must ask for; the plain beer wins by default.
+    cerveza = _canonical(connection, ids["cerveza"], "Cerveza", "", "ud")
+    cerveza_sin = _canonical(connection, ids["cerveza"], "Cerveza sin alcohol", "sin_alcohol", "ud")
+    for sku, product_name, canonical_id, price_one, price_two in (
+        ("CE1", "Cerveza normal Hacendado", cerveza, "1.00", "1.10"),
+        ("CE2", "Cerveza sin alcohol Hacendado", cerveza_sin, "0.80", "0.90"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            ids["cerveza"],
+            sku,
+            product_name,
+            "1",
+            "ud",
+            1,
+            price_one,
+            price_two,
+            canonical_id=canonical_id,
+            chain_category=categories["cerveza"],
+        )
+    cola = _canonical(connection, ids["refresco_cola"], "Coca-Cola", "", "ud")
+    cola_zero = _canonical(connection, ids["refresco_cola"], "Coca-Cola zero", "zero", "ud")
+    for sku, product_name, canonical_id, price_one, price_two in (
+        ("CO1", "Coca-Cola Hacendado", cola, "1.00", "1.10"),
+        ("CO2", "Coca-Cola Zero Hacendado", cola_zero, "0.80", "0.90"),
+    ):
+        _chain_product(
+            connection,
+            ids,
+            ids["refresco_cola"],
+            sku,
+            product_name,
+            "1",
+            "ud",
+            1,
+            price_one,
+            price_two,
+            canonical_id=canonical_id,
+            chain_category=categories["refresco_cola"],
+        )
+    # A flavour is never plain: "yogur" keeps the natural one even if fresa is cheaper.
+    yogur_fresa = _canonical(connection, ids["yogur"], "Yogur sabor fresa", "sabor:fresa", "ud")
+    _chain_product(
+        connection,
+        ids,
+        ids["yogur"],
+        "Y3",
+        "Yogur sabor fresa Hacendado",
+        "1",
+        "ud",
+        4,
+        "0.90",
+        "1.00",
+        canonical_id=yogur_fresa,
+        chain_category=categories["yogur"],
     )
     # A second chain with one product, so the chain filter has somewhere else to buy.
     arroz = _canonical(connection, ids["arroz"], "Arroz redondo", "", "kg")

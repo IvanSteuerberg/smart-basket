@@ -56,8 +56,10 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
         "alternatives",
         "resolved",
         "needs_llm",
+        "image_url",
         "options",
     }
+    assert item["image_url"] is None
     assert item["options"] == []
     assert item["line"] == 0
     assert item["quantity"] == "2"
@@ -226,6 +228,26 @@ def add_option_product(
         {"product": product_id, "zone": zone_id, "price": Decimal(price)},
     )
     session.flush()
+
+
+def test_an_interpreted_line_carries_the_photo_of_its_cheapest_product(client, session):
+    add_option_product(
+        session,
+        "leche",
+        sku="LECHE1",
+        base_quantity="1",
+        base_unit="l",
+        price="0.95",
+        image_url="https://example.test/leche.jpg",
+    )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "leche"}).json()
+
+    (item,) = body["items"]
+    assert item["category_key"] == "leche"
+    assert item["image_url"] == "https://example.test/leche.jpg"
 
 
 def test_a_vague_category_offers_its_option_leaves_with_the_cheapest_price(client, session):

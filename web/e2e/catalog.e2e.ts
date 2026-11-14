@@ -302,7 +302,11 @@ test("home, section, sort, product page and cart reach the origin step", async (
   await drawer.getByRole("button", { name: "Calcular cesta" }).click();
   await expect(page).toHaveURL(/#\/lista$/);
   await expect(page.getByRole("heading", { name: "¿Desde dónde sales?" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Calcular cesta" })).toBeDisabled();
+  // The list screen holds the only calculate button; the cart just brings the user here.
+  const calculate = page.getByRole("button", { name: "Calcular", exact: true });
+  await expect(calculate).toBeVisible();
+  await page.locator(".map").click();
+  await calculate.click();
 
   // The cart survives a reload.
   await page.reload();
@@ -436,7 +440,7 @@ test("the selected chains travel in the recommendation request", async ({ page }
   await page.locator(".map").click();
 
   const sent = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular cesta" }).click();
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
   const body = (await sent).postDataJSON();
   expect(body.chains).toEqual(["mercadona"]);
 });

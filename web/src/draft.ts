@@ -51,6 +51,7 @@ export function draftFromInterpreted(item: InterpretedItem): DraftItem {
     brand: item.brand ?? "",
     privateLabelOk: true,
     ...GENERIC_DEFAULTS,
+    imageUrl: item.image_url,
     options: item.options,
   };
 }

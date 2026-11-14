@@ -42,6 +42,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      image_url: null,
       options: [],
     };
 
@@ -70,6 +71,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: false,
       needs_llm: true,
+      image_url: null,
       options: [],
     });
 

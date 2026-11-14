@@ -243,6 +243,8 @@ class InterpretedItem(BaseModel):
     alternatives: list[str]
     resolved: bool
     needs_llm: bool
+    #: Photo of the cheapest product per unit of its category and descendants, if any.
+    image_url: str | None
     options: list[OptionOut]
 
 
@@ -297,6 +299,7 @@ def _interpreted_item(
     line: int,
     key: str | None,
     vague: bool,
+    image_url: str | None,
     options: Sequence[OptionOut],
 ) -> InterpretedItem:
     text = str(item.get("item", ""))
@@ -313,6 +316,7 @@ def _interpreted_item(
         alternatives=list(source.alternatives) if source is not None else [],
         resolved=(source.resolved if source is not None else True) and not vague,
         needs_llm=source.needs_llm if source is not None else False,
+        image_url=image_url,
         options=list(options),
     )
 
@@ -487,6 +491,9 @@ def interpret(
         if key is not None and getattr(preprocessor.generic_by_key.get(key), "vague", False)
     }
     options = _category_options(session, vague_keys)
+    # The cheapest priced product of each line's category gives its photo, as for options.
+    prices = _option_prices(session, {key for key in keys if key is not None})
+    images = {key: price["image_url"] for key, price in prices.items()}
     items = [
         _interpreted_item(
             preprocessor,
@@ -495,6 +502,7 @@ def interpret(
             line,
             key,
             key in vague_keys,
+            images.get(key),
             options.get(key, ()),
         )
         for item, key, (source, line) in zip(interpretation.items, keys, sources, strict=True)
