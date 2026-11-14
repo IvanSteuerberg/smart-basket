@@ -114,7 +114,7 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     load(session, seed_dir)
     row = session.execute(
         text(
-            "select level, base_unit, default_quantity, forms, is_vague "
+            "select level, base_unit, default_quantity, forms, is_vague, options "
             "from category where key = 'yogur_griego'"
         )
     ).one()
@@ -123,6 +123,7 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     assert row.default_quantity == Decimal("0.5")
     assert row.forms == ["yogur griego", "griego"]
     assert row.is_vague is False
+    assert row.options == []
 
     natural = session.execute(
         text("select default_quantity, forms from category where key = 'yogur_natural'")
@@ -131,11 +132,12 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     assert natural.forms == ["yogur natural"]
 
     yogures = session.execute(
-        text("select base_unit, forms, is_vague from category where key = 'yogures'")
+        text("select base_unit, forms, is_vague, options from category where key = 'yogures'")
     ).one()
     assert yogures.base_unit is None
     assert yogures.forms == ["yogur", "yogures"]
     assert yogures.is_vague is True
+    assert yogures.options == ["yogur_griego", "yogur_natural"]
 
 
 def test_mapping_change_on_the_second_load_updates_category_id(session, seed_dir, tmp_path):

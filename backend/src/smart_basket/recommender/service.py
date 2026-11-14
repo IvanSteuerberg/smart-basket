@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Literal
@@ -36,6 +36,7 @@ from smart_basket.optimizer import (
 from smart_basket.recommender.candidates import CandidateStore, candidate_stores
 from smart_basket.recommender.catalog import (
     CatalogEntry,
+    CategoryInfo,
     Item,
     build_catalog,
     load_categories,
@@ -65,8 +66,23 @@ class InconsistentResult(RuntimeError):
     """The optimizer returned a store that is not among the candidates: an internal error."""
 
 
+class VagueLine(Exception):
+    """A generic line names a vague category and needs the shopper's choice first."""
+
+    def __init__(self, line_id: int, category_key: str, name: str) -> None:
+        self.line_id = line_id
+        self.category_key = category_key
+        self.message = f"Elige qué {name.lower()} quieres antes de calcular la cesta."
+        super().__init__(self.message)
+
+
 class LineResponse(BaseModel):
+    line_id: int
     text: str
+    product_id: int
+    canonical_id: int | None
+    brand: str | None
+    image_url: str | None
     product_name: str
     packs: int
     quantity_bought: str
@@ -94,9 +110,20 @@ class StopResponse(BaseModel):
 
 
 class MissingResponse(BaseModel):
+    line_id: int
     text: str
     reason: Literal["not_available", "separate_stop", "unreachable"]
     stop: StopResponse | None = None
+
+
+class LineSaving(BaseModel):
+    line_id: int
+    savings: str
+
+
+class FlexSavings(BaseModel):
+    total: str
+    lines: list[LineSaving]
 
 
 class RecommendationResponse(BaseModel):
@@ -107,6 +134,7 @@ class RecommendationResponse(BaseModel):
     total_cost: str
     minutes: str
     missing: list[MissingResponse]
+    flex_savings: FlexSavings | None = None
     route: list[list[float]]
     explanation: str
     degraded: bool
@@ -125,6 +153,8 @@ class RecommendationQuery:
     degraded: bool
     #: Original request body, stored anonymously with the recommendation.
     payload: dict[str, Any]
+    #: Chain codes to consider; empty means every chain.
+    chains: tuple[str, ...] = ()
 
 
 def recommend(
@@ -135,13 +165,19 @@ def recommend(
     settings: Settings,
 ) -> RecommendationResponse:
     """Run the pipeline and store the recommendation; returns the response body."""
-    candidates = candidate_stores(session, query.origin, query.mode, settings)
+    categories = load_categories(
+        session, {item.category_key for item in query.items if item.category_key is not None}
+    )
+    _reject_vague_lines(query, categories)
+    candidates = candidate_stores(
+        session, query.origin, query.mode, settings, frozenset(query.chains)
+    )
     if not candidates:
         raise NoCandidateStores
-    categories = load_categories(session, {item.category_key for item in query.items})
     entries = build_catalog(session, query.items, categories, {c.zone_id for c in candidates})
     lines = tuple(entry.line for entry in entries if entry.line is not None)
 
+    travel = None
     if lines:
         # The session stays open during the Valhalla calls (a second connection would be
         # needed otherwise); acceptable for the MVP, where a recommendation is short.
@@ -153,9 +189,19 @@ def recommend(
         basket = _optimize(query, entries, candidates, travel, today)
     else:
         basket = _nothing_to_buy(query)
+    flex_savings = (
+        _flex_savings(session, query, entries, categories, candidates, travel, today, basket)
+        if travel is not None
+        else None
+    )
     route = _route(routing, query, candidates, basket)
     stores_by_id = {c.store_id: c for c in candidates}
     names = {pid: name for entry in entries for pid, name in entry.product_names.items()}
+    canonicals = {
+        pid: canonical for entry in entries for pid, canonical in entry.product_canonicals.items()
+    }
+    brands = {pid: brand for entry in entries for pid, brand in entry.product_brands.items()}
+    images = {pid: image for entry in entries for pid, image in entry.product_images.items()}
     texts = {str(entry.item_index): entry.text for entry in entries}
     names_by_id = {c.store_id: c.name for c in candidates}
     addresses_by_id = {c.store_id: c.address for c in candidates}
@@ -172,16 +218,80 @@ def recommend(
         id=str(recommendation_id),
         data_as_of=_iso(data_as_of) if basket.stores else None,
         engine_version=basket.engine_version,
-        stores=[_store(sp, stores_by_id, names, texts) for sp in basket.stores],
+        stores=[
+            _store(sp, stores_by_id, names, texts, canonicals, brands, images)
+            for sp in basket.stores
+        ],
         total_cost=_money(basket.total_cost) if basket.stores else "0",
         minutes=_quantity(basket.minutes) if basket.stores else "0",
         missing=[_missing_line(line, stores_by_id, texts) for line in missing],
+        flex_savings=flex_savings,
         route=[[lat, lon] for lat, lon in route],
         explanation=explain(basket, names_by_id, texts, extra, addresses_by_id),
         degraded=query.degraded,
     )
     _persist(session, recommendation_id, query, basket, data_as_of, response)
     return response
+
+
+def _reject_vague_lines(query: RecommendationQuery, categories: Mapping[str, CategoryInfo]) -> None:
+    """A vague category must be narrowed by the shopper before any basket is calculated."""
+    for index, item in enumerate(query.items):
+        if item.category_key is None:
+            continue
+        category = categories.get(item.category_key)
+        if category is not None and category.is_vague:
+            raise VagueLine(index, item.category_key, category.name)
+
+
+def _flex_savings(
+    session: Session,
+    query: RecommendationQuery,
+    entries: tuple[CatalogEntry, ...],
+    categories: Mapping[str, CategoryInfo],
+    candidates: list[CandidateStore],
+    travel: TravelTimes,
+    today: date,
+    basket: BasketResult,
+) -> FlexSavings | None:
+    """What the exact lines would save if their equivalent products were accepted."""
+    exact = {entry.item_index for entry in entries if entry.exact}
+    if not exact:
+        return None
+    flexible_items = tuple(
+        replace(item, accept="equivalent") if entry.exact else item
+        for item, entry in zip(query.items, entries, strict=True)
+    )
+    flexible_entries = build_catalog(
+        session, flexible_items, categories, {c.zone_id for c in candidates}
+    )
+    flexible = _optimize(query, flexible_entries, candidates, travel, today)
+    total = basket.total_cost - flexible.total_cost
+    if total <= 0:
+        return None
+    current_costs = _line_costs(basket)
+    flexible_costs = _line_costs(flexible)
+    lines = [
+        LineSaving(
+            line_id=index,
+            savings=_money(
+                current_costs.get(index, Decimal(0)) - flexible_costs.get(index, Decimal(0))
+            ),
+        )
+        for index in sorted(exact)
+        if current_costs.get(index, Decimal(0)) > flexible_costs.get(index, Decimal(0))
+    ]
+    return FlexSavings(total=_money(total), lines=lines)
+
+
+def _line_costs(basket: BasketResult) -> dict[int, Decimal]:
+    """Cost of each bought line, summed over the stores of the basket."""
+    costs: dict[int, Decimal] = {}
+    for purchase in basket.stores:
+        for line in purchase.lines:
+            index = int(line.line_id)
+            costs[index] = costs.get(index, Decimal(0)) + line.cost
+    return costs
 
 
 def _optimize(
@@ -271,6 +381,9 @@ def _store(
     stores: Mapping[int, CandidateStore],
     names: dict[int, str],
     texts: dict[str, str],
+    canonicals: dict[int, int | None],
+    brands: dict[int, str | None],
+    images: dict[int, str | None],
 ) -> StoreResponse:
     store = stores.get(purchase.store_id)
     if store is None:
@@ -283,17 +396,32 @@ def _store(
         lat=store.latitude,
         lon=store.longitude,
         position=purchase.position,
-        lines=[_line(line, names, texts) for line in purchase.lines],
+        lines=[_line(line, names, texts, canonicals, brands, images) for line in purchase.lines],
         subtotal=_money(purchase.subtotal),
     )
 
 
-def _line(purchase: LinePurchase, names: dict[int, str], texts: dict[str, str]) -> LineResponse:
+def _line(
+    purchase: LinePurchase,
+    names: dict[int, str],
+    texts: dict[str, str],
+    canonicals: dict[int, int | None],
+    brands: dict[int, str | None],
+    images: dict[int, str | None],
+) -> LineResponse:
     product_names = list(
         dict.fromkeys(names[pack.product_id] for pack in purchase.packs if pack.product_id in names)
     )
+    if not purchase.packs:
+        raise InconsistentResult(f"line {purchase.line_id} was bought without a product")
+    product_id = purchase.packs[0].product_id
     return LineResponse(
+        line_id=int(purchase.line_id),
         text=texts[purchase.line_id],
+        product_id=product_id,
+        canonical_id=canonicals.get(product_id),
+        brand=brands.get(product_id),
+        image_url=images.get(product_id),
         product_name=" + ".join(product_names),
         packs=sum(pack.packs for pack in purchase.packs),
         quantity_bought=_quantity(purchase.quantity_bought),
@@ -317,7 +445,9 @@ def _missing_line(
             extra_minutes=_quantity(separate.extra_minutes),
             exceeds_max_stores=separate.exceeds_max_stores,
         )
-    return MissingResponse(text=texts[line.line_id], reason=line.reason.value, stop=stop)
+    return MissingResponse(
+        line_id=int(line.line_id), text=texts[line.line_id], reason=line.reason.value, stop=stop
+    )
 
 
 def _data_as_of(
@@ -350,6 +480,9 @@ def _persist(
     request_body["origin"] = _origin_cell(query.origin)
     result_body = response.model_dump()
     result_body.pop("route", None)
+    canonicals = {
+        line.product_id: line.canonical_id for store in response.stores for line in store.lines
+    }
     session.execute(
         text(
             "insert into recommendation (id, data_as_of, engine_version, origin_cell, "
@@ -378,14 +511,15 @@ def _persist(
                 session.execute(
                     text(
                         "insert into recommendation_item (recommendation_id, line, part, "
-                        "chain_product_id, store_id, quantity, unit_price, line_total, "
-                        "promotion_id) values (:id, :line, :part, :product, :store, :quantity, "
-                        ":unit_price, :line_total, :promotion)"
+                        "canonical_id, chain_product_id, store_id, quantity, unit_price, "
+                        "line_total, promotion_id) values (:id, :line, :part, :canonical, "
+                        ":product, :store, :quantity, :unit_price, :line_total, :promotion)"
                     ),
                     {
                         "id": recommendation_id,
                         "line": int(line.line_id),
                         "part": part,
+                        "canonical": canonicals.get(pack.product_id),
                         "product": pack.product_id,
                         "store": purchase.store_id,
                         "quantity": pack.quantity,

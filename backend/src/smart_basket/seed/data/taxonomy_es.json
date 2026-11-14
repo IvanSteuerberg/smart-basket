@@ -9,6 +9,12 @@
      "key": "fruta",
      "name": "Fruta",
      "vague": true,
+     "options": [
+      "platano",
+      "manzana",
+      "naranja",
+      "pera"
+     ],
      "forms": [
       "fruta",
       "fruta variada"
@@ -187,6 +193,13 @@
      "key": "verdura",
      "name": "Verdura y hortalizas",
      "vague": true,
+     "options": [
+      "tomate",
+      "patata",
+      "cebolla",
+      "calabacin",
+      "pimiento"
+     ],
      "forms": [
       "verdura",
       "verduras",
@@ -428,6 +441,12 @@
        "key": "pollo",
        "name": "Pollo",
        "base_unit": "kg",
+       "options": [
+        "pollo_pechuga",
+        "pollo_muslo_contramuslo",
+        "pollo_alitas",
+        "pollo_entero"
+       ],
        "forms": [
         "pollo"
        ],
@@ -646,6 +665,12 @@
      "key": "pescado_fresco",
      "name": "Pescado fresco",
      "vague": true,
+     "options": [
+      "merluza",
+      "salmon",
+      "bacalao",
+      "dorada"
+     ],
      "forms": [
       "pescado",
       "pescado fresco"
@@ -913,6 +938,13 @@
      "key": "fiambres",
      "name": "Fiambres y embutidos",
      "vague": true,
+     "options": [
+      "jamon_cocido",
+      "pavo_fiambre",
+      "jamon_serrano",
+      "chorizo",
+      "fuet"
+     ],
      "forms": [
       "embutido",
       "embutidos",
@@ -1065,6 +1097,13 @@
      "key": "quesos",
      "name": "Quesos",
      "vague": true,
+     "options": [
+      "queso_curado",
+      "queso_fresco",
+      "queso_lonchas",
+      "queso_rallado",
+      "queso_untable"
+     ],
      "forms": [
       "queso",
       "quesos"
@@ -1283,6 +1322,13 @@
      "key": "yogures",
      "name": "Yogures",
      "vague": true,
+     "options": [
+      "yogur_natural",
+      "yogur_sabores",
+      "yogur_griego",
+      "yogur_desnatado",
+      "yogur_liquido"
+     ],
      "forms": [
       "yogur",
       "yogures",
@@ -1426,7 +1472,6 @@
     {
      "key": "pan",
      "name": "Pan",
-     "vague": true,
      "forms": [
       "pan"
      ],
@@ -2786,7 +2831,6 @@
     {
      "key": "cerveza",
      "name": "Cerveza",
-     "vague": true,
      "forms": [
       "birra"
      ],
@@ -2828,7 +2872,6 @@
     {
      "key": "vino",
      "name": "Vino",
-     "vague": true,
      "forms": [
       "vino"
      ],

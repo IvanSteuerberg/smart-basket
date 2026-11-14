@@ -1,9 +1,11 @@
-"""Products of the chain catalog for each requested line (decision 0016, provisional matching).
+"""Products of the chain catalog for each requested line, resolved through canonical products.
 
-Until real product matching exists (iteration 12), every chain product mapped to the requested
-leaf category, or to a descendant, is a candidate of that line. Each line gets a synthetic
-canonical id of its own, so two lines of the same leaf do not share products and options. A leaf
-without products falls back to the products of its parent group whose name resembles the text.
+Every chain product has a canonical product (decision 0004): a leaf of the taxonomy plus the
+variants that change equivalence, without brand or size. A generic line takes the products of
+the canonicals under the requested category whose variant set matches the line; a concrete line
+takes one product (exact) or every product of its canonical (equivalent). Each line gets a
+synthetic canonical id inside the optimizer, so two lines of the same canonical do not share
+products and options, while the response reports the real canonical of the chosen product.
 """
 
 from __future__ import annotations
@@ -13,57 +15,44 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from functools import lru_cache
-from typing import Any
+from typing import Any, Literal
 
-from rapidfuzz import fuzz
 from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
-from smart_basket.brands import Brands, contains_words, matches_brand
+from smart_basket.brands import Brands, matches_brand
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
-from smart_basket.preprocessor.text import fold, same_word, tokenize, words
+from smart_basket.preprocessor.text import same_word, words
 from smart_basket.seed import DEFAULT_DATA_DIR
 
-#: Minimum `token_set_ratio` between the folded item text and a fallback product name.
-FALLBACK_RATIO = 80
-#: Folded texts shorter than this are matched as whole words only, never as substrings.
-SHORT_TEXT = 4
-#: Words of a line that carry no product meaning when its text is compared with product names.
-CONNECTORS = frozenset({"de", "del", "la", "el", "los", "las", "y", "con", "para", "en", "al"})
-#: Measured dimension of each base unit. A product measured by mass cannot satisfy a leaf measured
-#: by volume or the other way round; counted leaves accept weighed products (bread sold by kg).
+#: How strictly a concrete line accepts the products of its canonical product.
+Accept = Literal["exact", "equivalent"]
+
+#: Measured dimension of each base unit. A product measured by mass cannot satisfy a line
+#: measured by volume or the other way round; counted lines accept weighed products (bread by kg).
 _DIMENSIONS = {"kg": "mass", "g": "mass", "l": "volume", "ml": "volume"}
-#: Shorter words of a line ("d", "l", "kg") are abbreviations or units, not product words.
-MIN_CONTENT_WORD = 3
 #: General Spanish variants shipped with the seed; their forms tell "integral" from "tiburón".
 VARIANTS_FILE = DEFAULT_DATA_DIR / "variants_es.json"
-#: Stems of the adjectives that mark a product as prepared rather than fresh.
-PROCESSED_STEMS = (
-    "empanad",
-    "rebozad",
-    "marinad",
-    "adobad",
-    "precocinad",
-    "preparad",
-    "rellen",
-)
-#: Processing phrases that act as one preparation ("al ajillo", "finas hierbas").
-PROCESSED_PHRASES = (("al", "ajillo"), ("a", "la", "plancha"), ("finas", "hierbas"))
 
-#: Each processing word as its word forms: masculine and feminine, singular and plural.
-PROCESSED: tuple[tuple[tuple[str, ...], ...], ...] = tuple(
-    tuple((stem + ending,) for ending in ("o", "a", "os", "as")) for stem in PROCESSED_STEMS
-) + tuple((phrase,) for phrase in PROCESSED_PHRASES)
+
+class UnknownProduct(Exception):
+    """A line names a product id that is not an active chain product."""
 
 
 @dataclass(frozen=True, slots=True)
 class Item:
-    """One requested list line, as sent by the client."""
+    """One requested list line, as sent by the client.
+
+    Exactly one of `category_key` (generic line) and `product_id` (concrete line) is set.
+    """
 
     text: str
-    category_key: str
-    quantity: Decimal
-    unit: Unit
+    category_key: str | None = None
+    product_id: int | None = None
+    accept: Accept = "equivalent"
+    variants: tuple[str, ...] | None = None
+    quantity: Decimal = Decimal(1)
+    unit: Unit = Unit.UD
     brand: str | None = None
     private_label_ok: bool = True
 
@@ -72,8 +61,10 @@ class Item:
 class CategoryInfo:
     category_id: int
     parent_id: int | None
+    name: str
     default_quantity: Decimal | None
     base_unit: str | None
+    is_vague: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,6 +80,20 @@ class CatalogEntry:
     line: Line | None
     products_by_zone: Mapping[int, tuple[Product, ...]]
     product_names: Mapping[int, str]
+    product_canonicals: Mapping[int, int | None]
+    product_brands: Mapping[int, str | None]
+    product_images: Mapping[int, str | None]
+    #: Whether the line asked for a concrete product with `accept="exact"`.
+    exact: bool
+
+
+@dataclass(frozen=True, slots=True)
+class VariantTerm:
+    """One general variant, with the word forms that name it in a text or product name."""
+
+    key: str
+    forms: tuple[tuple[str, ...], ...]
+    canonical: bool
 
 
 def load_categories(session: Session, keys: set[str]) -> dict[str, CategoryInfo]:
@@ -97,8 +102,8 @@ def load_categories(session: Session, keys: set[str]) -> dict[str, CategoryInfo]
         return {}
     rows = session.execute(
         text(
-            "select key, id, parent_id, default_quantity, base_unit from category "
-            "where key in :keys"
+            "select key, id, parent_id, name, default_quantity, base_unit, is_vague "
+            "from category where key in :keys"
         ).bindparams(bindparam("keys", expanding=True)),
         {"keys": sorted(keys)},
     ).mappings()
@@ -109,8 +114,10 @@ def _category(row: Mapping[str, Any]) -> CategoryInfo:
     return CategoryInfo(
         category_id=row["id"],
         parent_id=row["parent_id"],
+        name=row["name"],
         default_quantity=row["default_quantity"],
         base_unit=row["base_unit"],
+        is_vague=row["is_vague"],
     )
 
 
@@ -120,23 +127,20 @@ def build_catalog(
     categories: Mapping[str, CategoryInfo],
     zone_ids: set[int],
 ) -> tuple[CatalogEntry, ...]:
-    """Resolve every item against the catalog of the candidate zones.
-
-    The products of every requested category and of the parent groups the fallback may need
-    are fetched once, not once per item.
-    """
+    """Resolve every item against the priced products of the candidate zones."""
     brands = Brands(session)
-    resolved = [
-        (index, item, categories.get(item.category_key)) for index, item in enumerate(items)
-    ]
-    category_ids = {category.category_id for _, _, category in resolved if category is not None}
-    parent_ids = {
-        category.parent_id
-        for _, _, category in resolved
-        if category is not None and category.parent_id is not None
-    }
-    rows = _product_rows(session, category_ids | parent_ids, zone_ids)
-    return tuple(_entry(index, item, category, rows, brands) for index, item, category in resolved)
+    rows = _product_rows(session, zone_ids)
+    return tuple(
+        _entry(
+            index,
+            item,
+            categories.get(item.category_key) if item.category_key else None,
+            rows,
+            brands,
+            session,
+        )
+        for index, item in enumerate(items)
+    )
 
 
 def _entry(
@@ -145,36 +149,47 @@ def _entry(
     category: CategoryInfo | None,
     rows: Sequence[Mapping[str, Any]],
     brands: Brands,
+    session: Session,
 ) -> CatalogEntry:
+    if item.product_id is not None:
+        return _concrete_entry(index, item, rows, brands, session)
     if category is None:
-        return CatalogEntry(index, item.text, None, {}, {})
-    brand_terms = brands.terms(item.brand) if item.brand else None
-    item_rows = [row for row in rows if category.category_id in (row["ancestor_ids"] or [])]
-    if not item_rows and category.parent_id is not None:
-        item_rows = _fallback_rows(rows, category.parent_id, item.text)
-    # A synthetic canonical id per line keeps two lines of the same leaf apart: the optimizer
-    # matches products to lines by canonical id, so a shared one would mix brands and options.
-    canonical_id = -(index + 1)
-    candidates: list[tuple[Mapping[str, Any], Product]] = []
+        return CatalogEntry(index, item.text, None, {}, {}, {}, {}, {}, item.accept == "exact")
+    return _generic_entry(index, item, category, rows, brands)
+
+
+def _generic_entry(
+    index: int,
+    item: Item,
+    category: CategoryInfo,
+    rows: Sequence[Mapping[str, Any]],
+    brands: Brands,
+) -> CatalogEntry:
+    # Products without a canonical product are never candidates of a generic line.
+    item_rows = [
+        row
+        for row in rows
+        if row["canonical_id"] is not None and category.category_id in (row["ancestor_ids"] or [])
+    ]
+    requested = _requested_variants(item)
+    terms = _term_by_key()
+    canonical_keys = frozenset(key for key in requested if terms[key].canonical)
+    groups: dict[int, frozenset[str]] = {}
     for row in item_rows:
-        product = _product(row, canonical_id, category.base_unit, brands)
-        if product is None:
-            continue
-        if not item.private_label_ok and product.is_private_label:
-            continue
-        if brand_terms is not None and not matches_brand(row["name"], brand_terms):
-            continue
-        candidates.append((row, product))
-    # Name preference before the processed filter: in "carne picada" every product named like
-    # the line is a "Preparado", so dropping them first would leave meatballs instead.
-    candidates = _with_variants(candidates, item.text)
-    candidates = _prefer_named(candidates, item.text)
-    chosen = _without_processed(candidates, item.text)
-    products: dict[int, list[Product]] = {}
-    names: dict[int, str] = {}
-    for row, product in chosen:
-        products.setdefault(row["zone_id"], []).append(product)
-        names[row["product_id"]] = row["name"]
+        groups.setdefault(row["canonical_id"], _variant_keys(row["variant_key"]))
+    exact_ids = {canonical_id for canonical_id, keys in groups.items() if keys == canonical_keys}
+    chosen_ids = exact_ids
+    if not chosen_ids:
+        chosen_ids = {
+            canonical_id for canonical_id, keys in groups.items() if canonical_keys <= keys
+        }
+    item_rows = [row for row in item_rows if row["canonical_id"] in chosen_ids]
+    # Variants that do not change the canonical still filter products by name.
+    name_variants = [key for key in requested if not terms[key].canonical]
+    item_rows = _with_variant_names(item_rows, name_variants)
+    canonical_id = -(index + 1)
+    chosen = _candidates(item_rows, item, brands, category.base_unit, canonical_id)
+    products_by_zone, names, canonicals, brand_names, images = _collect(chosen, brands)
     line = Line(
         line_id=str(index),
         canonical_id=canonical_id,
@@ -184,83 +199,183 @@ def _entry(
         default_quantity=_default_quantity(item, category, chosen),
     )
     return CatalogEntry(
-        item_index=index,
-        text=item.text,
-        line=line,
-        products_by_zone={zone: tuple(items) for zone, items in products.items()},
-        product_names=names,
+        index, item.text, line, products_by_zone, names, canonicals, brand_names, images, False
     )
 
 
-def _product_rows(
-    session: Session, category_ids: set[int], zone_ids: set[int]
-) -> list[Mapping[str, Any]]:
-    """Products mapped to any of `category_ids` or a descendant, priced in each zone."""
-    if not category_ids or not zone_ids:
+def _concrete_entry(
+    index: int,
+    item: Item,
+    rows: Sequence[Mapping[str, Any]],
+    brands: Brands,
+    session: Session,
+) -> CatalogEntry:
+    header = _product_header(session, item.product_id)
+    if header is None:
+        raise UnknownProduct
+    canonical = header["canonical_id"] if item.accept == "equivalent" else None
+    if canonical is not None:
+        item_rows = [row for row in rows if row["canonical_id"] == canonical]
+    else:
+        item_rows = [row for row in rows if row["product_id"] == item.product_id]
+    canonical_id = -(index + 1)
+    chosen = _candidates(item_rows, item, brands, header["base_unit"], canonical_id)
+    quantity, unit = _concrete_quantity(item, header)
+    preferences = LinePreferences(private_label_ok=item.private_label_ok)
+    if item.accept == "exact" or canonical is None:
+        preferences = LinePreferences(
+            pack_quantity=_pack_size(header),
+            private_label_ok=item.private_label_ok,
+        )
+    products_by_zone, names, canonicals, brand_names, images = _collect(chosen, brands)
+    line = Line(
+        line_id=str(index),
+        canonical_id=canonical_id,
+        quantity=quantity,
+        unit=unit,
+        preferences=preferences,
+        default_quantity=None,
+    )
+    return CatalogEntry(
+        index,
+        item.text,
+        line,
+        products_by_zone,
+        names,
+        canonicals,
+        brand_names,
+        images,
+        item.accept == "exact",
+    )
+
+
+def _product_header(session: Session, product_id: int) -> Mapping[str, Any] | None:
+    """Size and canonical of an active product, or None when the id does not exist."""
+    return (
+        session.execute(
+            text(
+                "select id, canonical_id, base_quantity, base_unit, pack_count "
+                "from chain_product where id = :id and is_active"
+            ),
+            {"id": product_id},
+        )
+        .mappings()
+        .first()
+    )
+
+
+def _pack_size(header: Mapping[str, Any]) -> Decimal | None:
+    if header["base_quantity"] is None:
+        return None
+    return header["base_quantity"] * header["pack_count"]
+
+
+def _concrete_quantity(item: Item, header: Mapping[str, Any]) -> tuple[Decimal, Unit]:
+    """Quantity in the base unit of the requested product, so the optimizer buys those packs."""
+    size = _pack_size(header)
+    if size is None or header["base_unit"] is None:
+        return item.quantity, Unit.UD
+    return item.quantity * size, Unit(header["base_unit"])
+
+
+def _collect(
+    chosen: Sequence[tuple[Mapping[str, Any], Product]], brands: Brands
+) -> tuple[
+    dict[int, list[Product]],
+    dict[int, str],
+    dict[int, int | None],
+    dict[int, str | None],
+    dict[int, str | None],
+]:
+    products: dict[int, list[Product]] = {}
+    names: dict[int, str] = {}
+    canonicals: dict[int, int | None] = {}
+    brand_names: dict[int, str | None] = {}
+    images: dict[int, str | None] = {}
+    for row, product in chosen:
+        products.setdefault(row["zone_id"], []).append(product)
+        product_id = row["product_id"]
+        names[product_id] = row["name"]
+        canonicals[product_id] = row["canonical_id"]
+        brand_names[product_id] = brands.brand_for(row["name"])
+        images[product_id] = row["image_url"]
+    return (
+        {zone: tuple(items) for zone, items in products.items()},
+        names,
+        canonicals,
+        brand_names,
+        images,
+    )
+
+
+def _candidates(
+    rows: Sequence[Mapping[str, Any]],
+    item: Item,
+    brands: Brands,
+    dimension_unit: str | None,
+    canonical_id: int,
+) -> list[tuple[Mapping[str, Any], Product]]:
+    brand_terms = brands.terms(item.brand) if item.brand else None
+    chosen: list[tuple[Mapping[str, Any], Product]] = []
+    for row in rows:
+        product = _product(row, canonical_id, dimension_unit, brands)
+        if product is None:
+            continue
+        if not item.private_label_ok and product.is_private_label:
+            continue
+        if brand_terms is not None and not matches_brand(row["name"], brand_terms):
+            continue
+        chosen.append((row, product))
+    return chosen
+
+
+def _product_rows(session: Session, zone_ids: set[int]) -> list[Mapping[str, Any]]:
+    """Active products with a current price in each zone, with their canonical category."""
+    if not zone_ids:
         return []
     return list(
         session.execute(
             text(
                 """
-                select cp.id as product_id, cp.chain_id, cp.name,
+                select cp.id as product_id, cp.chain_id, cp.name, cp.image_url,
                        cp.base_quantity, cp.base_unit, cp.pack_count,
-                       pc.zone_id, pc.price, cc.category_id as product_category_id,
+                       cp.canonical_id, canon.variant_key,
+                       pc.zone_id, pc.price,
                        array(
                            select ancestor_id from category_closure
-                           where descendant_id = cc.category_id
+                           where descendant_id =
+                               coalesce(canon.category_id, cc.category_id)
                        ) as ancestor_ids
                 from chain_product cp
-                join chain_category cc on cc.id = cp.chain_category_id
-                join chain_product_zone cpz on cpz.chain_product_id = cp.id
+                left join canonical_product canon on canon.id = cp.canonical_id
+                left join chain_category cc on cc.id = cp.chain_category_id
+                join chain_product_zone cpz
+                  on cpz.chain_product_id = cp.id and cpz.is_available
                 join price_current pc
                   on pc.chain_product_id = cp.id and pc.zone_id = cpz.zone_id
                 where cp.is_active
-                  and cpz.is_available
                   and cpz.zone_id in :zones
-                  and cc.category_id in (
-                      select descendant_id from category_closure
-                      where ancestor_id = any(:ids)
-                  )
                 order by cp.id, pc.zone_id
                 """
             ).bindparams(bindparam("zones", expanding=True)),
-            {"zones": sorted(zone_ids), "ids": sorted(category_ids)},
+            {"zones": sorted(zone_ids)},
         ).mappings()
     )
-
-
-def _fallback_rows(
-    rows: Sequence[Mapping[str, Any]], group_id: int, item_text: str
-) -> list[Mapping[str, Any]]:
-    """Products mapped directly to the parent group whose name resembles the item text."""
-    folded = fold(item_text)
-    item_words = words(item_text)
-    short = len(folded) < SHORT_TEXT
-    matched = []
-    for row in rows:
-        if row["product_category_id"] != group_id:
-            continue
-        if short:
-            if contains_words(words(row["name"]), item_words):
-                matched.append(row)
-        elif fuzz.token_set_ratio(folded, fold(row["name"])) >= FALLBACK_RATIO:
-            matched.append(row)
-    return matched
 
 
 def _product(
     row: Mapping[str, Any],
     canonical_id: int,
-    leaf_base_unit: str | None,
+    line_base_unit: str | None,
     brands: Brands,
 ) -> Product | None:
     """Optimizer product, or None when it cannot satisfy the line or has no size to compare by."""
     quantity, unit = row["base_quantity"], row["base_unit"]
     if quantity is None or unit is None:
         return None
-    leaf_dimension = _DIMENSIONS.get(leaf_base_unit or "")
+    line_dimension = _DIMENSIONS.get(line_base_unit or "")
     product_dimension = _DIMENSIONS.get(unit)
-    if leaf_dimension and product_dimension and leaf_dimension != product_dimension:
+    if line_dimension and product_dimension and line_dimension != product_dimension:
         return None
     ancestors = row["ancestor_ids"] or []
     return Product(
@@ -273,24 +388,6 @@ def _product(
         is_private_label=brands.is_private_label(row["chain_id"], row["name"]),
         category_ids=frozenset(ancestors),
     )
-
-
-def _prefer_named(
-    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
-) -> list[tuple[Mapping[str, Any], Product]]:
-    """Products whose names share the most words with the line, when any shares one.
-
-    "papel de horno" keeps "Papel vegetal" over "Bolsa de rafia"; a line sharing no word with any
-    product name keeps every product.
-    """
-    content = _content_words(item_text)
-    if not content:
-        return list(rows)
-    scores = [_shared_words(row[0]["name"], content) for row in rows]
-    best = max(scores, default=0)
-    if best == 0:
-        return list(rows)
-    return [row for row, score in zip(rows, scores, strict=True) if score == best]
 
 
 def _default_quantity(
@@ -315,49 +412,61 @@ def _default_quantity(
     return quantities[(len(quantities) - 1) // 2]
 
 
-def _without_processed(
-    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
-) -> list[tuple[Mapping[str, Any], Product]]:
-    """Drop prepared products unless the line asks for one of their preparations."""
-    line_words = words(item_text)
-    asked = {group for group in PROCESSED if _contains_any(line_words, group)}
-    kept = []
-    for row, product in rows:
-        name_words = words(row["name"])
-        found = {group for group in PROCESSED if _contains_any(name_words, group)}
-        if found and not found & asked:
-            continue
-        kept.append((row, product))
-    # A leaf whose products are all prepared ("carne picada") still offers them.
-    return kept or list(rows)
+def _requested_variants(item: Item) -> frozenset[str]:
+    """The variant keys of the line: explicit ones, or the variants its text names."""
+    if item.variants is not None:
+        return frozenset(item.variants)
+    line_words = words(item.text)
+    return frozenset(term.key for term in _variant_terms() if _contains_any(line_words, term.forms))
 
 
-def _with_variants(
-    rows: Sequence[tuple[Mapping[str, Any], Product]], item_text: str
-) -> list[tuple[Mapping[str, Any], Product]]:
-    """Keep the products matching every variant written in the line, when a variant is sold.
+def _with_variant_names(
+    rows: Sequence[Mapping[str, Any]], requested: Sequence[str]
+) -> list[Mapping[str, Any]]:
+    """Keep the products matching every non-canonical variant named in the line, when sold.
 
     "pasta integral" keeps the wholemeal pasta; a variant no product carries ("huevos eco")
     filters nothing.
     """
-    line_words = words(item_text)
+    terms = _term_by_key()
     kept = list(rows)
-    for forms in _variant_forms():
-        if not _contains_any(line_words, forms):
-            continue
-        matching = [row for row in kept if _contains_any(words(row[0]["name"]), forms)]
+    for key in sorted(requested):
+        forms = terms[key].forms
+        matching = [row for row in kept if _contains_any(words(row["name"]), forms)]
         kept = matching or kept
     return kept
 
 
+def _variant_keys(raw: str | None) -> frozenset[str]:
+    """The variant keys stored in a canonical product, sorted and `|`-joined."""
+    return frozenset(key for key in (raw or "").split("|") if key)
+
+
 @lru_cache(maxsize=1)
-def _variant_forms() -> tuple[tuple[tuple[str, ...], ...], ...]:
-    """The word forms of every general variant, read from the seed once per process."""
+def _variant_terms() -> tuple[VariantTerm, ...]:
+    """Every general variant, read from the seed once per process."""
     data = json.loads(VARIANTS_FILE.read_text(encoding="utf-8"))
     return tuple(
-        tuple(words(form) for form in variant.get("forms") or [variant.get("name", variant["key"])])
+        VariantTerm(
+            key=variant["key"],
+            forms=tuple(
+                words(form)
+                for form in variant.get("forms") or [variant.get("name", variant["key"])]
+            ),
+            canonical=bool(variant.get("canonical", False)),
+        )
         for variant in data.get("variants", [])
     )
+
+
+@lru_cache(maxsize=1)
+def _term_by_key() -> dict[str, VariantTerm]:
+    return {term.key: term for term in _variant_terms()}
+
+
+def variant_keys() -> frozenset[str]:
+    """The keys of every shipped general variant, for request validation."""
+    return frozenset(term.key for term in _variant_terms())
 
 
 def _contains_any(haystack: tuple[str, ...], forms: Iterable[tuple[str, ...]]) -> bool:
@@ -373,20 +482,3 @@ def _contains_form(haystack: tuple[str, ...], form: tuple[str, ...]) -> bool:
         all(same_word(haystack[start + offset], word) for offset, word in enumerate(form))
         for start in range(len(haystack) - len(form) + 1)
     )
-
-
-def _content_words(text: str) -> tuple[str, ...]:
-    """Folded words of a line that carry meaning, without connectors or numbers."""
-    return tuple(
-        token.key
-        for token in tokenize(text)
-        if token.kind == "word"
-        and token.key not in CONNECTORS
-        and len(token.key) >= MIN_CONTENT_WORD
-    )
-
-
-def _shared_words(name: str, content: tuple[str, ...]) -> int:
-    """How many content words of the line a product name has as whole words (plural tolerated)."""
-    product_words = tuple(token.key for token in tokenize(name) if token.kind == "word")
-    return sum(any(same_word(word, other) for other in product_words) for word in content)

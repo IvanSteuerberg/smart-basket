@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from smart_basket.config import Settings
@@ -27,37 +27,50 @@ class CandidateStore:
 
 
 def candidate_stores(
-    session: Session, origin: GeoPoint, mode: TravelMode, settings: Settings
+    session: Session,
+    origin: GeoPoint,
+    mode: TravelMode,
+    settings: Settings,
+    chains: frozenset[str] = frozenset(),
 ) -> list[CandidateStore]:
-    """Stores with current prices in their zone within the mode's radius, nearest first."""
+    """Stores with current prices in their zone within the mode's radius, nearest first.
+
+    `chains` limits the result to those chain codes; empty means every chain.
+    """
     radius = settings.walk_radius_m if mode is TravelMode.WALK else settings.car_radius_m
+    chain_filter = "and c.code in :chains" if chains else ""
+    statement = text(
+        f"""
+        with origin as (
+            select st_setsrid(st_makepoint(:lon, :lat), 4326)::geography as point
+        )
+        select s.id, s.chain_id, s.name, s.address, c.name as chain, s.zone_id,
+               st_y(s.geom::geometry) as latitude,
+               st_x(s.geom::geometry) as longitude,
+               st_distance(s.geom, origin.point) as distance_m
+        from store s
+        join chain c on c.id = s.chain_id
+        cross join origin
+        where s.is_active
+          {chain_filter}
+          and exists (
+              select 1 from price_current pc where pc.zone_id = s.zone_id
+          )
+          and st_dwithin(s.geom, origin.point, :radius)
+        order by distance_m, s.id
+        limit :limit
+        """
+    )
+    if chains:
+        statement = statement.bindparams(bindparam("chains", expanding=True))
     rows = session.execute(
-        text(
-            """
-            with origin as (
-                select st_setsrid(st_makepoint(:lon, :lat), 4326)::geography as point
-            )
-            select s.id, s.chain_id, s.name, s.address, c.name as chain, s.zone_id,
-                   st_y(s.geom::geometry) as latitude,
-                   st_x(s.geom::geometry) as longitude,
-                   st_distance(s.geom, origin.point) as distance_m
-            from store s
-            join chain c on c.id = s.chain_id
-            cross join origin
-            where s.is_active
-              and exists (
-                  select 1 from price_current pc where pc.zone_id = s.zone_id
-              )
-              and st_dwithin(s.geom, origin.point, :radius)
-            order by distance_m, s.id
-            limit :limit
-            """
-        ),
+        statement,
         {
             "lat": origin.latitude,
             "lon": origin.longitude,
             "radius": radius,
             "limit": settings.candidate_stores,
+            "chains": sorted(chains),
         },
     ).mappings()
     return [

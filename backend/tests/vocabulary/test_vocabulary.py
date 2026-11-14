@@ -102,6 +102,8 @@ def test_a_category_removed_from_the_file_leaves_the_lexicon(session, tmp_path):
         for node in nodes:
             if node["key"] == "platano":
                 continue
+            if "options" in node:
+                node["options"] = [option for option in node["options"] if option != "platano"]
             node["children"] = without_platano(node.get("children", []))
             kept.append(node)
         return kept
