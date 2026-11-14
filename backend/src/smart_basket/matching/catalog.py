@@ -377,16 +377,20 @@ def export_review(session: Session, path: Path) -> int:
 def import_decisions(session: Session, path: Path) -> int:
     """Apply a human's decisions: assign with method `review` and accept the review.
 
-    The file is a JSON array of `{"product_id", "category_key", "variant_key"}`. An unknown
-    key is an error that names the line; the caller rolls the whole file back.
+    The file is a JSON array of `{"product_id", "category_key", "variant_key"}`. Without a
+    `variant_key`, the human chose only the leaf and the variants are read from the product
+    name as the rules do. An unknown key is an error that names the line; the caller rolls the
+    whole file back.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise DecisionFileError("the decisions file must be a JSON array")
     taxonomy = load_taxonomy(session)
     variant_names = _variant_names(session)
-    product_ids = set(session.execute(text("select id from chain_product")).scalars())
+    names_by_id = dict(session.execute(text("select id, name from chain_product")).tuples().all())
+    product_ids = set(names_by_id)
     canonical_ids = _load_canonicals(session)
+    preprocessor: Preprocessor | None = None
     applied = 0
     for line, entry in enumerate(data, start=1):
         if not isinstance(entry, dict):
@@ -399,7 +403,12 @@ def import_decisions(session: Session, path: Path) -> int:
             raise DecisionFileError(
                 f"line {line}: unknown category key {entry.get('category_key')!r}"
             )
-        keys = _variant_keys(entry.get("variant_key", ""), line, variant_names)
+        if "variant_key" in entry:
+            keys = _variant_keys(entry["variant_key"], line, variant_names)
+        else:
+            if preprocessor is None:
+                preprocessor = Preprocessor(build_lexicon(session))
+            keys = name_match(preprocessor, names_by_id[product_id]).variant_keys
         name = canonical_name(leaf.name, keys, variant_names)
         key = (leaf.id, name, variant_key(keys))
         canonical_id = canonical_ids.get(key)

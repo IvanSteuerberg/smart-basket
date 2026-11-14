@@ -293,3 +293,17 @@ def test_a_pending_review_still_in_doubt_stays_and_counts_as_unchanged(catalog):
     second = run(catalog.session)
     assert second.summary.unchanged == second.summary.products
     assert {item.product_id for item in second.review} >= {catalog.products["M5"]}
+
+
+def test_a_decision_without_variants_reads_them_from_the_name(catalog, tmp_path):
+    # The human chose the leaf only; "sin lactosa" still makes its own canonical.
+    path = tmp_path / "decisions.json"
+    path.write_text(
+        json.dumps([{"product_id": catalog.products["M2"], "category_key": "leche"}]),
+        encoding="utf-8",
+    )
+    assert import_decisions(catalog.session, path) == 1
+    row = assignment(catalog.session, "M2")
+    assert row["category_key"] == "leche"
+    assert row["variant_key"] == "sin_lactosa"
+    assert row["match_method"] == "review"
