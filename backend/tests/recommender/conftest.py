@@ -136,7 +136,21 @@ def _seed(connection: Connection) -> dict[str, int]:
         connection, "papel_horno", "Papel de horno", 2, ids["drogueria"], "ud"
     )
     ids["aves"] = _category(connection, "aves", "Aves", 1, base_unit="kg")
-    for category in ("lacteos", "fruta", "huevos", "arroz", "panaderia", "refresco", "drogueria"):
+    ids["pasta"] = _category(connection, "pasta", "Pasta", 1, base_unit="kg")
+    ids["pollo"] = _category(connection, "pollo", "Pollo", 1, base_unit="kg")
+    ids["carne"] = _category(connection, "carne", "Carne", 1, base_unit="kg")
+    for category in (
+        "lacteos",
+        "fruta",
+        "huevos",
+        "arroz",
+        "panaderia",
+        "refresco",
+        "drogueria",
+        "pasta",
+        "pollo",
+        "carne",
+    ):
         _closure(connection, ids[category], ids[category], 0)
     for leaf in ("leche", "yogur", "queso"):
         _closure(connection, ids[leaf], ids[leaf], 0)
@@ -167,6 +181,9 @@ def _seed(connection: Connection) -> dict[str, int]:
             connection, ids["chain"], "17", "Papel de horno", ids["papel_horno"]
         ),
         "aves": _chain_category(connection, ids["chain"], "18", "Aves", ids["aves"]),
+        "pasta": _chain_category(connection, ids["chain"], "19", "Pasta", ids["pasta"]),
+        "pollo": _chain_category(connection, ids["chain"], "20", "Pollo", ids["pollo"]),
+        "carne": _chain_category(connection, ids["chain"], "21", "Carne", ids["carne"]),
     }
     products = {
         "leche": ("L1", "Leche semidesnatada Hacendado", "1", "l", 1, "0.95", "1.00"),
@@ -232,6 +249,24 @@ def _seed(connection: Connection) -> dict[str, int]:
         ("papel_horno", "PH3", "Papel vegetal a granel", "0.2", "kg", "0.90", "1.00"),
         ("aves", "AV1", "Ala de pavo", "1", "kg", "3.00", "3.10"),
         ("aves", "AV2", "Muslo de pavo", "1", "kg", "2.50", "2.60"),
+        ("leche", "L4", "Leche sin lactosa Hacendado", "1", "l", "1.05", "1.15"),
+        ("pasta", "PA1", "Macarrón rayado integral Hacendado", "0.5", "kg", "1.00", "1.10"),
+        ("pasta", "PA2", "Pasta tiburón Hacendado", "0.5", "kg", "0.80", "0.90"),
+        ("pollo", "PO1", "Muslo de pollo", "0.46", "kg", "4.00", "4.10"),
+        ("pollo", "PO2", "Pollo entero", "0.63", "kg", "4.19", "4.29"),
+        ("pollo", "PO3", "Alitas de pollo", "0.60", "kg", "4.80", "4.90"),
+        (
+            "pollo",
+            "PO4",
+            "Filetes pechuga de pollo marinadas empanadas sin gluten",
+            "0.46",
+            "kg",
+            "4.00",
+            "4.10",
+        ),
+        ("pollo", "PO5", "Pechugas enteras de pollo", "0.63", "kg", "4.19", "4.29"),
+        ("carne", "CA1", "Preparado de carne picada cerdo", "0.5", "kg", "4.50", "4.60"),
+        ("carne", "CA2", "Preparado de carne picada mixta", "0.5", "kg", "4.70", "4.80"),
     ):
         _chain_product(
             connection,

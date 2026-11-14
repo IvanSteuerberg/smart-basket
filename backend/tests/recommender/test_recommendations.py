@@ -349,6 +349,18 @@ def test_counted_leaf_accepts_weighed_products(world):
     assert body["stores"][0]["lines"][0]["product_name"] == "Papel vegetal a granel"
 
 
+def test_counted_line_of_a_weighed_leaf_picks_by_price_per_kilo(world):
+    # The 0.46 kg pack costs less in total but more per kilo than the 0.63 kg one.
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("pollo", "pollo", "1", "ud")]),
+    ).json()
+    assert body["missing"] == []
+    line = body["stores"][0]["lines"][0]
+    assert line["product_name"] == "Pollo entero"
+    assert line["quantity_bought"] == "0.63"
+
+
 def test_line_without_a_matching_name_keeps_every_product(world):
     body = world.client.post(
         "/api/recommendations",
