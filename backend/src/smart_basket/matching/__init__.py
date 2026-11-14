@@ -6,11 +6,13 @@ equivalence, with a review queue for everything the rules cannot decide.
 
 from smart_basket.matching.catalog import (
     DecisionFileError,
+    DecisionsSummary,
     LeafReport,
     MatchResult,
     MatchSummary,
     ReviewItem,
     Taxonomy,
+    export_decisions,
     export_review,
     import_decisions,
     load_products,
@@ -18,6 +20,7 @@ from smart_basket.matching.catalog import (
     pending_reviews,
     run,
     section_paths,
+    sync_decisions,
     write_json,
 )
 from smart_basket.matching.names import Hit, NameMatch, canonical_name, name_match, variant_key
@@ -27,6 +30,7 @@ __all__ = [
     "Candidate",
     "Decision",
     "DecisionFileError",
+    "DecisionsSummary",
     "Hit",
     "LeafReport",
     "MatchResult",
@@ -37,6 +41,7 @@ __all__ = [
     "Taxonomy",
     "canonical_name",
     "decide",
+    "export_decisions",
     "export_review",
     "import_decisions",
     "load_products",
@@ -45,6 +50,7 @@ __all__ = [
     "pending_reviews",
     "run",
     "section_paths",
+    "sync_decisions",
     "variant_key",
     "write_json",
 ]

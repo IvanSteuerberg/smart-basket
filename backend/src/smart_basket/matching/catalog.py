@@ -14,10 +14,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from smart_basket.config import Settings
 
 from smart_basket.matching.names import canonical_name, name_match, variant_key
 from smart_basket.matching.rules import Candidate, Section, decide
@@ -109,6 +112,14 @@ class MatchResult:
 
 class DecisionFileError(ValueError):
     """A decisions file the importer cannot apply; the message names the line."""
+
+
+@dataclass(frozen=True, slots=True)
+class DecisionsSummary:
+    """The number of decisions applied, plus how many were skipped when `skip_missing`."""
+
+    applied: int
+    skipped: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -374,41 +385,79 @@ def export_review(session: Session, path: Path) -> int:
     return len(items)
 
 
-def import_decisions(session: Session, path: Path) -> int:
+def import_decisions(
+    session: Session, path: Path, *, skip_missing: bool = False
+) -> DecisionsSummary:
     """Apply a human's decisions: assign with method `review` and accept the review.
 
-    The file is a JSON array of `{"product_id", "category_key", "variant_key"}`. Without a
-    `variant_key`, the human chose only the leaf and the variants are read from the product
-    name as the rules do. An unknown key is an error that names the line; the caller rolls the
-    whole file back.
+    The file is a JSON array of `{"product_id", "category_key", "variant_key"}` or
+    `{"chain", "sku", "category_key", "variant_key"}`. Without a `variant_key`, the human chose
+    only the leaf and the variants are read from the product name as the rules do. An unknown
+    product is skipped when `skip_missing`; otherwise it is an error that names the line. An
+    unknown category key is always an error that names the line.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise DecisionFileError("the decisions file must be a JSON array")
     taxonomy = load_taxonomy(session)
     variant_names = _variant_names(session)
-    names_by_id = dict(session.execute(text("select id, name from chain_product")).tuples().all())
-    product_ids = set(names_by_id)
+    rows = (
+        session.execute(
+            text(
+                "select cp.id, cp.name, ch.code, cp.chain_sku "
+                "from chain_product cp "
+                "join chain ch on ch.id = cp.chain_id"
+            )
+        )
+        .mappings()
+        .all()
+    )
+    names_by_id = {row["id"]: row["name"] for row in rows}
+    products_by_sku = {(row["code"], row["chain_sku"]): (row["id"], row["name"]) for row in rows}
     canonical_ids = _load_canonicals(session)
     preprocessor: Preprocessor | None = None
     applied = 0
+    skipped = 0
     for line, entry in enumerate(data, start=1):
         if not isinstance(entry, dict):
             raise DecisionFileError(f"line {line}: expected an object")
-        product_id = entry.get("product_id")
-        if not isinstance(product_id, int) or product_id not in product_ids:
-            raise DecisionFileError(f"line {line}: product {product_id!r} does not exist")
-        leaf = taxonomy.leaves.get(entry.get("category_key"))
+        product_id: int | None = None
+        product_name: str | None = None
+        if "product_id" in entry:
+            pid = entry["product_id"]
+            if isinstance(pid, int) and pid in names_by_id:
+                product_id = pid
+                product_name = names_by_id[pid]
+            else:
+                if skip_missing:
+                    skipped += 1
+                    continue
+                raise DecisionFileError(f"line {line}: product {pid!r} does not exist")
+        elif "chain" in entry and "sku" in entry:
+            chain_code = entry["chain"]
+            sku = str(entry["sku"])
+            key = (chain_code, sku)
+            if key in products_by_sku:
+                product_id, product_name = products_by_sku[key]
+            else:
+                if skip_missing:
+                    skipped += 1
+                    continue
+                raise DecisionFileError(
+                    f"line {line}: product {chain_code!r} {sku!r} does not exist"
+                )
+        else:
+            raise DecisionFileError(f"line {line}: expected 'product_id' or 'chain' and 'sku'")
+        category_key = entry.get("category_key")
+        leaf = taxonomy.leaves.get(category_key)
         if leaf is None:
-            raise DecisionFileError(
-                f"line {line}: unknown category key {entry.get('category_key')!r}"
-            )
+            raise DecisionFileError(f"line {line}: unknown category key {category_key!r}")
         if "variant_key" in entry:
             keys = _variant_keys(entry["variant_key"], line, variant_names)
         else:
             if preprocessor is None:
                 preprocessor = Preprocessor(build_lexicon(session))
-            keys = name_match(preprocessor, names_by_id[product_id]).variant_keys
+            keys = name_match(preprocessor, product_name).variant_keys
         name = canonical_name(leaf.name, keys, variant_names)
         key = (leaf.id, name, variant_key(keys))
         canonical_id = canonical_ids.get(key)
@@ -424,7 +473,55 @@ def import_decisions(session: Session, path: Path) -> int:
             {"product": product_id},
         )
         applied += 1
-    return applied
+    return DecisionsSummary(applied=applied, skipped=skipped)
+
+
+def export_decisions(session: Session, path: Path) -> int:
+    """Export all `review` assignments as reproducible decision objects."""
+    rows = (
+        session.execute(
+            text(
+                "select ch.code as chain, cp.chain_sku as sku, cat.key as category_key, "
+                "  c.variant_key "
+                "from chain_product cp "
+                "join chain ch on ch.id = cp.chain_id "
+                "join canonical_product c on c.id = cp.canonical_id "
+                "join category cat on cat.id = c.category_id "
+                "where cp.match_method = 'review' "
+                "order by ch.code, cp.chain_sku"
+            )
+        )
+        .mappings()
+        .all()
+    )
+    entries = [
+        {
+            "chain": row["chain"],
+            "sku": row["sku"],
+            "category_key": row["category_key"],
+            "variant_key": row["variant_key"],
+        }
+        for row in rows
+    ]
+    write_json(path, entries)
+    return len(entries)
+
+
+def sync_decisions(session: Session, settings: Settings | None = None) -> MatchResult | None:
+    """Apply reproducible decisions if configured and then run classification."""
+    if settings is None:
+        from smart_basket.config import get_settings
+
+        settings = get_settings()
+
+    path = settings.resolve_match_decisions_file()
+    if path is None or not path.exists():
+        print("no decisions file")
+        return None
+
+    decisions = import_decisions(session, path, skip_missing=True)
+    print(f"decisions applied: {decisions.applied}, skipped: {decisions.skipped}")
+    return run(session)
 
 
 def write_json(path: Path, data: Any) -> None:

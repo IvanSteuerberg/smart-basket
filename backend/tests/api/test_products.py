@@ -109,8 +109,7 @@ def _product(
     return product_id
 
 
-@pytest.fixture
-def catalog(session: Session) -> Catalog:
+def seed_catalog(session: Session) -> Catalog:
     chain_id = _scalar(session, "select id from chain where code = 'mercadona'")
     zone_id = _scalar(
         session,
@@ -209,6 +208,11 @@ def catalog(session: Session) -> Catalog:
     return Catalog(products=products, canonicals=canonicals)
 
 
+@pytest.fixture
+def catalog(session: Session) -> Catalog:
+    return seed_catalog(session)
+
+
 def _items(client, **params) -> list[dict]:
     response = client.get("/api/products", params={"size": 60, **params})
     assert response.status_code == 200, response.text
@@ -277,6 +281,33 @@ def test_search_matches_the_forms_of_the_category(client, catalog):
         "Plátano ecológico",
         "Fruta de temporada",
     ]
+
+
+def test_search_relevance_ranks_prefix_above_other_matches(client, session, catalog):
+    chain_id = _scalar(session, "select id from chain where code = 'mercadona'")
+    zone_id = _scalar(
+        session,
+        "select z.id from zone z join chain c on c.id = z.chain_id"
+        " where c.code = 'mercadona' and z.kind = 'warehouse' order by z.id limit 1",
+    )
+    yogur_cat = _scalar(session, "select id from chain_category where code = 'T-YOGUR'")
+    _product(
+        session,
+        chain_id=chain_id,
+        chain_category_id=yogur_cat,
+        zone_id=zone_id,
+        sku="bebida-platano",
+        name="Bebida de plátano",
+        price="0.50",
+        quantity="1",
+        unit="l",
+    )
+    session.flush()
+
+    names = _names(client, q="platanos", sort="unit_price")
+    assert "Bebida de plátano" in names
+    assert names.index("Plátano de Canarias") < names.index("Bebida de plátano")
+    assert names.index("Plátano de Canarias bolsa") < names.index("Bebida de plátano")
 
 
 def test_sorts_and_paging(client, catalog):

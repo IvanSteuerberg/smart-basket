@@ -5,13 +5,16 @@ import json
 import pytest
 from sqlalchemy import text
 
+from smart_basket.config import Settings
 from smart_basket.matching import (
     DecisionFileError,
+    export_decisions,
     export_review,
     import_decisions,
     load_products,
     load_taxonomy,
     run,
+    sync_decisions,
 )
 
 pytestmark = pytest.mark.db
@@ -196,7 +199,7 @@ def test_import_decisions_then_run_keeps_the_human_decision(catalog, tmp_path):
         ),
         encoding="utf-8",
     )
-    assert import_decisions(catalog.session, path) == 2
+    assert import_decisions(catalog.session, path).applied == 2
 
     row = assignment(catalog.session, "M5")
     assert row["category_key"] == "galletas"
@@ -302,8 +305,166 @@ def test_a_decision_without_variants_reads_them_from_the_name(catalog, tmp_path)
         json.dumps([{"product_id": catalog.products["M2"], "category_key": "leche"}]),
         encoding="utf-8",
     )
-    assert import_decisions(catalog.session, path) == 1
+    assert import_decisions(catalog.session, path).applied == 1
     row = assignment(catalog.session, "M2")
     assert row["category_key"] == "leche"
     assert row["variant_key"] == "sin_lactosa"
     assert row["match_method"] == "review"
+
+
+def test_import_decisions_by_chain_and_sku(catalog, tmp_path):
+    path = tmp_path / "decisions.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "chain": "mercadona",
+                    "sku": "M1",
+                    "category_key": "platano",
+                    "variant_key": "",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result = import_decisions(catalog.session, path)
+    assert result.applied == 1
+    assert result.skipped == 0
+    row = assignment(catalog.session, "M1")
+    assert row["category_key"] == "platano"
+    assert row["match_method"] == "review"
+    assert row["match_confidence"] == 1.0
+
+
+def test_import_decisions_skip_missing_and_error(catalog, tmp_path):
+    path = tmp_path / "decisions.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "chain": "mercadona",
+                    "sku": "UNKNOWN_SKU",
+                    "category_key": "platano",
+                },
+                {
+                    "chain": "mercadona",
+                    "sku": "M1",
+                    "category_key": "platano",
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        DecisionFileError, match="line 1: product 'mercadona' 'UNKNOWN_SKU' does not exist"
+    ):
+        import_decisions(catalog.session, path, skip_missing=False)
+
+    summary = import_decisions(catalog.session, path, skip_missing=True)
+    assert summary.applied == 1
+    assert summary.skipped == 1
+    assert assignment(catalog.session, "M1")["match_method"] == "review"
+
+
+def test_import_decisions_fails_on_unknown_category_even_with_skip_missing(catalog, tmp_path):
+    path = tmp_path / "decisions.json"
+    path.write_text(
+        json.dumps(
+            [
+                {
+                    "chain": "mercadona",
+                    "sku": "M1",
+                    "category_key": "unknown_cat",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(DecisionFileError, match="line 1: unknown category key 'unknown_cat'"):
+        import_decisions(catalog.session, path, skip_missing=True)
+
+
+def test_export_decisions_roundtrip(catalog, tmp_path):
+    # Establish a review match
+    in_path = tmp_path / "input.json"
+    in_path.write_text(
+        json.dumps(
+            [
+                {
+                    "chain": "mercadona",
+                    "sku": "M1",
+                    "category_key": "platano",
+                    "variant_key": "",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    import_decisions(catalog.session, in_path)
+
+    out_path = tmp_path / "exported.json"
+    count = export_decisions(catalog.session, out_path)
+    assert count >= 1
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert any(
+        item["chain"] == "mercadona" and item["sku"] == "M1" and item["category_key"] == "platano"
+        for item in data
+    )
+
+    # Re-importing on the same base maintains the same assignment
+    re_applied = import_decisions(catalog.session, out_path)
+    assert re_applied.applied == count
+    assert re_applied.skipped == 0
+    row = assignment(catalog.session, "M1")
+    assert row["category_key"] == "platano"
+    assert row["match_method"] == "review"
+
+
+def test_sync_decisions_without_file(catalog, capsys):
+    settings = Settings(match_decisions_file=None)
+    result = sync_decisions(catalog.session, settings)
+    assert result is None
+    captured = capsys.readouterr()
+    assert "no decisions file" in captured.out
+
+
+def test_sync_decisions_empty_file_env_resolves_to_none(catalog, capsys, monkeypatch):
+    monkeypatch.setenv("MATCH_DECISIONS_FILE", "")
+    settings = Settings()
+    assert settings.match_decisions_file is None
+    assert settings.resolve_match_decisions_file() is None
+    result = sync_decisions(catalog.session, settings)
+    assert result is None
+    captured = capsys.readouterr()
+    assert "no decisions file" in captured.out
+
+
+def test_sync_decisions_outside_data_dir_raises_error(catalog, tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    outside = tmp_path / "outside.json"
+    outside.write_text("[]", encoding="utf-8")
+    settings = Settings(data_dir=data_dir, match_decisions_file=outside)
+    with pytest.raises(ValueError, match="must be inside DATA_DIR"):
+        sync_decisions(catalog.session, settings)
+
+
+def test_sync_decisions_applies_and_runs(catalog, tmp_path, capsys):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    dec_file = data_dir / "decisions.json"
+    dec_file.write_text(
+        json.dumps(
+            [
+                {"chain": "mercadona", "sku": "M5", "category_key": "galletas", "variant_key": ""},
+                {"chain": "mercadona", "sku": "MISSING", "category_key": "platano"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    settings = Settings(data_dir=data_dir, match_decisions_file=dec_file)
+    result = sync_decisions(catalog.session, settings)
+    assert result is not None
+    captured = capsys.readouterr()
+    assert "decisions applied: 1, skipped: 1" in captured.out
+    assert assignment(catalog.session, "M5")["match_method"] == "review"
