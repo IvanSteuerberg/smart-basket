@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { Accept } from "../api";
 import {
   draftItemsFromCart,
   isGenericLine,
@@ -8,22 +9,70 @@ import {
 } from "../cart";
 import { askListName } from "../listName";
 import {
+  CART_ACCEPT_ANY_PREFIX,
+  CART_ACCEPT_EXACT,
+  CART_ACCEPT_LABEL,
+  CART_ANY_BRAND,
+  CART_ANY_BRAND_HELP,
   CART_CALCULATE,
+  CART_CHAINS,
+  CART_CHAINS_ALL,
   CART_EMPTY,
+  CART_EXPORT_PROFILE,
+  CART_IMPORT_PROFILE,
+  CART_LOCK,
+  CART_LOCK_HELP,
+  CART_PROFILE_NOTICE,
   CART_SAVE,
   CART_TITLE,
   CART_UNCALCULABLE,
+  CART_UNLOCK,
 } from "../texts";
+import { CHAINS, ChainLogo } from "./ChainLogo";
 import { ProductImage } from "./ProductImage";
 
 export interface CartDrawerProps {
   open: boolean;
   lines: CartLine[];
+  anyBrand: boolean;
+  /** Selected chains; null means every chain. */
+  chainFilter: string[] | null;
   onClose: () => void;
   onQuantityChange: (id: string, quantity: number) => void;
+  onAcceptChange: (id: string, accept: Accept) => void;
+  onToggleLock: (id: string) => void;
+  onAnyBrandChange: (value: boolean) => void;
+  onChainFilterChange: (chains: string[] | null) => void;
   onRemove: (id: string) => void;
   onSaveList: (name: string) => void;
   onCalculate: () => void;
+  onExportProfile: () => void;
+  onImportProfile: (json: string) => void;
+}
+
+/** «Cualquier leche entera»: the generic name of a line, in lowercase. */
+function anyLabel(name: string): string {
+  return `${CART_ACCEPT_ANY_PREFIX} ${name.toLocaleLowerCase("es")}`;
+}
+
+function PadlockIcon({ closed }: { closed: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
+      <rect x="5" y="10" width="14" height="10" rx="2" />
+      {closed ? (
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      ) : (
+        <path d="M8 10V7a4 4 0 0 1 7.5-2" />
+      )}
+    </svg>
+  );
 }
 
 function QuantityStepper({
@@ -62,11 +111,19 @@ function QuantityStepper({
 export function CartDrawer({
   open,
   lines,
+  anyBrand,
+  chainFilter,
   onClose,
   onQuantityChange,
+  onAcceptChange,
+  onToggleLock,
+  onAnyBrandChange,
+  onChainFilterChange,
   onRemove,
   onSaveList,
   onCalculate,
+  onExportProfile,
+  onImportProfile,
 }: CartDrawerProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   // The parent passes a new onClose on every render; the effect below must run only when the
@@ -99,6 +156,19 @@ export function CartDrawer({
     if (name !== null) onSaveList(name);
   }
 
+  function toggleChain(code: string) {
+    const current = chainFilter ?? [];
+    const next = current.includes(code)
+      ? current.filter((candidate) => candidate !== code)
+      : [...current, code];
+    onChainFilterChange(next.length === 0 ? null : next);
+  }
+
+  async function importFile(file: File | undefined) {
+    if (!file) return;
+    onImportProfile(await file.text());
+  }
+
   return (
     <div className="fixed inset-0 z-50 text-slate-900">
       <div className="absolute inset-0 bg-slate-900/40" onClick={onClose} aria-hidden="true" />
@@ -122,6 +192,60 @@ export function CartDrawer({
           </button>
         </header>
 
+        <div className="border-b border-stone-200 px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <span id="any-brand-label" className="text-sm font-semibold">
+              {CART_ANY_BRAND}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={anyBrand}
+              aria-labelledby="any-brand-label"
+              onClick={() => onAnyBrandChange(!anyBrand)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                anyBrand ? "bg-brand" : "bg-stone-300"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  anyBrand ? "left-[1.375rem]" : "left-0.5"
+                }`}
+              />
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-stone-500">{CART_ANY_BRAND_HELP}</p>
+
+          <div className="mt-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500">
+              {CART_CHAINS}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                aria-pressed={chainFilter === null}
+                onClick={() => onChainFilterChange(null)}
+                className={chainChipClass(chainFilter === null)}
+              >
+                {CART_CHAINS_ALL}
+              </button>
+              {CHAINS.map(({ code, name }) => (
+                <button
+                  key={code}
+                  type="button"
+                  aria-label={name}
+                  aria-pressed={chainFilter?.includes(code) ?? false}
+                  title={name}
+                  onClick={() => toggleChain(code)}
+                  className={chainChipClass(chainFilter?.includes(code) ?? false)}
+                >
+                  <ChainLogo chain={code} className="h-4 w-auto" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-4 py-2">
           {lines.length === 0 ? (
             <p className="py-8 text-center text-stone-500">{CART_EMPTY}</p>
@@ -135,13 +259,44 @@ export function CartDrawer({
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-sm font-semibold">
                       {isGenericLine(line)
-                        ? `Cualquier ${line.category_name ?? line.name}`
+                        ? anyLabel(line.category_name ?? line.name)
                         : line.name}
                     </p>
                     {!isGenericLine(line) && (line.brand || line.packaging) && (
                       <p className="text-xs text-stone-500">
                         {[line.brand, line.packaging].filter(Boolean).join(" · ")}
                       </p>
+                    )}
+                    {!isGenericLine(line) && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <select
+                          aria-label={CART_ACCEPT_LABEL}
+                          value={line.accept}
+                          onChange={(event) =>
+                            onAcceptChange(line.id, event.target.value as Accept)
+                          }
+                          className="min-w-0 rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-slate-900"
+                        >
+                          <option value="exact">{CART_ACCEPT_EXACT}</option>
+                          <option value="equivalent">
+                            {anyLabel(line.category_name ?? line.name)}
+                          </option>
+                        </select>
+                        <button
+                          type="button"
+                          aria-label={line.locked ? CART_UNLOCK : CART_LOCK}
+                          aria-pressed={line.locked}
+                          title={CART_LOCK_HELP}
+                          onClick={() => onToggleLock(line.id)}
+                          className={`shrink-0 rounded-lg border px-2 py-1 ${
+                            line.locked
+                              ? "border-brand bg-brand-soft text-brand"
+                              : "border-stone-300 bg-white text-stone-500"
+                          }`}
+                        >
+                          <PadlockIcon closed={line.locked} />
+                        </button>
+                      </div>
                     )}
                     <div className="mt-2 flex items-center gap-3">
                       <QuantityStepper
@@ -169,6 +324,25 @@ export function CartDrawer({
               {CART_UNCALCULABLE}
             </p>
           )}
+          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-brand">
+            <button type="button" onClick={onExportProfile} className="underline">
+              {CART_EXPORT_PROFILE}
+            </button>
+            <label className="cursor-pointer underline">
+              {CART_IMPORT_PROFILE}
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  void importFile(file);
+                }}
+              />
+            </label>
+          </div>
+          <p className="mb-2 text-[0.7rem] text-stone-500">{CART_PROFILE_NOTICE}</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -191,4 +365,13 @@ export function CartDrawer({
       </aside>
     </div>
   );
+}
+
+function chainChipClass(active: boolean): string {
+  return [
+    "flex h-8 min-w-8 items-center justify-center rounded-full border px-2",
+    active
+      ? "border-brand bg-brand-soft ring-1 ring-brand"
+      : "border-stone-200 bg-white hover:border-brand",
+  ].join(" ");
 }
