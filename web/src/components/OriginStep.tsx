@@ -31,9 +31,6 @@ export interface OriginStepProps {
   onOptionsChange: (patch: Partial<RouteOptions>) => void;
   open: boolean;
   onToggleOpen: () => void;
-  /** Accepted for the list screen; the one calculate button lives in `ListStep`. */
-  onCalculate?: () => void;
-  calculating?: boolean;
 }
 
 export function OriginStep({

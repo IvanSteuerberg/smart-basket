@@ -310,8 +310,6 @@ export function ListStep({
         onOptionsChange={onOptionsChange}
         open={originOpen}
         onToggleOpen={onToggleOriginOpen}
-        onCalculate={onCalculate}
-        calculating={calculating}
       />
     </div>
   );
