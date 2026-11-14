@@ -37,6 +37,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      options: [],
     };
 
     const draft = draftFromInterpreted(interpreted);
@@ -64,6 +65,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: false,
       needs_llm: true,
+      options: [],
     });
 
     expect(draft.categoryKey).toBeNull();

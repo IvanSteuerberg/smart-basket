@@ -76,6 +76,7 @@ const mockInterpret: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      options: [],
     },
     {
       line: 2,
@@ -89,6 +90,7 @@ const mockInterpret: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      options: [],
     },
     {
       line: 3,
@@ -102,6 +104,7 @@ const mockInterpret: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      options: [],
     },
   ],
   llm_used: false,
@@ -123,21 +126,36 @@ const mockRecommendation: Recommendation = {
       position: 1,
       lines: [
         {
+          line_id: 0,
           text: "2 l de leche",
+          product_id: 101,
+          canonical_id: 201,
+          brand: null,
+          image_url: null,
           product_name: "Leche entera Pascual 1L",
           packs: 2,
           quantity_bought: "2",
           cost: "1.90",
         },
         {
+          line_id: 1,
           text: "pan de molde",
+          product_id: 102,
+          canonical_id: 202,
+          brand: null,
+          image_url: null,
           product_name: "Pan de molde con corteza Hacendado",
           packs: 1,
           quantity_bought: "1",
           cost: "1.25",
         },
         {
+          line_id: 2,
           text: "colacao",
+          product_id: 103,
+          canonical_id: 203,
+          brand: null,
+          image_url: null,
           product_name: "Cacao soluble ColaCao Original 760g",
           packs: 1,
           quantity_bought: "1",
@@ -156,6 +174,7 @@ const mockRecommendation: Recommendation = {
   ],
   explanation: "Tu cesta en Mercadona ahorra 2,30 € respecto a la segunda opción.",
   degraded: false,
+  flex_savings: null,
 };
 
 const LIST = "2 l de leche\npan de molde\ncolacao";
