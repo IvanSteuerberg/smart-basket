@@ -55,3 +55,39 @@ export function formatDateTime(value: string): string {
     `${pad(date.getHours())}:${pad(date.getMinutes())}`
   );
 }
+
+export interface LatLonPoint {
+  lat: number;
+  lon: number;
+}
+
+/** Great-circle distance between two coordinates in meters. */
+export function haversineDistanceMeters(point1: LatLonPoint, point2: LatLonPoint): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(point2.lat - point1.lat);
+  const dLon = toRad(point2.lon - point1.lon);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(point1.lat)) *
+      Math.cos(toRad(point2.lat)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/** Formats straight-line distance from origin: «a 450 m» or «a 1,2 km». */
+export function formatDistance(meters: number): string {
+  if (!Number.isFinite(meters) || meters < 0) return "";
+  if (meters < 1000) {
+    return `a ${Math.round(meters)} m`;
+  }
+  const km = meters / 1000;
+  const formatted = new Intl.NumberFormat("es-ES", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(km);
+  return `a ${formatted} km`;
+}
+
