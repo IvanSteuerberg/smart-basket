@@ -106,3 +106,60 @@ def test_a_product_without_a_section_goes_to_review():
     decision = decide(NameMatch((Hit("platano", 1),), ()), nowhere, LEAF_KEYS)
     assert decision.in_review
     assert decision.candidates[0].category_key == "platano"
+
+
+#: Top-level sections of the nodes above, for the section-over-name rule.
+TOPS = {
+    "platano": "fruta_verdura",
+    "manzana": "fruta_verdura",
+    "pollo": "carne",
+    "pavo": "carne",
+    "carne": "carne",
+    "tomate": "fruta_verdura",
+    "galletas": "despensa",
+    "queso": "charcuteria_quesos",
+    "tomate_conserva": "despensa",
+    "conservas": "despensa",
+}
+TOMATE_CONSERVA = Section(
+    "tomate_conserva",
+    True,
+    frozenset({"conservas", "despensa"}),
+    frozenset({"tomate_conserva"}),
+    top="despensa",
+)
+
+
+def test_a_section_leaf_wins_over_a_name_from_another_top_level_section():
+    # "Tomate doble concentrado" is filed with preserves; the fresh tomato leaf is elsewhere.
+    decision = decide(
+        NameMatch((Hit("tomate", 1),), ()), TOMATE_CONSERVA, LEAF_KEYS | {"tomate"}, TOPS
+    )
+    assert decision.category_key == "tomate_conserva"
+    assert decision.confidence == 0.7
+
+
+def test_a_name_from_the_same_top_level_section_still_goes_to_review():
+    pollo = Section(
+        "pollo", True, frozenset({"carnes", "frescos"}), frozenset({"pollo"}), top="carne"
+    )
+    decision = decide(NameMatch((Hit("pavo", 1),), ()), pollo, LEAF_KEYS, TOPS)
+    assert decision.in_review
+
+
+def test_a_group_from_another_top_level_section_keeps_the_section_leaf():
+    decision = decide(NameMatch((Hit("carne", 1),), ()), TOMATE_CONSERVA, LEAF_KEYS, TOPS)
+    assert decision.category_key == "tomate_conserva"
+
+
+def test_a_misfiled_product_that_is_no_fresh_ingredient_still_goes_to_review():
+    # "Galletas María" filed under cheese: biscuits are not an ingredient of cheese.
+    queso = Section(
+        "queso",
+        True,
+        frozenset({"charcuteria_quesos"}),
+        frozenset({"queso"}),
+        top="charcuteria_quesos",
+    )
+    decision = decide(NameMatch((Hit("galletas", 1),), ()), queso, LEAF_KEYS | {"galletas"}, TOPS)
+    assert decision.in_review

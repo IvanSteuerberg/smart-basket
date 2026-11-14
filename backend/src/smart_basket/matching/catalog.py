@@ -146,7 +146,14 @@ class Taxonomy:
         self.leaves = {node.key: node for node in nodes if node.is_leaf}
         self.leaf_keys = frozenset(self.leaves)
         self._subtree = subtree
+        self.top_of = {node.key: self._top(node).key for node in nodes}
         self._sections: dict[int | None, Section] = {}
+
+    def _top(self, node: Node) -> Node:
+        """The top-level section above `node` (the node itself when it is at the top)."""
+        while node.parent_id is not None and node.parent_id in self.nodes:
+            node = self.nodes[node.parent_id]
+        return node
 
     def section(self, node_id: int | None) -> Section:
         """The allowed subtree of the section mapped to `node_id`, cached per node."""
@@ -173,6 +180,7 @@ class Taxonomy:
             allowed_leaves=frozenset(
                 self.nodes[child].key for child in allowed if self.nodes[child].is_leaf
             ),
+            top=self._top(node).key,
         )
 
 
@@ -259,7 +267,9 @@ def run(session: Session, *, dry_run: bool = False) -> MatchResult:
             continue
 
         match = name_match(preprocessor, product.name)
-        decision = decide(match, taxonomy.section(product.category_id), taxonomy.leaf_keys)
+        decision = decide(
+            match, taxonomy.section(product.category_id), taxonomy.leaf_keys, taxonomy.top_of
+        )
         if decision.in_review:
             review += 1
             planned.append(

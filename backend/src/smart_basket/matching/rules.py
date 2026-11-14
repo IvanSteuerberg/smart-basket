@@ -7,7 +7,7 @@ queue instead of a guess (precision over recall).
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from smart_basket.matching.names import Hit, NameMatch
@@ -15,6 +15,15 @@ from smart_basket.matching.names import Hit, NameMatch
 #: A leaf named by the product, and a leaf taken from a section that maps to it.
 LEAF_CONFIDENCE = 0.9
 SECTION_CONFIDENCE = 0.8
+#: A section leaf kept although the name names a product of another top-level section: the
+#: section tells the form ("Tomate doble concentrado" is a preserve, not a fresh tomato).
+SECTION_OVER_NAME_CONFIDENCE = 0.7
+#: Top-level sections of fresh ingredients (seed taxonomy keys, decision 0015). A product filed
+#: elsewhere that names one of them is made from it ("Nuggets de pollo", "Tomate frito"); a
+#: product naming anything else in a foreign section ("Galletas María" under cheese) is misfiled.
+FRESH_TOPS = frozenset(
+    {"fruta_verdura", "carne", "pescado_marisco", "lacteos_huevos", "charcuteria_quesos"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +37,8 @@ class Section:
     #: Keys of the leaves the product may take: the node's subtree and, if it is a leaf, its
     #: parent group's subtree (the section mixes products its chain filed nearby).
     allowed_leaves: frozenset[str]
+    #: Key of the top-level section that holds the node (the node itself at the top).
+    top: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,19 +62,26 @@ class Decision:
         return self.category_key is None
 
 
-def decide(match: NameMatch, section: Section, leaf_keys: frozenset[str]) -> Decision:
+def decide(
+    match: NameMatch,
+    section: Section,
+    leaf_keys: frozenset[str],
+    top_of: Mapping[str, str] | None = None,
+) -> Decision:
     """Assign the leaf of a product, or send it to the review queue.
 
     `leaf_keys` are the keys of every leaf of the taxonomy, so a name that only names groups
-    is told apart from one that names a leaf.
+    is told apart from one that names a leaf. `top_of` gives the top-level section of every
+    node; without it, a name pointing outside the section always goes to review.
     """
     leaves = tuple(hit for hit in match.hits if hit.key in leaf_keys)
     groups = tuple(hit for hit in match.hits if hit.key not in leaf_keys)
+    tops = top_of or {}
 
     if leaves:
-        return _from_leaves(leaves, section)
+        return _from_leaves(leaves, section, tops)
     if section.is_leaf:
-        return _from_section(section, groups)
+        return _from_section(section, groups, tops)
     return Decision(
         category_key=None,
         confidence=None,
@@ -74,7 +92,7 @@ def decide(match: NameMatch, section: Section, leaf_keys: frozenset[str]) -> Dec
     )
 
 
-def _from_leaves(leaves: tuple[Hit, ...], section: Section) -> Decision:
+def _from_leaves(leaves: tuple[Hit, ...], section: Section, tops: Mapping[str, str]) -> Decision:
     """The name names at least one leaf: only an unambiguous leaf inside the section wins.
 
     Leaves inside the section are preferred, so a word the section files elsewhere does not
@@ -92,6 +110,8 @@ def _from_leaves(leaves: tuple[Hit, ...], section: Section) -> Decision:
                 section,
             )
         return Decision(category_key=tied[0].key, confidence=LEAF_CONFIDENCE)
+    if _other_sections_only(leaves, section, tops):
+        return Decision(category_key=section.key, confidence=SECTION_OVER_NAME_CONFIDENCE)
     return _review_with(
         _most_specific(leaves),
         "the name names this leaf, outside the section's subtree",
@@ -115,14 +135,17 @@ def _review_with(hits: tuple[Hit, ...], why: str, section: Section) -> Decision:
     )
 
 
-def _from_section(section: Section, groups: tuple[Hit, ...]) -> Decision:
+def _from_section(section: Section, groups: tuple[Hit, ...], tops: Mapping[str, str]) -> Decision:
     """The section is a leaf and the name names no leaf: take the section's leaf.
 
     A group named in the product must contain that leaf ("fruta" for a product filed under
     "plátano"); a group that does not is a conflict for the review queue.
     """
     assert section.key is not None  # is_leaf implies a node
-    outside = [hit.key for hit in groups if hit.key not in section.ancestors]
+    outside_hits = tuple(hit for hit in groups if hit.key not in section.ancestors)
+    outside = [hit.key for hit in outside_hits]
+    if outside and _other_sections_only(outside_hits, section, tops):
+        return Decision(category_key=section.key, confidence=SECTION_OVER_NAME_CONFIDENCE)
     if outside:
         return Decision(
             category_key=None,
@@ -134,6 +157,19 @@ def _from_section(section: Section, groups: tuple[Hit, ...]) -> Decision:
             + _section_candidates(section),
         )
     return Decision(category_key=section.key, confidence=SECTION_CONFIDENCE)
+
+
+def _other_sections_only(hits: tuple[Hit, ...], section: Section, tops: Mapping[str, str]) -> bool:
+    """True when the section is a leaf and every hit is a fresh ingredient filed elsewhere.
+
+    A chain files preserves, frozen food and ready meals by their form, so "Nuggets de pollo"
+    in a frozen section is frozen food, not fresh chicken. A hit in the same top-level section
+    ("pavo" for a product filed under "pollo"), or one that is not a fresh ingredient, is a
+    real conflict for the review queue.
+    """
+    if not section.is_leaf or section.top is None:
+        return False
+    return all(tops.get(hit.key) in FRESH_TOPS and tops.get(hit.key) != section.top for hit in hits)
 
 
 def _section_candidates(section: Section) -> tuple[Candidate, ...]:
