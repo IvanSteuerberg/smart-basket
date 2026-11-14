@@ -90,8 +90,13 @@ _ORDERS = {
     "name": "cp.name, cp.id",
 }
 
+
 #: The product name folded the way `smart_basket.preprocessor.text.fold` does.
-_FOLDED_NAME = "translate(lower(cp.name), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc')"
+def _fold_sql(col: str) -> str:
+    return f"translate(lower({col}), 'áàäâãéèëêíìïîóòöôõúùüûñç', 'aaaaaeeeeiiiiooooouuuunc')"
+
+
+_FOLDED_NAME = _fold_sql("cp.name")
 
 #: Characters with a meaning inside a PostgreSQL regular expression (the hyphen is literal).
 _REGEX_SPECIAL = frozenset(".^$*+?()[]{}|\\")
@@ -208,6 +213,30 @@ def _word_pattern(word: str) -> str:
     return rf"(^|[^a-z0-9])({body})([^a-z0-9]|$)"
 
 
+def _start_pattern(word: str) -> str:
+    """Start-of-string whole-word pattern for `word`, tolerating plural -s or -es."""
+    variants = {word, word + "s", word + "es"}
+    if word.endswith("s") and len(word) > 1:
+        variants.add(word[:-1])
+    if word.endswith("es") and len(word) > 2:
+        variants.add(word[:-2])
+    body = "|".join(
+        _regex_escape(variant) for variant in sorted(variants, key=len, reverse=True) if variant
+    )
+    return rf"^({body})([^a-z0-9]|$)"
+
+
+def _relevance_sql(name_column: str, has_categories: bool) -> str:
+    """Relevance rank: 0 if category form matches or folded name starts with query; 1 otherwise."""
+    category_branch = (
+        "ec.id in (select descendant_id from category_closure "
+        "where ancestor_id = any(:q_categories)) or "
+        if has_categories
+        else ""
+    )
+    return f"(case when {category_branch}{_fold_sql(name_column)} ~ :q_start then 0 else 1 end)"
+
+
 def _query_words(q: str) -> tuple[str, ...]:
     """Folded content tokens of `q`; connectors such as "de" carry no product meaning."""
     return tuple(
@@ -217,25 +246,37 @@ def _query_words(q: str) -> tuple[str, ...]:
     )
 
 
-def _search_sql(q: str, forms: Mapping[int, Iterable[str]], params: dict[str, Any]) -> str | None:
-    """Every word in the product name, or a match of `q` against the category's forms."""
+def search_params(
+    q: str,
+    forms: Mapping[int, Iterable[str]],
+    params: dict[str, Any],
+) -> tuple[tuple[str, ...], list[int]]:
+    """Folded content tokens, regex patterns and matching category IDs for `q`."""
     query = _query_words(q)
     if not query:
-        return None
-    name_parts = []
+        return (), []
     for index, word in enumerate(query):
-        key = f"q_word_{index}"
-        params[key] = _word_pattern(word)
-        name_parts.append(f"{_FOLDED_NAME} ~ :{key}")
+        params[f"q_word_{index}"] = _word_pattern(word)
+    params["q_start"] = _start_pattern(query[0])
     normalized = " ".join(query)
     category_ids = sorted(
         category_id
         for category_id, category_forms in forms.items()
         if any(form.strip() == normalized for form in category_forms)
     )
+    if category_ids:
+        params["q_categories"] = category_ids
+    return query, category_ids
+
+
+def _search_sql(q: str, forms: Mapping[int, Iterable[str]], params: dict[str, Any]) -> str | None:
+    """Every word in the product name, or a match of `q` against the category's forms."""
+    query, category_ids = search_params(q, forms, params)
+    if not query:
+        return None
+    name_parts = [f"{_FOLDED_NAME} ~ :q_word_{index}" for index in range(len(query))]
     if not category_ids:
         return f"({' and '.join(name_parts)})"
-    params["q_categories"] = category_ids
     # A query naming a group ("lacteos") matches the products of every leaf below it.
     return (
         f"(({' and '.join(name_parts)}) or ec.id in (select descendant_id from category_closure "
@@ -249,7 +290,7 @@ def _filters(
     q: str,
     forms: Mapping[int, Iterable[str]],
     params: dict[str, Any],
-) -> str:
+) -> tuple[str, bool]:
     conditions = []
     if section_id is not None:
         params["section_id"] = section_id
@@ -264,7 +305,7 @@ def _filters(
     search = _search_sql(q, forms, params)
     if search is not None:
         conditions.append(search)
-    return "".join(f" and {condition}" for condition in conditions)
+    return "".join(f" and {condition}" for condition in conditions), "q_categories" in params
 
 
 def _category_id(session: Session, key: str, error: str) -> int:
@@ -382,7 +423,12 @@ def products(
     section_id = _category_id(session, section, SECTION_ERROR) if section else None
     category_id = _category_id(session, category, CATEGORY_ERROR) if category else None
     params: dict[str, Any] = {}
-    where = _filters(section_id, category_id, q, search_forms_for(session), params)
+    where, has_categories = _filters(section_id, category_id, q, search_forms_for(session), params)
+    query = _query_words(q)
+    if query:
+        order_clause = f"{_relevance_sql('cp.name', has_categories)}, {_ORDERS[sort]}"
+    else:
+        order_clause = _ORDERS[sort]
     page_params = {**params, "size": size, "offset": (page - 1) * size}
     rows = (
         session.execute(
@@ -394,7 +440,7 @@ def products(
                 + " where cp.is_active"
                 + where
                 + " order by "
-                + _ORDERS[sort]
+                + order_clause
                 + " limit :size offset :offset"
             ),
             page_params,

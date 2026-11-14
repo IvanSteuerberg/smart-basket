@@ -11,6 +11,7 @@ from smart_basket.db import session_scope
 from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
 from smart_basket.ingestion.store import log_ingest_summary
 from smart_basket.matching import run as run_matching
+from smart_basket.matching import sync_decisions
 
 log = logging.getLogger(__name__)
 
@@ -61,8 +62,13 @@ def import_stores() -> None:
 
 def match_products() -> None:
     """Assign chain products to canonical products and queue the doubtful ones (0004, 0007)."""
+    settings = get_settings()
     with session_scope() as session:
-        result = run_matching(session)
+        result = None
+        if settings.match_decisions_file:
+            result = sync_decisions(session, settings)
+        if result is None:
+            result = run_matching(session)
     log.info("match_products: %s", result.summary)
 
 

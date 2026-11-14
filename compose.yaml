@@ -21,6 +21,7 @@ x-backend: &backend
     GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
     VALHALLA_URL: http://routing:8002
     DATA_DIR: /data
+    MATCH_DECISIONS_FILE: ${MATCH_DECISIONS_FILE:-}
     MERCADONA_WAREHOUSES: ${MERCADONA_WAREHOUSES:-3683}
     INGEST_DELAY_SECONDS: ${INGEST_DELAY_SECONDS:-1.5}
   extra_hosts:
@@ -55,7 +56,7 @@ services:
   migrate:
     <<: *backend
     restart: "no"
-    command: ["sh", "-c", "smart-basket-migrate upgrade head && smart-basket-seed"]
+    command: ["sh", "-c", "smart-basket-migrate upgrade head && smart-basket-seed && smart-basket-match sync"]
     healthcheck:
       disable: true
     depends_on:

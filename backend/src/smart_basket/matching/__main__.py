@@ -3,8 +3,16 @@
 import argparse
 from pathlib import Path
 
+from smart_basket.config import get_settings
 from smart_basket.db import session_scope
-from smart_basket.matching import DecisionFileError, export_review, import_decisions, run
+from smart_basket.matching import (
+    DecisionFileError,
+    export_decisions,
+    export_review,
+    import_decisions,
+    run,
+    sync_decisions,
+)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -23,7 +31,17 @@ def main(argv: list[str] | None = None) -> None:
     export = commands.add_parser("export-review", help="write the pending reviews as JSON")
     export.add_argument("file", type=Path, help="destination JSON file")
     importer = commands.add_parser("import-decisions", help="apply the decisions of a human")
+    importer.add_argument(
+        "--skip-missing", action="store_true", help="skip missing products instead of failing"
+    )
     importer.add_argument("file", type=Path, help="decisions JSON file")
+
+    export_dec = commands.add_parser(
+        "export-decisions", help="write review decisions as reproducible JSON"
+    )
+    export_dec.add_argument("file", type=Path, help="destination JSON file")
+
+    commands.add_parser("sync", help="apply reproducible decisions and classify active products")
 
     args = parser.parse_args(argv)
     if args.command == "run":
@@ -36,13 +54,26 @@ def main(argv: list[str] | None = None) -> None:
         with session_scope() as session:
             count = export_review(session, args.file)
         print(f"pending reviews: {count}")
-    else:
+    elif args.command == "import-decisions":
         with session_scope() as session:
             try:
-                count = import_decisions(session, args.file)
+                count = import_decisions(session, args.file, skip_missing=args.skip_missing)
             except DecisionFileError as error:
                 raise SystemExit(str(error)) from error
-        print(f"decisions applied: {count}")
+        if args.skip_missing:
+            print(f"decisions applied: {count.applied}, skipped: {count.skipped}")
+        else:
+            print(f"decisions applied: {count}")
+    elif args.command == "export-decisions":
+        with session_scope() as session:
+            count = export_decisions(session, args.file)
+        print(f"decisions exported: {count}")
+    elif args.command == "sync":
+        with session_scope() as session:
+            try:
+                sync_decisions(session, get_settings())
+            except ValueError as error:
+                raise SystemExit(str(error)) from error
 
 
 if __name__ == "__main__":

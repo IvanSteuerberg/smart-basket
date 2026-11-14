@@ -2,9 +2,9 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -39,8 +39,41 @@ class Settings(BaseSettings):
     car_radius_m: int = 20000
 
     data_dir: Path = Path("data")
+    match_decisions_file: Path | None = None
     mercadona_warehouses: str = "3683"
     ingest_delay_seconds: float = 1.5
+
+    @field_validator("match_decisions_file", mode="before")
+    @classmethod
+    def _empty_as_none(cls, v: Any) -> Any:
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return None
+        return Path(v) if isinstance(v, str) else v
+
+    def resolve_match_decisions_file(self) -> Path | None:
+        """Resolve `match_decisions_file` and enforce that it stays within `data_dir`."""
+        if self.match_decisions_file is None:
+            return None
+        data_root = self.data_dir.resolve()
+        candidate = self.match_decisions_file
+        if candidate.is_absolute():
+            resolved = candidate.resolve()
+        else:
+            resolved_cwd = candidate.resolve()
+            resolved_data = (data_root / candidate).resolve()
+            if resolved_cwd.is_relative_to(data_root):
+                resolved = resolved_cwd
+            elif resolved_data.is_relative_to(data_root):
+                resolved = resolved_data
+            else:
+                resolved = resolved_cwd
+
+        if not resolved.is_relative_to(data_root):
+            raise ValueError(
+                f"MATCH_DECISIONS_FILE ({self.match_decisions_file}) must be inside "
+                f"DATA_DIR ({self.data_dir})"
+            )
+        return resolved
 
     @property
     def mercadona_warehouse_codes(self) -> list[str]:
