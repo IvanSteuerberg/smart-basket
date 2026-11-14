@@ -47,6 +47,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0016 Ingestion adapters](/decisions/0016-ingestion-adapters.md) - One adapter per chain, shared persistence with change-only prices, run bookkeeping that survives failures and safeguards before marking products unavailable.
 * [0017 Single-chain recommendation end to end](/decisions/0017-single-chain-recommendation.md) - The API routes, one provisional comparable product per list line with unit, name and brand guards, the brand seed, a template explanation and an anonymous record without the origin.
 * [0018 Stores from OpenStreetMap and geocoding through the backend](/decisions/0018-osm-stores-and-backend-geocoding.md) - Supermarkets of the ten chains imported monthly from Overpass, and typed addresses geocoded with Nominatim through the backend, kept out of logs.
+* [0019 Shopper preferences](/decisions/0019-shopper-preferences.md) - One profile model in three layers, in the browser for the MVP and in PostgreSQL with accounts; preferences constrain the basket but never enter the objective; no graph store until thresholds are met.
 
 ## Evaluation
 

@@ -55,6 +55,14 @@ Accounts may be added later. The MVP keeps that path open:
 * **Browser data is migrated** on the first login. To make that a copy rather than a transformation, what the MVP stores in the browser follows the same structure as those future tables, as versioned JSON ([data model](/architecture/data-model.md)).
 * **New work at that point:** a free, simple authentication (email magic link or an open-source identity server such as Keycloak), GDPR obligations for server-side personal data (consent, account deletion, data export) and a revision of [NFR-06](/requirements/non-functional.md).
 
+## Post-MVP note: accounts with subscriptions
+
+After the course the author may turn the app into a product with user accounts and paid subscriptions. That is outside the MVP and changes only this path, not the MVP scope:
+
+* **Preferences and their history** (usual choices, pinned brands, chains, dietary rules) move to the server with the same shape they have in the browser ([0019](/decisions/0019-shopper-preferences.md)).
+* **Recommendations across users** ("people who buy X also buy Y", similar profiles) become possible, first in PostgreSQL; a graph store only past the thresholds in 0019.
+* **Extra obligations:** explicit, separate consent for dietary rules (possible health data, art. 9 GDPR), consent records, a data protection impact assessment if profiling across users is introduced, and the paid Gemini tier if the cloud LLM is kept ([NFR-11](/requirements/non-functional.md)). Payments are not designed.
+
 # Related
 
 * [Functional requirements](/requirements/functional.md)

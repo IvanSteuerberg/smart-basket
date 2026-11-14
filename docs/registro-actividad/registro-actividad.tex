@@ -218,6 +218,7 @@
 	\subsection*{Sábado 14 de noviembre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
 		\actividad{Análisis}{Prueba real con el sistema completo en el portátil: 126 marcas y 41 supermercados de León cargados, y las dos listas reales del autor recomendadas a pie y en coche desde un origen en León. Todas las líneas se interpretan; la recomendación tarda 0,1--0,2 s y la interpretación de la lista larga (17 líneas) unos 6,5 s, por encima de los 5 s del requisito. La revisión final encuentra fallos de privacidad (la dirección escrita llegaba a los registros del servidor) y de elección de producto, que se corrigen.}{Decisiones 0017 (recomendación con una cadena) y 0018 (tiendas de OpenStreetMap y geocodificación a través del servidor).}
+		\actividad{Decisión}{Dónde y cómo se guardan y aprenden las preferencias del comprador (elección habitual, marcas fijadas, cadenas y reglas como ``sin lactosa''), en el MVP sin cuentas y en un posible producto con cuentas y suscripciones, y si eso justifica Neo4j. Se comparan un perfil en el navegador, tablas de PostgreSQL, Apache AGE y Neo4j con Claude y DeepSeek como fuentes. No se añade un grafo: el perfil tiene la misma forma en el navegador y en el servidor, las preferencias restringen la cesta sin entrar en su coste, y las reglas dietéticas, posibles datos de salud, solo las fija el usuario.}{Señal de Tiempo 8, decisión 0019 (borrador) y nota posterior al MVP en el alcance.}
 	\end{description}
 
 	\subsection*{Planificado para la semana}
