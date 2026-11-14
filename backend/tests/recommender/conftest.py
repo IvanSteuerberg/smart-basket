@@ -267,6 +267,8 @@ def _seed(connection: Connection) -> dict[str, int]:
         ("pollo", "PO5", "Pechugas enteras de pollo", "0.63", "kg", "4.19", "4.29"),
         ("carne", "CA1", "Preparado de carne picada cerdo", "0.5", "kg", "4.50", "4.60"),
         ("carne", "CA2", "Preparado de carne picada mixta", "0.5", "kg", "4.70", "4.80"),
+        # Same leaf in Mercadona; it must not win "carne picada" just for not being a "Preparado".
+        ("carne", "CA3", "Albóndigas de cerdo", "0.5", "kg", "4.55", "4.65"),
     ):
         _chain_product(
             connection,

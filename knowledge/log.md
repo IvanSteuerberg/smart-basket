@@ -2,6 +2,7 @@
 
 ## 2026-11-14
 
+* **Update** Decisions 0017 and 0018 after the author's own test: chain-named buildings without a `shop` tag are imported (the Mercadona by the university, 43 stores now), and an import that sees fewer than half of the stores deactivates nothing. Lines without a quantity compare price per kilo through a typical pack, written variants filter products, and processed products are left out unless asked.
 * **Create** Decision 0017 (single-chain recommendation end to end) and decision 0018 (stores from OpenStreetMap, geocoding through the backend), from iteration 11: brand seed with aliases and `implies` (migration 0004), store import (41 stores in León), API for categories, search, interpretation, geocoding and recommendations, web flow with a Leaflet map, and Playwright in CI. First real run with the author's two lists: every line categorized, recommendation in 0.1-0.2 s, interpretation of the 17-line list 6.3-6.7 s (over NFR-01). System overview: implementation status.
 
 ## 2026-11-09

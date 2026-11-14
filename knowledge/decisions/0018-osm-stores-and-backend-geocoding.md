@@ -18,10 +18,11 @@ The `store` table ([0007](/decisions/0007-data-model.md)) was empty, and chains 
 # Decision
 
 1. **Stores from OpenStreetMap.** `smart_basket.stores` queries Overpass for `shop=supermarket|hypermarket` inside a configurable box around León (`STORES_BBOX`).
+   - **Buildings named after a chain:** buildings without a `shop` tag whose brand or name maps to a chain are imported too. The Mercadona next to the University of León is mapped only as a building.
    - **Chain mapping:** OSM `brand`, then `name`, are mapped to the ten chains through case- and accent-insensitive aliases. Other shops are ignored, and so are the unverified `brand:wikidata` values.
    - **Upsert:** by `osm_id`, with name, address, location, opening hours and format.
    - **Zone:** the chain's León zone when it has one (Mercadona: warehouse 3683), otherwise the chain-wide zone.
-   - **Deactivation:** only stores inside the queried box that are no longer seen. An empty answer deactivates nothing.
+   - **Deactivation:** only stores inside the queried box that are no longer seen. An empty answer, or one with fewer than half of the active stores in the box, deactivates nothing.
    - **Runs:** each run is recorded in `ingest_run` (`kind = 'stores'`).
    - **Schedule:** the worker runs it monthly; `smart-basket-stores import [--dry-run]` runs it by hand.
 2. **Geocoding through the backend.** `GET /api/geocode?q=` calls Nominatim from the server, so the user's IP never reaches OpenStreetMap:

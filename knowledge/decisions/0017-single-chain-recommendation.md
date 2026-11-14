@@ -37,6 +37,9 @@ Canonical products and cross-chain matching ([0007](/decisions/0007-data-model.m
 3. **Guards on the candidates of a line**, because mixed sections of the chain map to broad leaves:
    - **Unit dimension:** a product measured by mass is skipped for a leaf measured by volume and the other way round, so milk powder does not answer «leche». A leaf counted in units accepts weighed products, because bread is sold by the kilo.
    - **Name preference:** the products whose names share the most words of the line are kept, counting words of three letters or more without connectors («papel de horno» keeps «Papel vegetal» over a raffia bag in the same leaf). If no name shares a word, every product stays.
+   - **Variants:** a variant written in the line («integral», «sin lactosa») keeps only the products that carry it, when any does.
+   - **Processed products:** after the name preference, products whose name has a preparation word (empanado, marinado, preparado, relleno…) are dropped unless the line asks for it or nothing else is left.
+   - **Typical pack:** a line without a quantity in a leaf sold by weight or volume, and with no default quantity, asks for the median pack of its candidates. The optimizer then compares price per kilo within its usual band, instead of taking the cheapest pack («pechuga de pollo» gets fresh breasts at 6,65 €/kg, not a breaded pack at 8,70 €/kg).
    - **Name fallback:** if a leaf has no products, products of its group are matched by name (token-set similarity, whole words for very short texts).
    - **Brands:** a requested brand and the private-label check compare whole folded words of the product name, using brand names and aliases.
 4. **Candidate stores:** the nearest active stores of chains with prices in their zone, at most 10, within 3 km on foot or 20 km by car, ordered by distance. The optimizer receives the Valhalla matrix; the route shape comes from Valhalla's `/route` for the chosen order.
@@ -67,7 +70,7 @@ Canonical products and cross-chain matching ([0007](/decisions/0007-data-model.m
   - All 27 real lines got a category, and 26 got a product; omega 3 capsules were not found in the store.
 - **Guards help but product choice is still crude.**
   - The guards fixed the obvious errors: «Carne hamburguesa» now gets a beef burger, «Nata d cocinar» cooking cream and «papel de horno» baking paper.
-  - «Pollo» still gets chicken livers and «Fruta» a single tangerine.
+  - «Pollo» still gets a chicken carcass, «Petisuis» a biscuit-flavoured petit and «Fruta» a single tangerine.
   - Choosing among the products of a broad leaf is what iteration 12's canonical products and matching fix.
 - Variants such as «eco» are recognized but do not yet filter products.
 

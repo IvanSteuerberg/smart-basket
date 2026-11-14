@@ -167,9 +167,11 @@ def _entry(
         if brand_terms is not None and not _matches_brand(row["name"], brand_terms):
             continue
         candidates.append((row, product))
-    candidates = _without_processed(candidates, item.text)
+    # Name preference before the processed filter: in "carne picada" every product named like
+    # the line is a "Preparado", so dropping them first would leave meatballs instead.
     candidates = _with_variants(candidates, item.text)
-    chosen = _prefer_named(candidates, item.text)
+    candidates = _prefer_named(candidates, item.text)
+    chosen = _without_processed(candidates, item.text)
     products: dict[int, list[Product]] = {}
     names: dict[int, str] = {}
     for row, product in chosen:
