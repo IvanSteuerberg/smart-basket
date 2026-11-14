@@ -148,7 +148,7 @@ def test_preprocessor_resolves_seed_brands(pp: Preprocessor):
 
 def test_ordinary_words_are_not_taken_as_brands(pp: Preprocessor):
     gallo = pp.preprocess("1 kg de gallo").items[0]
-    assert gallo.generic_key == "pescado_blanco_otro"
+    assert gallo.generic_key == "gallo_pescado"
     assert gallo.brand is None
     assert gallo.resolved is True
 

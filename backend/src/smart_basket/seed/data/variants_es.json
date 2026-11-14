@@ -1,222 +1,286 @@
 {
-  "version": 1,
-  "variants": [
-    {
-      "key": "sin_lactosa",
-      "name": "sin lactosa",
-      "canonical": true,
-      "forms": [
-        "sin lactosa"
-      ]
-    },
-    {
-      "key": "sin_gluten",
-      "name": "sin gluten",
-      "canonical": true,
-      "forms": [
-        "sin gluten"
-      ]
-    },
-    {
-      "key": "sin_azucar",
-      "name": "sin azúcar",
-      "forms": [
-        "sin azúcar",
-        "sin azucares añadidos"
-      ]
-    },
-    {
-      "key": "sin_sal",
-      "name": "sin sal",
-      "forms": [
-        "sin sal"
-      ]
-    },
-    {
-      "key": "integral",
-      "name": "integral",
-      "canonical": true,
-      "forms": [
-        "integral",
-        "integrales"
-      ]
-    },
-    {
-      "key": "7_cereales",
-      "name": "7 cereales",
-      "forms": [
-        "7 cereales",
-        "siete cereales",
-        "multicereales"
-      ]
-    },
-    {
-      "key": "desnatada",
-      "name": "desnatada",
-      "canonical": true,
-      "forms": [
-        "desnatada",
-        "desnatado",
-        "desnatadas",
-        "desnatados"
-      ]
-    },
-    {
-      "key": "semidesnatada",
-      "name": "semidesnatada",
-      "canonical": true,
-      "forms": [
-        "semidesnatada",
-        "semidesnatado",
-        "semidesnatadas",
-        "semidesnatados"
-      ]
-    },
-    {
-      "key": "entera",
-      "name": "entera",
-      "canonical": true,
-      "forms": [
-        "entera",
-        "entero",
-        "enteras",
-        "enteros"
-      ]
-    },
-    {
-      "key": "zero",
-      "name": "zero",
-      "forms": [
-        "zero",
-        "cero"
-      ]
-    },
-    {
-      "key": "light",
-      "name": "light",
-      "forms": [
-        "light"
-      ]
-    },
-    {
-      "key": "natural",
-      "name": "natural",
-      "forms": [
-        "natural",
-        "naturales"
-      ]
-    },
-    {
-      "key": "griego",
-      "name": "griego",
-      "forms": [
-        "griego",
-        "griegos"
-      ]
-    },
-    {
-      "key": "ecologico",
-      "name": "ecológico",
-      "canonical": true,
-      "forms": [
-        "ecológico",
-        "ecológica",
-        "ecológicos",
-        "ecológicas",
-        "bio",
-        "eco"
-      ]
-    },
-    {
-      "key": "descafeinado",
-      "name": "descafeinado",
-      "forms": [
-        "descafeinado",
-        "descafeinada"
-      ]
-    },
-    {
-      "key": "congelado",
-      "name": "congelado",
-      "forms": [
-        "congelado",
-        "congelada",
-        "congelados",
-        "congeladas"
-      ]
-    },
-    {
-      "key": "fresco",
-      "name": "fresco",
-      "forms": [
-        "fresco",
-        "fresca",
-        "frescos",
-        "frescas"
-      ]
-    },
-    {
-      "key": "chocolate",
-      "name": "chocolate",
-      "forms": [
-        "chocolate"
-      ]
-    },
-    {
-      "key": "fresa",
-      "name": "fresa",
-      "forms": [
-        "fresa"
-      ]
-    },
-    {
-      "key": "vainilla",
-      "name": "vainilla",
-      "forms": [
-        "vainilla"
-      ]
-    },
-    {
-      "key": "limon",
-      "name": "limón",
-      "forms": [
-        "limón"
-      ]
-    },
-    {
-      "key": "pina",
-      "name": "piña",
-      "forms": [
-        "piña"
-      ]
-    },
-    {
-      "key": "melocoton",
-      "name": "melocotón",
-      "forms": [
-        "melocotón"
-      ]
-    },
-    {
-      "key": "naranja",
-      "name": "naranja",
-      "forms": [
-        "naranja"
-      ]
-    },
-    {
-      "key": "con_gas",
-      "name": "con gas",
-      "forms": [
-        "con gas"
-      ]
-    },
-    {
-      "key": "sin_alcohol",
-      "name": "sin alcohol",
-      "forms": [
-        "sin alcohol"
-      ]
-    }
-  ]
+ "version": 1,
+ "variants": [
+  {
+   "key": "sin_lactosa",
+   "name": "sin lactosa",
+   "canonical": true,
+   "forms": [
+    "sin lactosa"
+   ]
+  },
+  {
+   "key": "sin_gluten",
+   "name": "sin gluten",
+   "canonical": true,
+   "forms": [
+    "sin gluten"
+   ]
+  },
+  {
+   "key": "sin_azucar",
+   "name": "sin azúcar",
+   "forms": [
+    "sin azúcar",
+    "sin azucares añadidos",
+    "0% azúcar",
+    "zero azúcar"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "sin_sal",
+   "name": "sin sal",
+   "forms": [
+    "sin sal",
+    "0% sal",
+    "sin sal añadida",
+    "bajo en sal",
+    "reducido en sal"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "integral",
+   "name": "integral",
+   "canonical": true,
+   "forms": [
+    "integral",
+    "integrales",
+    "100% integral"
+   ]
+  },
+  {
+   "key": "7_cereales",
+   "name": "7 cereales",
+   "forms": [
+    "7 cereales",
+    "siete cereales",
+    "multicereales"
+   ]
+  },
+  {
+   "key": "desnatada",
+   "name": "desnatada",
+   "canonical": true,
+   "forms": [
+    "desnatada",
+    "desnatado",
+    "desnatadas",
+    "desnatados",
+    "0% mg"
+   ]
+  },
+  {
+   "key": "semidesnatada",
+   "name": "semidesnatada",
+   "canonical": true,
+   "forms": [
+    "semidesnatada",
+    "semidesnatado",
+    "semidesnatadas",
+    "semidesnatados"
+   ]
+  },
+  {
+   "key": "entera",
+   "name": "entera",
+   "canonical": true,
+   "forms": [
+    "entera"
+   ]
+  },
+  {
+   "key": "zero",
+   "name": "zero",
+   "forms": [
+    "zero",
+    "cero",
+    "zero azúcar"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "light",
+   "name": "light",
+   "forms": [
+    "light"
+   ]
+  },
+  {
+   "key": "natural",
+   "name": "natural",
+   "forms": [
+    "natural",
+    "naturales"
+   ]
+  },
+  {
+   "key": "griego",
+   "name": "griego",
+   "forms": [
+    "griego",
+    "griegos"
+   ]
+  },
+  {
+   "key": "ecologico",
+   "name": "ecológico",
+   "canonical": true,
+   "forms": [
+    "ecológico",
+    "ecológica",
+    "ecológicos",
+    "ecológicas",
+    "bio",
+    "eco"
+   ]
+  },
+  {
+   "key": "descafeinado",
+   "name": "descafeinado",
+   "forms": [
+    "descafeinado",
+    "descafeinada"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "congelado",
+   "name": "congelado",
+   "forms": [
+    "congelado",
+    "congelada",
+    "congelados",
+    "congeladas"
+   ]
+  },
+  {
+   "key": "fresco",
+   "name": "fresco",
+   "forms": [
+    "fresco",
+    "fresca",
+    "frescos",
+    "frescas"
+   ]
+  },
+  {
+   "key": "chocolate",
+   "name": "chocolate",
+   "forms": [
+    "chocolate",
+    "al cacao",
+    "con chocolate"
+   ]
+  },
+  {
+   "key": "fresa",
+   "name": "fresa",
+   "forms": [
+    "fresa"
+   ]
+  },
+  {
+   "key": "vainilla",
+   "name": "vainilla",
+   "forms": [
+    "vainilla"
+   ]
+  },
+  {
+   "key": "limon",
+   "name": "limón",
+   "forms": [
+    "limón",
+    "con limón"
+   ]
+  },
+  {
+   "key": "pina",
+   "name": "piña",
+   "forms": [
+    "piña",
+    "con piña"
+   ]
+  },
+  {
+   "key": "melocoton",
+   "name": "melocotón",
+   "forms": [
+    "melocotón",
+    "con melocotón"
+   ]
+  },
+  {
+   "key": "naranja",
+   "name": "naranja",
+   "forms": [
+    "naranja",
+    "con naranja"
+   ]
+  },
+  {
+   "key": "con_gas",
+   "name": "con gas",
+   "forms": [
+    "con gas",
+    "fresh gas"
+   ]
+  },
+  {
+   "key": "sin_alcohol",
+   "name": "sin alcohol",
+   "forms": [
+    "sin alcohol",
+    "0,0",
+    "0,0%"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "en_aceite_oliva",
+   "name": "en aceite oliva",
+   "forms": [
+    "en aceite de oliva",
+    "con aceite de oliva"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "en_aceite_girasol",
+   "name": "en aceite girasol",
+   "forms": [
+    "en aceite de girasol",
+    "con aceite de girasol"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "al_natural",
+   "name": "al natural",
+   "forms": [
+    "al natural"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "picante",
+   "name": "picante",
+   "forms": [
+    "picante",
+    "picantes"
+   ],
+   "canonical": true
+  },
+  {
+   "key": "dulce",
+   "name": "dulce",
+   "forms": [
+    "dulce",
+    "dulces"
+   ],
+   "canonical": true
+  }
+ ]
 }

@@ -48,14 +48,25 @@
        ]
       },
       {
-       "key": "naranja_mandarina",
-       "name": "Naranja y mandarina",
+       "key": "naranja",
+       "name": "Naranja",
        "base_unit": "kg",
        "forms": [
         "naranja",
-        "naranjas de zumo",
+        "naranjas",
+        "naranja de mesa",
+        "naranjas de zumo"
+       ]
+      },
+      {
+       "key": "mandarina",
+       "name": "Mandarina y clementina",
+       "base_unit": "kg",
+       "forms": [
         "mandarina",
-        "clementina"
+        "mandarinas",
+        "clementina",
+        "clementinas"
        ]
       },
       {
@@ -148,6 +159,26 @@
         "albaricoque",
         "paraguayo",
         "cereza"
+       ]
+      },
+      {
+       "key": "granada",
+       "name": "Granada",
+       "base_unit": "kg",
+       "forms": [
+        "granada",
+        "granadas"
+       ]
+      },
+      {
+       "key": "caqui",
+       "name": "Caqui",
+       "base_unit": "kg",
+       "forms": [
+        "caqui",
+        "caquis",
+        "kaki",
+        "kakis"
        ]
       }
      ]
@@ -329,6 +360,53 @@
         "canónigos",
         "brotes tiernos"
        ]
+      },
+      {
+       "key": "judia_verde",
+       "name": "Judía verde",
+       "base_unit": "kg",
+       "forms": [
+        "judía verde",
+        "judías verdes",
+        "judias verdes"
+       ]
+      },
+      {
+       "key": "calabaza",
+       "name": "Calabaza",
+       "base_unit": "kg",
+       "forms": [
+        "calabaza",
+        "calabazas"
+       ]
+      },
+      {
+       "key": "apio",
+       "name": "Apio",
+       "base_unit": "ud",
+       "forms": [
+        "apio"
+       ]
+      },
+      {
+       "key": "esparrago_verde",
+       "name": "Espárragos verdes",
+       "base_unit": "kg",
+       "forms": [
+        "espárragos verdes",
+        "espárrago verde",
+        "trigueros"
+       ]
+      },
+      {
+       "key": "maiz_mazorca",
+       "name": "Maíz en mazorca",
+       "base_unit": "ud",
+       "forms": [
+        "mazorca",
+        "mazorcas",
+        "maíz en mazorca"
+       ]
       }
      ]
     }
@@ -351,14 +429,66 @@
        "name": "Pollo",
        "base_unit": "kg",
        "forms": [
-        "pollo",
+        "pollo"
+       ],
+       "vague": true
+      },
+      {
+       "key": "pollo_pechuga",
+       "name": "Pechuga de pollo",
+       "base_unit": "kg",
+       "forms": [
         "pechuga de pollo",
+        "pechugas de pollo",
+        "filetes de pechuga",
         "pechuga",
-        "muslos de pollo",
-        "contramuslos",
-        "alitas",
-        "pollo entero",
         "filetes de pollo"
+       ]
+      },
+      {
+       "key": "pollo_muslo_contramuslo",
+       "name": "Muslos y contramuslos de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "muslos de pollo",
+        "contramuslos de pollo",
+        "jamoncitos de pollo",
+        "cuartos traseros de pollo",
+        "muslos",
+        "contramuslos"
+       ]
+      },
+      {
+       "key": "pollo_alitas",
+       "name": "Alitas de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "alitas de pollo",
+        "alitas",
+        "alas de pollo"
+       ]
+      },
+      {
+       "key": "pollo_entero",
+       "name": "Pollo entero y troceado",
+       "base_unit": "kg",
+       "forms": [
+        "pollo entero",
+        "medio pollo",
+        "pollo troceado"
+       ]
+      },
+      {
+       "key": "pollo_casqueria_caldo",
+       "name": "Carcasa, menudencias y despiece de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "carcasa de pollo",
+        "menudencias de pollo",
+        "higaditos de pollo",
+        "hígados de pollo",
+        "mollejas de pollo",
+        "patas de pollo"
        ]
       },
       {
@@ -547,35 +677,109 @@
        ]
       },
       {
-       "key": "dorada_lubina",
-       "name": "Dorada y lubina",
+       "key": "dorada",
+       "name": "Dorada",
        "base_unit": "kg",
        "forms": [
         "dorada",
-        "lubina"
+        "doradas",
+        "filetes de dorada"
        ]
       },
       {
-       "key": "pescado_blanco_otro",
-       "name": "Corvina, rodaballo, trucha y otros",
+       "key": "lubina",
+       "name": "Lubina",
+       "base_unit": "kg",
+       "forms": [
+        "lubina",
+        "lubinas",
+        "filete de lubina"
+       ]
+      },
+      {
+       "key": "trucha",
+       "name": "Trucha",
+       "base_unit": "kg",
+       "forms": [
+        "trucha",
+        "truchas",
+        "trucha asalmonada"
+       ]
+      },
+      {
+       "key": "corvina",
+       "name": "Corvina",
        "base_unit": "kg",
        "forms": [
         "corvina",
-        "rodaballo",
-        "trucha",
-        "lenguado",
-        "gallo"
+        "filetes de corvina"
        ]
       },
       {
-       "key": "cefalopodos",
-       "name": "Sepia, pulpo y calamar",
+       "key": "rodaballo",
+       "name": "Rodaballo",
+       "base_unit": "kg",
+       "forms": [
+        "rodaballo",
+        "filete de rodaballo"
+       ]
+      },
+      {
+       "key": "lenguado",
+       "name": "Lenguado",
+       "base_unit": "kg",
+       "forms": [
+        "lenguado",
+        "lenguados"
+       ]
+      },
+      {
+       "key": "gallo_pescado",
+       "name": "Gallo",
+       "base_unit": "kg",
+       "forms": [
+        "gallo",
+        "gallos"
+       ]
+      },
+      {
+       "key": "calamar",
+       "name": "Calamar y chipirón",
+       "base_unit": "kg",
+       "forms": [
+        "calamar",
+        "calamares",
+        "chipirón",
+        "chipirones"
+       ]
+      },
+      {
+       "key": "sepia",
+       "name": "Sepia",
        "base_unit": "kg",
        "forms": [
         "sepia",
+        "sepias",
+        "choco"
+       ]
+      },
+      {
+       "key": "pulpo",
+       "name": "Pulpo",
+       "base_unit": "kg",
+       "forms": [
         "pulpo",
-        "calamar",
-        "chipirones"
+        "patas de pulpo",
+        "pulpo cocido"
+       ]
+      },
+      {
+       "key": "atun_fresco",
+       "name": "Atún fresco",
+       "base_unit": "kg",
+       "forms": [
+        "atún fresco",
+        "bonito fresco"
        ]
       }
      ]
@@ -756,22 +960,52 @@
        ]
       },
       {
-       "key": "chopped_mortadela",
-       "name": "Chopped y mortadela",
+       "key": "chopped",
+       "name": "Chopped",
        "base_unit": "kg",
        "forms": [
         "chopped",
-        "mortadela"
+        "chóped",
+        "chopped pork"
        ]
       },
       {
-       "key": "salchichon",
-       "name": "Salchichón y fuet",
+       "key": "mortadela",
+       "name": "Mortadela",
+       "base_unit": "kg",
+       "forms": [
+        "mortadela",
+        "mortadela con aceitunas",
+        "mortadela italiana"
+       ]
+      },
+      {
+       "key": "salchichon_curado",
+       "name": "Salchichón",
        "base_unit": "kg",
        "forms": [
         "salchichón",
+        "salchichon",
+        "salchichones"
+       ]
+      },
+      {
+       "key": "fuet",
+       "name": "Fuet y longaniza curada",
+       "base_unit": "kg",
+       "forms": [
         "fuet",
+        "espetec",
         "longaniza curada"
+       ]
+      },
+      {
+       "key": "salami",
+       "name": "Salami y pepperoni",
+       "base_unit": "kg",
+       "forms": [
+        "salami",
+        "pepperoni"
        ]
       },
       {
@@ -1524,6 +1758,47 @@
         "sazonador para carne",
         "ajo en polvo"
        ]
+      },
+      {
+       "key": "canela",
+       "name": "Canela",
+       "base_unit": "kg",
+       "forms": [
+        "canela",
+        "canela molida",
+        "canela en rama"
+       ]
+      },
+      {
+       "key": "comino",
+       "name": "Comino",
+       "base_unit": "kg",
+       "forms": [
+        "comino",
+        "comino molido"
+       ]
+      },
+      {
+       "key": "curry",
+       "name": "Curry",
+       "base_unit": "kg",
+       "forms": [
+        "curry"
+       ]
+      },
+      {
+       "key": "especias_otras",
+       "name": "Otras especias",
+       "base_unit": "kg",
+       "forms": [
+        "nuez moscada",
+        "cúrcuma",
+        "jengibre molido",
+        "clavo",
+        "cayena",
+        "guindilla",
+        "ñoras"
+       ]
       }
      ]
     },
@@ -1766,9 +2041,29 @@
        "base_unit": "kg",
        "forms": [
         "caballa",
-        "melva",
-        "sardinas",
-        "sardinillas"
+        "sardinas"
+       ],
+       "vague": true
+      },
+      {
+       "key": "sardinas_conserva",
+       "name": "Sardinas y sardinillas en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "sardinas en lata",
+        "sardinillas",
+        "sardinas en conserva"
+       ]
+      },
+      {
+       "key": "caballa_melva_conserva",
+       "name": "Caballa y melva en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "caballa en conserva",
+        "caballa en lata",
+        "melva en lata",
+        "melva"
        ]
       },
       {
@@ -2439,14 +2734,21 @@
        ]
       },
       {
-       "key": "zumo_melocoton_pina",
-       "name": "Zumo de melocotón y piña",
+       "key": "zumo_melocoton",
+       "name": "Zumo de melocotón",
        "base_unit": "l",
-       "default_quantity": 1,
        "forms": [
         "zumo de melocotón",
-        "zumo de piña",
         "néctar de melocotón"
+       ]
+      },
+      {
+       "key": "zumo_pina",
+       "name": "Zumo de piña",
+       "base_unit": "l",
+       "forms": [
+        "zumo de piña",
+        "néctar de piña"
        ]
       },
       {
@@ -2699,6 +3001,14 @@
        "forms": [
         "licor sin alcohol",
         "ginebra sin alcohol"
+       ]
+      },
+      {
+       "key": "tequila",
+       "name": "Tequila",
+       "base_unit": "l",
+       "forms": [
+        "tequila"
        ]
       }
      ]
