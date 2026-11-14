@@ -6,6 +6,8 @@ import {
   getSections,
   interpretText,
   requestRecommendation,
+  type Accept,
+  type CanonicalCard,
   type CatalogSection,
   type Health,
   type LatLon,
@@ -15,6 +17,7 @@ import {
   type SectionCategory,
 } from "./api";
 import {
+  canonicalLine,
   cartItemCount,
   cartReducer,
   draftItemsFromCart,
@@ -22,6 +25,19 @@ import {
   specificLine,
 } from "./cart";
 import { draftFromInterpreted, toRequestItem, type DraftItem } from "./draft";
+import {
+  appendEvent,
+  emptyProfile,
+  exportProfile,
+  importProfile,
+  indexedDbProfileStore,
+  livePreferences,
+  removePreference,
+  setPreference,
+  uuidv7,
+  type Profile,
+  type ProfileStore,
+} from "./profile";
 import { CATALOG_HASH, LIST_HASH, navigate, useRoute } from "./router";
 import {
   createSavedList,
@@ -33,8 +49,10 @@ import {
   type SavedList,
 } from "./storage";
 import { BasketStep } from "./components/BasketStep";
+import { CanonicalPage } from "./components/CanonicalPage";
 import { CartDrawer } from "./components/CartDrawer";
 import { CatalogPage } from "./components/CatalogPage";
+import { CHAINS } from "./components/ChainLogo";
 import { HomePage } from "./components/HomePage";
 import { ListStep } from "./components/ListStep";
 import { DEFAULT_OPTIONS, OriginStep, type RouteOptions } from "./components/OriginStep";
@@ -76,6 +94,15 @@ export default function App() {
 
   const [cart, dispatch] = useReducer(cartReducer, null, () => loadCart());
   const [cartOpen, setCartOpen] = useState(false);
+  // Shopper preferences (decision 0019): the chains to shop in (null = all) and the global
+  // "Me da igual la marca" switch. The profile keeps them in the browser between sessions.
+  const [chainFilter, setChainFilter] = useState<string[] | null>(null);
+  const [anyBrand, setAnyBrand] = useState(false);
+  const [store] = useState<ProfileStore>(() => indexedDbProfileStore());
+  const profileRef = useRef<Profile>(emptyProfile());
+  // Resolves once the saved profile is in `profileRef`; every change waits for it, so a tap
+  // made while IndexedDB is still loading neither overwrites nor is overwritten by the load.
+  const profileLoaded = useRef<Promise<void>>(Promise.resolve());
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([]);
   const [catalogSectionsError, setCatalogSectionsError] = useState<string | null>(null);
@@ -129,6 +156,125 @@ export default function App() {
   useEffect(() => {
     saveCart(cart);
   }, [cart]);
+
+  // Load the saved profile once: the padlocks already travel with the cart, this restores
+  // the switch and the chains.
+  useEffect(() => {
+    let cancelled = false;
+    profileLoaded.current = store
+      .load()
+      .then((loaded) => {
+        if (cancelled) return;
+        profileRef.current = loaded;
+        applyPreferences(loaded);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [store]);
+
+  function applyPreferences(profile: Profile) {
+    const live = livePreferences(profile);
+    const chains = live
+      .filter((preference) => preference.kind === "chain_include")
+      .map((preference) => preference.scope_key);
+    setChainFilter(chains.length === 0 ? null : chains);
+    setAnyBrand(
+      live.some((preference) => preference.kind === "any_brand" && preference.value === true),
+    );
+  }
+
+  /** Applies a change on top of the loaded profile, saves it and shows its preferences. */
+  function commitProfile(change: (profile: Profile) => Profile) {
+    void profileLoaded.current.then(() => {
+      const next = change(profileRef.current);
+      profileRef.current = next;
+      applyPreferences(next);
+      return store.save(next);
+    });
+  }
+
+  function handleAnyBrandChange(value: boolean) {
+    setAnyBrand(value);
+    if (value) dispatch({ type: "anyBrand" });
+    const now = new Date();
+    const key = { scope_kind: "global", scope_key: "any_brand", kind: "any_brand" } as const;
+    commitProfile((profile) =>
+      value
+        ? setPreference(profile, { ...key, value: true }, now)
+        : removePreference(profile, key, now),
+    );
+  }
+
+  function handleChainFilterChange(chains: string[] | null) {
+    setChainFilter(chains);
+    const now = new Date();
+    commitProfile((current) => {
+      let profile = current;
+      for (const { code } of CHAINS) {
+        const key = { scope_kind: "chain", scope_key: code, kind: "chain_include" } as const;
+        profile =
+          chains !== null && chains.includes(code)
+            ? setPreference(profile, { ...key, value: true }, now)
+            : removePreference(profile, key, now);
+      }
+      return profile;
+    });
+  }
+
+  function handleAcceptChange(id: string, accept: Accept) {
+    dispatch({ type: "setAccept", id, accept });
+  }
+
+  function handleToggleLock(id: string) {
+    const line = cart.find((candidate) => candidate.id === id);
+    dispatch({ type: "toggleLock", id });
+    if (!line || line.category_key === null) return;
+
+    const now = new Date();
+    const key = { scope_kind: "category", scope_key: line.category_key, kind: "brand_pin" } as const;
+    if (line.locked) {
+      commitProfile((profile) => removePreference(profile, key, now));
+      return;
+    }
+
+    commitProfile((profile) =>
+      appendEvent(
+        setPreference(
+          profile,
+          { ...key, value: { product_id: line.product_id, brand: line.brand } },
+          now,
+        ),
+        {
+          id: uuidv7(now.getTime()),
+          term: line.category_name ?? line.name,
+          action: "pinned",
+          canonical_id: null,
+          product_id: line.product_id,
+          brand: line.brand,
+          chain: null,
+          date: now.toISOString(),
+        },
+      ),
+    );
+  }
+
+  function handleExportProfile() {
+    const blob = new Blob([exportProfile(profileRef.current)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "smart-basket-preferencias.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function handleImportProfile(json: string) {
+    commitProfile((profile) => importProfile(json, profile));
+  }
 
   async function handleInterpret() {
     if (interpretingRef.current) return;
@@ -231,6 +377,7 @@ export default function App() {
         priority_mode: options.priority,
         return_to_origin: options.returnToOrigin,
         degraded,
+        chains: chainFilter,
       });
       setRecommendation(result);
       setStep("basket");
@@ -260,7 +407,11 @@ export default function App() {
   }
 
   function handleAddSpecific(product: Product) {
-    dispatch({ type: "add", line: specificLine(product) });
+    dispatch({ type: "add", line: specificLine(product, anyBrand) });
+  }
+
+  function handleAddCanonical(card: CanonicalCard) {
+    dispatch({ type: "add", line: canonicalLine(card) });
   }
 
   function handleAddGeneric(product: Product) {
@@ -366,11 +517,23 @@ export default function App() {
         <div className="min-h-screen bg-stone-50 text-slate-900">
           <CatalogPage
             section={route.section}
+            view={route.view}
             sections={catalogSections}
             sectionsError={catalogSectionsError}
             query={catalogQuery}
             onQueryChange={setCatalogQuery}
             onAdd={handleAddSpecific}
+            onAddCanonical={handleAddCanonical}
+          />
+        </div>
+      )}
+
+      {route.name === "canonical" && (
+        <div className="min-h-screen bg-stone-50 text-slate-900">
+          <CanonicalPage
+            id={route.id}
+            onAddGeneric={handleAddCanonical}
+            onAddSpecific={handleAddSpecific}
           />
         </div>
       )}
@@ -390,11 +553,19 @@ export default function App() {
       <CartDrawer
         open={cartOpen}
         lines={cart}
+        anyBrand={anyBrand}
+        chainFilter={chainFilter}
         onClose={() => setCartOpen(false)}
         onQuantityChange={(id, quantity) => dispatch({ type: "setQuantity", id, quantity })}
+        onAcceptChange={handleAcceptChange}
+        onToggleLock={handleToggleLock}
+        onAnyBrandChange={handleAnyBrandChange}
+        onChainFilterChange={handleChainFilterChange}
         onRemove={(id) => dispatch({ type: "remove", id })}
         onSaveList={handleSaveCartList}
         onCalculate={handleCalculateFromCart}
+        onExportProfile={handleExportProfile}
+        onImportProfile={handleImportProfile}
       />
     </>
   );

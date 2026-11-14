@@ -2,9 +2,13 @@
 
 import { useSyncExternalStore } from "react";
 
+/** The catalog can be browsed by generic product (default) or by supermarket. */
+export type CatalogView = "product" | "super";
+
 export type Route =
   | { name: "home" }
-  | { name: "catalog"; section: string | null }
+  | { name: "catalog"; section: string | null; view: CatalogView }
+  | { name: "canonical"; id: number }
   | { name: "product"; id: number }
   | { name: "list" };
 
@@ -12,8 +16,13 @@ export const HOME_HASH = "#/";
 export const CATALOG_HASH = "#/catalogo";
 export const LIST_HASH = "#/lista";
 
-export function catalogHash(section: string | null): string {
-  return section === null ? CATALOG_HASH : `${CATALOG_HASH}/${encodeURIComponent(section)}`;
+export function catalogHash(section: string | null, view: CatalogView = "product"): string {
+  const base = section === null ? CATALOG_HASH : `${CATALOG_HASH}/${encodeURIComponent(section)}`;
+  return view === "super" ? `${base}?vista=super` : base;
+}
+
+export function canonicalHash(id: number): string {
+  return `#/generico/${id}`;
 }
 
 export function productHash(id: number): string {
@@ -31,12 +40,18 @@ function decode(value: string): string {
 /** Unknown hashes fall back to the home page. */
 export function parseRoute(hash: string): Route {
   const path = hash.startsWith("#") ? hash.slice(1) : hash;
-  const clean = path.split("?")[0].replace(/\/+$/, "");
+  const [rawPath, query = ""] = path.split("?");
+  const clean = rawPath.replace(/\/+$/, "");
   const parts = clean.split("/").filter((part) => part !== "").map(decode);
 
   if (parts.length === 0) return { name: "home" };
   if (parts[0] === "catalogo" && parts.length <= 2) {
-    return { name: "catalog", section: parts[1] ?? null };
+    const view: CatalogView =
+      new URLSearchParams(query).get("vista") === "super" ? "super" : "product";
+    return { name: "catalog", section: parts[1] ?? null, view };
+  }
+  if (parts[0] === "generico" && parts.length === 2 && /^\d+$/.test(parts[1])) {
+    return { name: "canonical", id: Number(parts[1]) };
   }
   if (parts[0] === "producto" && parts.length === 2 && /^\d+$/.test(parts[1])) {
     return { name: "product", id: Number(parts[1]) };

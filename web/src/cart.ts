@@ -1,6 +1,6 @@
 // The cart is the user's list: catalog products added before choosing an origin.
 
-import type { Product } from "./api";
+import type { Accept, CanonicalCard, Product } from "./api";
 import { GENERIC_DEFAULTS, newId, type DraftItem } from "./draft";
 
 export const MIN_QUANTITY = 1;
@@ -18,11 +18,18 @@ export interface CartLine {
   category_key: string | null;
   category_name: string | null;
   quantity: number;
+  /** "exact" buys this product; "equivalent" accepts any product of its canonical. */
+  accept: Accept;
+  /** Pinned with the padlock: the global "Me da igual la marca" switch leaves it exact. */
+  locked: boolean;
 }
 
 export type CartAction =
   | { type: "add"; line: CartLine }
   | { type: "setQuantity"; id: string; quantity: number }
+  | { type: "setAccept"; id: string; accept: Accept }
+  | { type: "toggleLock"; id: string }
+  | { type: "anyBrand" }
   | { type: "remove"; id: string }
   | { type: "clear" };
 
@@ -56,6 +63,23 @@ export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {
       return lines.map((line) =>
         line.id === action.id ? { ...line, quantity: clampQuantity(action.quantity) } : line,
       );
+    case "setAccept":
+      return lines.map((line) =>
+        line.id === action.id ? { ...line, accept: action.accept } : line,
+      );
+    case "toggleLock":
+      return lines.map((line) =>
+        line.id === action.id
+          ? { ...line, locked: !line.locked, accept: line.locked ? line.accept : "exact" }
+          : line,
+      );
+    case "anyBrand":
+      // Same rule as `applyAnyBrand` in draft.ts: pinned lines keep their choice.
+      return lines.map((line) =>
+        line.product_id !== null && !line.locked && line.accept === "exact"
+          ? { ...line, accept: "equivalent" }
+          : line,
+      );
     case "remove":
       return lines.filter((line) => line.id !== action.id);
     case "clear":
@@ -69,7 +93,7 @@ export function cartItemCount(lines: CartLine[]): number {
 }
 
 /** A specific product: its own brand and packaging, its canonical for the basket. */
-export function specificLine(product: Product): CartLine {
+export function specificLine(product: Product, anyBrand = false): CartLine {
   return {
     id: newId(),
     product_id: product.id,
@@ -80,6 +104,8 @@ export function specificLine(product: Product): CartLine {
     category_key: product.canonical?.category_key ?? null,
     category_name: product.canonical?.name ?? null,
     quantity: MIN_QUANTITY,
+    accept: anyBrand ? "equivalent" : "exact",
+    locked: false,
   };
 }
 
@@ -96,6 +122,25 @@ export function genericLine(product: Product): CartLine | null {
     category_key: product.canonical.category_key,
     category_name: product.canonical.name,
     quantity: MIN_QUANTITY,
+    accept: "equivalent",
+    locked: false,
+  };
+}
+
+/** A generic line added from a canonical card: no concrete product, any of the canonical. */
+export function canonicalLine(card: CanonicalCard): CartLine {
+  return {
+    id: newId(),
+    product_id: null,
+    name: card.name,
+    brand: null,
+    packaging: null,
+    image_url: card.image_url,
+    category_key: card.category_key,
+    category_name: card.name,
+    quantity: MIN_QUANTITY,
+    accept: "equivalent",
+    locked: false,
   };
 }
 
@@ -113,7 +158,8 @@ export function draftItemFromCartLine(line: CartLine): DraftItem | null {
     privateLabelOk: true,
     ...GENERIC_DEFAULTS,
     productId: line.product_id,
-    accept: isGenericLine(line) ? "equivalent" : "exact",
+    accept: line.accept,
+    locked: line.locked,
     imageUrl: line.image_url,
   };
 }
