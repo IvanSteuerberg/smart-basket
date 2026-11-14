@@ -78,7 +78,14 @@ join category ec on ec.id = coalesce(canon.category_id, ccat.category_id)
 """
 
 _ORDERS = {
-    "unit_price": "(cp.base_quantity is null), pc.price / cp.base_quantity, cp.name, cp.id",
+    # Same rule as `_unit_price`: a product counted by units without a size is priced per unit;
+    # one weighed or measured without a size has no unit price and goes last.
+    "unit_price": (
+        "(cp.base_quantity is null and cp.base_unit is distinct from 'ud'), "
+        "coalesce(pc.price / nullif(cp.base_quantity, 0), "
+        "case when cp.base_unit = 'ud' then pc.price end), "
+        "cp.name, cp.id"
+    ),
     "price": "pc.price, cp.name, cp.id",
     "name": "cp.name, cp.id",
 }
@@ -229,7 +236,11 @@ def _search_sql(q: str, forms: Mapping[int, Iterable[str]], params: dict[str, An
     if not category_ids:
         return f"({' and '.join(name_parts)})"
     params["q_categories"] = category_ids
-    return f"(({' and '.join(name_parts)}) or ec.id = any(:q_categories))"
+    # A query naming a group ("lacteos") matches the products of every leaf below it.
+    return (
+        f"(({' and '.join(name_parts)}) or ec.id in (select descendant_id from category_closure "
+        "where ancestor_id = any(:q_categories)))"
+    )
 
 
 def _filters(
@@ -266,7 +277,7 @@ def _category_id(session: Session, key: str, error: str) -> int:
 
 
 def _unit_price(price: Decimal, quantity: Decimal | None, unit: str | None) -> str | None:
-    if quantity is None:
+    if quantity is None or quantity <= 0:
         return decimal_text(price) if unit == "ud" else None
     return decimal_text((price / quantity).quantize(UNIT_PRICE_QUANTUM, rounding=ROUND_HALF_UP))
 
@@ -300,9 +311,16 @@ def _to_product(row: Mapping[str, Any], brands: Brands) -> ProductOut:
 
 def _section_images(rows: Iterable[Mapping[str, Any]]) -> dict[int, str]:
     """Lowest-id photo of the most common canonical (or leaf) of each section."""
-    groups: dict[int, dict[int, list[tuple[int, str]]]] = defaultdict(lambda: defaultdict(list))
+    groups: dict[int, dict[tuple[str, int], list[tuple[int, str]]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in rows:
-        key = row["canonical_id"] if row["canonical_id"] is not None else row["node_id"]
+        # Canonical ids and category ids are different id spaces: keep them apart.
+        key = (
+            ("canonical", row["canonical_id"])
+            if row["canonical_id"] is not None
+            else ("category", row["node_id"])
+        )
         groups[row["section_id"]][key].append((row["id"], row["image_url"]))
     images = {}
     for section_id, by_key in groups.items():
