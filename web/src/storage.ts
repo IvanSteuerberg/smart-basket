@@ -1,12 +1,13 @@
 // Versioned browser storage for the user's saved lists (data model, browser storage).
 
+import type { PriorityMode, TravelMode } from "./api";
 import type { CartLine } from "./cart";
 import { isUnit, newId, withLineDefaults, type DraftItem } from "./draft";
 
 export const STORAGE_KEY = "smart-basket.lists";
-/** Version 2 added the cart next to the saved lists; version 1 is still read. */
-export const SCHEMA_VERSION = 2;
-const LEGACY_SCHEMA_VERSION = 1;
+/** Version 3 added origin and route options; versions 1 and 2 are still read. */
+export const SCHEMA_VERSION = 3;
+const LEGACY_SCHEMA_VERSIONS = [1, 2];
 
 export interface SavedList {
   id: string;
@@ -18,15 +19,39 @@ export interface SavedList {
   items: DraftItem[];
 }
 
+export interface StoredOrigin {
+  lat: number;
+  lon: number;
+  label: string;
+}
+
+export interface StoredRouteOptions {
+  mode: TravelMode;
+  maxStores: number;
+  priority: PriorityMode;
+  returnToOrigin: boolean;
+}
+
+export const DEFAULT_ROUTE_OPTIONS: StoredRouteOptions = {
+  mode: "walk",
+  maxStores: 2,
+  priority: "balanced",
+  returnToOrigin: true,
+};
+
 interface StoredPayload {
   schema_version: number;
   lists: SavedList[];
   cart: CartLine[];
+  origin: StoredOrigin | null;
+  options: StoredRouteOptions;
 }
 
 interface StoredStore {
   lists: SavedList[];
   cart: CartLine[];
+  origin: StoredOrigin | null;
+  options: StoredRouteOptions;
 }
 
 function defaultStorage(): Storage | null {
@@ -41,7 +66,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
-function isDraftItem(value: unknown): value is DraftItem {
+/** A line saved before the concrete-product fields existed allows them missing. */
+type StoredDraftItem = Omit<
+  DraftItem,
+  "productId" | "accept" | "locked" | "imageUrl" | "options"
+> &
+  Partial<Omit<DraftItem, "options">> & {
+    options?: DraftItem["options"];
+  };
+
+function isDraftItem(value: unknown): value is StoredDraftItem {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&
@@ -51,11 +85,29 @@ function isDraftItem(value: unknown): value is DraftItem {
     typeof value.quantity === "string" &&
     isUnit(value.unit) &&
     typeof value.brand === "string" &&
-    typeof value.privateLabelOk === "boolean"
+    typeof value.privateLabelOk === "boolean" &&
+    (value.productId === undefined ||
+      value.productId === null ||
+      (typeof value.productId === "number" && Number.isInteger(value.productId))) &&
+    (value.accept === undefined || value.accept === "exact" || value.accept === "equivalent") &&
+    (value.locked === undefined || typeof value.locked === "boolean") &&
+    (value.imageUrl === undefined || value.imageUrl === null || typeof value.imageUrl === "string") &&
+    (value.options === undefined ||
+      (Array.isArray(value.options) &&
+        value.options.every(
+          (opt) =>
+            isRecord(opt) &&
+            typeof opt.category_key === "string" &&
+            typeof opt.name === "string",
+        )))
   );
 }
 
-function isSavedList(value: unknown): value is SavedList {
+interface StoredSavedList extends Omit<SavedList, "items"> {
+  items: StoredDraftItem[];
+}
+
+function isSavedList(value: unknown): value is StoredSavedList {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&
@@ -91,6 +143,32 @@ function isCartLine(value: unknown): value is StoredCartLine {
   );
 }
 
+function isStoredOrigin(value: unknown): value is StoredOrigin {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.lat === "number" &&
+    Number.isFinite(value.lat) &&
+    typeof value.lon === "number" &&
+    Number.isFinite(value.lon) &&
+    typeof value.label === "string"
+  );
+}
+
+function isStoredRouteOptions(value: unknown): value is StoredRouteOptions {
+  if (!isRecord(value)) return false;
+  const modes: TravelMode[] = ["walk", "car"];
+  const priorities: PriorityMode[] = ["savings", "balanced", "time"];
+  return (
+    typeof value.mode === "string" &&
+    modes.includes(value.mode as TravelMode) &&
+    typeof value.maxStores === "number" &&
+    Number.isFinite(value.maxStores) &&
+    typeof value.priority === "string" &&
+    priorities.includes(value.priority as PriorityMode) &&
+    typeof value.returnToOrigin === "boolean"
+  );
+}
+
 /** Old concrete lines read as exact, old generic ones as equivalent, and nothing as pinned. */
 function withCartDefaults(line: StoredCartLine): CartLine {
   return {
@@ -101,19 +179,25 @@ function withCartDefaults(line: StoredCartLine): CartLine {
 }
 
 function readStore(storage: Storage | null): StoredStore {
-  if (!storage) return { lists: [], cart: [] };
+  const empty: StoredStore = {
+    lists: [],
+    cart: [],
+    origin: null,
+    options: DEFAULT_ROUTE_OPTIONS,
+  };
+  if (!storage) return empty;
   try {
     const raw = storage.getItem(STORAGE_KEY);
-    if (!raw) return { lists: [], cart: [] };
+    if (!raw) return empty;
     const payload: unknown = JSON.parse(raw);
     if (!isRecord(payload) || !Array.isArray(payload.lists)) {
-      return { lists: [], cart: [] };
+      return empty;
     }
     if (
       payload.schema_version !== SCHEMA_VERSION &&
-      payload.schema_version !== LEGACY_SCHEMA_VERSION
+      !LEGACY_SCHEMA_VERSIONS.includes(payload.schema_version as number)
     ) {
-      return { lists: [], cart: [] };
+      return empty;
     }
     return {
       lists: payload.lists
@@ -122,9 +206,11 @@ function readStore(storage: Storage | null): StoredStore {
       cart: Array.isArray(payload.cart)
         ? payload.cart.filter(isCartLine).map(withCartDefaults)
         : [],
+      origin: isStoredOrigin(payload.origin) ? payload.origin : null,
+      options: isStoredRouteOptions(payload.options) ? payload.options : DEFAULT_ROUTE_OPTIONS,
     };
   } catch {
-    return { lists: [], cart: [] };
+    return empty;
   }
 }
 
@@ -143,7 +229,8 @@ export function loadLists(storage: Storage | null = defaultStorage()): SavedList
 }
 
 export function saveLists(lists: SavedList[], storage: Storage | null = defaultStorage()): void {
-  writeStore({ lists, cart: readStore(storage).cart }, storage);
+  const current = readStore(storage);
+  writeStore({ ...current, lists }, storage);
 }
 
 export function loadCart(storage: Storage | null = defaultStorage()): CartLine[] {
@@ -151,7 +238,32 @@ export function loadCart(storage: Storage | null = defaultStorage()): CartLine[]
 }
 
 export function saveCart(cart: CartLine[], storage: Storage | null = defaultStorage()): void {
-  writeStore({ lists: readStore(storage).lists, cart }, storage);
+  const current = readStore(storage);
+  writeStore({ ...current, cart }, storage);
+}
+
+export function loadOrigin(storage: Storage | null = defaultStorage()): StoredOrigin | null {
+  return readStore(storage).origin;
+}
+
+export function saveOrigin(
+  origin: StoredOrigin | null,
+  storage: Storage | null = defaultStorage(),
+): void {
+  const current = readStore(storage);
+  writeStore({ ...current, origin }, storage);
+}
+
+export function loadOptions(storage: Storage | null = defaultStorage()): StoredRouteOptions {
+  return readStore(storage).options;
+}
+
+export function saveOptions(
+  options: StoredRouteOptions,
+  storage: Storage | null = defaultStorage(),
+): void {
+  const current = readStore(storage);
+  writeStore({ ...current, options }, storage);
 }
 
 export function createSavedList(

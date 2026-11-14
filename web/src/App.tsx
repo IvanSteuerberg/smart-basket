@@ -1,20 +1,17 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import {
   describeError,
-  getCategories,
   getHealth,
   getSections,
   interpretText,
+  isVagueLine,
   requestRecommendation,
   type Accept,
   type CanonicalCard,
   type CatalogSection,
   type Health,
-  type LatLon,
   type Product,
   type Recommendation,
-  type SearchResult,
-  type SectionCategory,
 } from "./api";
 import {
   canonicalLine,
@@ -24,7 +21,13 @@ import {
   genericLine,
   specificLine,
 } from "./cart";
-import { draftFromInterpreted, toRequestItem, type DraftItem } from "./draft";
+import {
+  allResolved,
+  applyAnyBrand,
+  draftFromInterpreted,
+  toRequestItem,
+  type DraftItem,
+} from "./draft";
 import {
   appendEvent,
   emptyProfile,
@@ -43,10 +46,15 @@ import {
   createSavedList,
   loadCart,
   loadLists,
+  loadOptions,
+  loadOrigin,
   saveCart,
   saveLists,
+  saveOptions,
+  saveOrigin,
   upsertSavedList,
   type SavedList,
+  type StoredOrigin,
 } from "./storage";
 import { BasketStep } from "./components/BasketStep";
 import { CanonicalPage } from "./components/CanonicalPage";
@@ -55,12 +63,11 @@ import { CatalogPage } from "./components/CatalogPage";
 import { CHAINS } from "./components/ChainLogo";
 import { HomePage } from "./components/HomePage";
 import { ListStep } from "./components/ListStep";
-import { DEFAULT_OPTIONS, OriginStep, type RouteOptions } from "./components/OriginStep";
+import { type RouteOptions } from "./components/OriginStep";
 import { ProductPage } from "./components/ProductPage";
-import { ReviewStep } from "./components/ReviewStep";
 import { SiteHeader } from "./components/SiteHeader";
 
-type Step = "list" | "review" | "origin" | "basket";
+type Step = "list" | "basket";
 
 function HealthFooter() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -79,7 +86,7 @@ function HealthFooter() {
   }, []);
 
   return (
-    <footer className="footer-status" aria-live="polite">
+    <footer className="py-4 text-center text-xs text-stone-500" aria-live="polite">
       {failed
         ? "No se puede contactar con el servidor"
         : health
@@ -110,36 +117,21 @@ export default function App() {
   const [step, setStep] = useState<Step>("list");
 
   const [text, setText] = useState("");
-  const [addedItems, setAddedItems] = useState<DraftItem[]>([]);
   const [items, setItems] = useState<DraftItem[]>([]);
   const [degraded, setDegraded] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
   const [interpretError, setInterpretError] = useState<string | null>(null);
-  const interpretingRef = useRef(false);
-
-  const [sections, setSections] = useState<SectionCategory[]>([]);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   const [lists, setLists] = useState<SavedList[]>(() => loadLists());
 
-  const [origin, setOrigin] = useState<LatLon | null>(null);
-  const [options, setOptions] = useState<RouteOptions>(DEFAULT_OPTIONS);
+  const [origin, setOrigin] = useState<StoredOrigin | null>(() => loadOrigin());
+  const [options, setOptions] = useState<RouteOptions>(() => loadOptions());
+  const [originOpen, setOriginOpen] = useState(false);
+
   const [calculating, setCalculating] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
-  const calculatingRef = useRef(false);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    getCategories(controller.signal)
-      .then((response) => {
-        if (!controller.signal.aborted) setSections(response.sections);
-      })
-      .catch((error: unknown) => {
-        if (!controller.signal.aborted) setCategoriesError(describeError(error));
-      });
-    return () => controller.abort();
-  }, []);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -276,59 +268,33 @@ export default function App() {
     commitProfile((profile) => importProfile(json, profile));
   }
 
-  async function handleInterpret() {
-    if (interpretingRef.current) return;
-    setInterpretError(null);
-    const trimmed = text.trim();
-    if (trimmed === "") {
-      if (addedItems.length === 0) return;
-      setItems(addedItems.map((item) => ({ ...item })));
-      setDegraded(false);
-      setStep("review");
-      return;
-    }
-    interpretingRef.current = true;
-    setInterpreting(true);
-    try {
-      const response = await interpretText(trimmed);
-      setItems([
-        ...response.items.map(draftFromInterpreted),
-        ...addedItems.map((item) => ({ ...item })),
-      ]);
-      setDegraded(response.degraded);
-      setStep("review");
-    } catch (error) {
-      setInterpretError(describeError(error));
-    } finally {
-      interpretingRef.current = false;
-      setInterpreting(false);
-    }
+  function handleOriginChange(next: StoredOrigin) {
+    setOrigin(next);
+    saveOrigin(next);
+    setCalcError(null);
   }
 
-  function handleAddItem(item: DraftItem) {
-    setAddedItems((current) => [...current, item]);
-  }
-
-  function handleRemoveAddedItem(id: string) {
-    setAddedItems((current) => current.filter((item) => item.id !== id));
-  }
-
-  function handleChangeItem(id: string, patch: Partial<DraftItem>) {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
-  }
-
-  function handlePickCategory(id: string, result: SearchResult) {
-    handleChangeItem(id, { categoryKey: result.key, categoryName: result.name });
+  function handleOptionsChange(patch: Partial<RouteOptions>) {
+    setOptions((current) => {
+      const updated = { ...current, ...patch };
+      saveOptions(updated);
+      return updated;
+    });
+    setCalcError(null);
   }
 
   function handleRemoveItem(id: string) {
     setItems((current) => current.filter((item) => item.id !== id));
   }
 
+  function handleUpdateItem(id: string, patch: Partial<DraftItem>) {
+    setItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+
   function handleSaveList(name: string) {
-    const next = upsertSavedList(lists, createSavedList(name, text, addedItems));
+    const next = upsertSavedList(lists, createSavedList(name, text, items));
     setLists(next);
     saveLists(next);
   }
@@ -345,53 +311,109 @@ export default function App() {
     const list = lists.find((candidate) => candidate.id === id);
     if (!list) return;
     setText(list.text);
-    setAddedItems(list.items);
-    setItems([]);
+    setItems(list.items);
     setDegraded(false);
     setInterpretError(null);
+    setCalcError(null);
     setStep("list");
   }
 
-  function handleOriginChange(next: LatLon) {
-    setOrigin(next);
-    setCalcError(null);
-  }
-
-  function handleOptionsChange(patch: Partial<RouteOptions>) {
-    setOptions((current) => ({ ...current, ...patch }));
-    setCalcError(null);
-  }
-
-  async function handleCalculate() {
-    if (calculatingRef.current) return;
-    if (!origin) return;
-    calculatingRef.current = true;
+  async function executeRecommendation(
+    targetItems: DraftItem[],
+    targetOrigin: StoredOrigin,
+    targetOptions: RouteOptions,
+    isDegraded: boolean = degraded,
+  ) {
+    busyRef.current = true;
     setCalculating(true);
     setCalcError(null);
     try {
       const result = await requestRecommendation({
-        items: items.map(toRequestItem),
-        origin,
-        mode: options.mode,
-        max_stores: options.maxStores,
-        priority_mode: options.priority,
-        return_to_origin: options.returnToOrigin,
-        degraded,
+        items: targetItems.map(toRequestItem),
+        origin: { lat: targetOrigin.lat, lon: targetOrigin.lon },
+        mode: targetOptions.mode,
+        max_stores: targetOptions.maxStores,
+        priority_mode: targetOptions.priority,
+        return_to_origin: targetOptions.returnToOrigin,
+        degraded: isDegraded,
         chains: chainFilter,
       });
       setRecommendation(result);
       setStep("basket");
     } catch (error) {
-      setCalcError(describeError(error));
+      if (isVagueLine(error)) {
+        const lineId = error.detail.line_id;
+        setItems((current) =>
+          current.map((item, index) =>
+            index === lineId
+              ? { ...item, categoryKey: null, productId: null, options: [] }
+              : item,
+          ),
+        );
+        setCalcError(error.detail.message);
+        setStep("list");
+      } else {
+        setCalcError(describeError(error));
+      }
     } finally {
-      calculatingRef.current = false;
+      busyRef.current = false;
       setCalculating(false);
+    }
+  }
+
+  async function recalculateWithItems(
+    nextItems: DraftItem[],
+    isDegraded: boolean = degraded,
+  ) {
+    if (busyRef.current || !origin) return;
+    setItems(nextItems);
+    await executeRecommendation(nextItems, origin, options, isDegraded);
+  }
+
+  async function handleCalculate() {
+    if (busyRef.current) return;
+    setCalcError(null);
+    setInterpretError(null);
+
+    let currentItems = items;
+    let currentDegraded = degraded;
+    const trimmed = text.trim();
+
+    if (trimmed !== "") {
+      busyRef.current = true;
+      setInterpreting(true);
+      try {
+        const response = await interpretText(trimmed);
+        const newItems = response.items.map(draftFromInterpreted);
+        currentItems = [...items, ...newItems];
+        currentDegraded = response.degraded;
+        setItems(currentItems);
+        setText("");
+        setDegraded(response.degraded);
+      } catch (error) {
+        setInterpretError(describeError(error));
+        busyRef.current = false;
+        setInterpreting(false);
+        return;
+      } finally {
+        busyRef.current = false;
+        setInterpreting(false);
+      }
+    }
+
+    if (currentItems.length === 0) return;
+
+    if (!origin) {
+      setOriginOpen(true);
+    }
+
+    if (allResolved(currentItems) && origin) {
+      await recalculateWithItems(currentItems, currentDegraded);
     }
   }
 
   function handleNewList() {
     setText("");
-    setAddedItems([]);
     setItems([]);
     setDegraded(false);
     setInterpretError(null);
@@ -419,64 +441,65 @@ export default function App() {
     if (line) dispatch({ type: "add", line });
   }
 
-  /** The cart becomes the list: straight to the origin step, no review. */
   function handleCalculateFromCart() {
     const cartItems = draftItemsFromCart(cart);
     if (cartItems.length === 0) return;
     setText("");
-    setAddedItems([]);
     setItems(cartItems);
     setDegraded(false);
     setInterpretError(null);
     setCalcError(null);
     setRecommendation(null);
-    setStep("origin");
+    setStep("list");
     setCartOpen(false);
     navigate(LIST_HASH);
+
+    if (origin && allResolved(cartItems)) {
+      void recalculateWithItems(cartItems, false);
+    } else {
+      if (!origin) {
+        setOriginOpen(true);
+      }
+    }
+  }
+
+  async function handleChangeProduct(lineId: number, productId: number) {
+    const nextItems = items.map((item, index) =>
+      index === lineId
+        ? { ...item, productId, accept: "exact" as const }
+        : item,
+    );
+    await recalculateWithItems(nextItems);
+  }
+
+  async function handleApplyAnyBrand() {
+    await recalculateWithItems(applyAnyBrand(items));
   }
 
   const flow = (
-    <main className="page">
+    <main className="mx-auto grid max-w-xl gap-4 px-4 pt-4 pb-12 text-slate-900">
       {step === "list" && (
         <ListStep
+          items={items}
+          onRemoveItem={handleRemoveItem}
+          onUpdateItem={handleUpdateItem}
           text={text}
           onTextChange={setText}
-          addedItems={addedItems}
-          onAddItem={handleAddItem}
-          onRemoveItem={handleRemoveAddedItem}
-          sections={sections}
-          categoriesError={categoriesError}
-          onInterpret={handleInterpret}
+          onCalculate={handleCalculate}
+          calculating={calculating}
           interpreting={interpreting}
           interpretError={interpretError}
+          calcError={calcError}
+          degraded={degraded}
           lists={lists}
           onSaveList={handleSaveList}
           onLoadList={handleLoadList}
-        />
-      )}
-
-      {step === "review" && (
-        <ReviewStep
-          items={items}
-          degraded={degraded}
-          onChange={handleChangeItem}
-          onPickCategory={handlePickCategory}
-          onRemove={handleRemoveItem}
-          onBack={() => setStep("list")}
-          onContinue={() => setStep("origin")}
-        />
-      )}
-
-      {step === "origin" && (
-        <OriginStep
           origin={origin}
           onOriginChange={handleOriginChange}
           options={options}
           onOptionsChange={handleOptionsChange}
-          onCalculate={handleCalculate}
-          onBack={() => setStep("review")}
-          calculating={calculating}
-          error={calcError}
+          originOpen={originOpen}
+          onToggleOriginOpen={() => setOriginOpen((prev) => !prev)}
         />
       )}
 
@@ -484,8 +507,12 @@ export default function App() {
         <BasketStep
           recommendation={recommendation}
           origin={origin}
-          onBack={() => setStep("origin")}
+          calculating={calculating}
+          calcError={calcError}
+          onBack={() => setStep("list")}
           onNewList={handleNewList}
+          onApplyAnyBrand={handleApplyAnyBrand}
+          onChangeProduct={handleChangeProduct}
         />
       )}
 

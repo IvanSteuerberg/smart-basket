@@ -3,14 +3,21 @@ import type { CartLine } from "./cart";
 import { GENERIC_DEFAULTS, newId, type DraftItem } from "./draft";
 import {
   createSavedList,
+  DEFAULT_ROUTE_OPTIONS,
   loadCart,
   loadLists,
+  loadOptions,
+  loadOrigin,
   saveCart,
   saveLists,
+  saveOptions,
+  saveOrigin,
   SCHEMA_VERSION,
   STORAGE_KEY,
   upsertSavedList,
   type SavedList,
+  type StoredOrigin,
+  type StoredRouteOptions,
 } from "./storage";
 
 function memoryStorage(): Storage {
@@ -97,6 +104,87 @@ describe("loadLists", () => {
       }),
     );
     expect(loadLists(storage)).toHaveLength(1);
+  });
+
+  it("validates draft items with new fields and discards invalid ones", () => {
+    const storage = memoryStorage();
+    const baseValidItem = item();
+
+    // Valid item with all new fields
+    const fullValidItem = item({
+      productId: 101,
+      accept: "exact",
+      locked: true,
+      imageUrl: "https://photos.test/p.png",
+      options: [
+        {
+          category_key: "pollo_pechuga",
+          name: "Pechuga de pollo",
+          image_url: null,
+          from_unit_price: "2.50",
+          base_unit: "kg",
+        },
+      ],
+    });
+
+    // Valid item without new fields (legacy)
+    const legacyItem = {
+      id: "leg-1",
+      text: "leche",
+      categoryKey: "leche-entera",
+      categoryName: "Leche entera",
+      quantity: "1",
+      unit: "l",
+      brand: "Pascual",
+      privateLabelOk: true,
+    };
+
+    // Invalid: options is not an array
+    const invalidOptionsType = { ...baseValidItem, options: "not an array" };
+    // Invalid: options array contains invalid element (missing name)
+    const invalidOptionsElement = { ...baseValidItem, options: [{ category_key: "k" }] };
+    // Invalid: options array contains non-string category_key
+    const invalidOptionsKey = { ...baseValidItem, options: [{ category_key: 123, name: "Name" }] };
+    // Invalid: productId is a float
+    const invalidProductIdFloat = { ...baseValidItem, productId: 1.5 };
+    // Invalid: productId is a string
+    const invalidProductIdString = { ...baseValidItem, productId: "101" };
+    // Invalid: accept is not exact or equivalent
+    const invalidAccept = { ...baseValidItem, accept: "other" };
+    // Invalid: locked is not boolean
+    const invalidLocked = { ...baseValidItem, locked: "true" };
+    // Invalid: imageUrl is not string or null
+    const invalidImageUrl = { ...baseValidItem, imageUrl: 123 };
+
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schema_version: SCHEMA_VERSION,
+        lists: [
+          list({ id: "valid-full", items: [fullValidItem] }),
+          list({ id: "valid-legacy", items: [legacyItem as unknown as DraftItem] }),
+          list({ id: "invalid-opt-type", items: [invalidOptionsType as unknown as DraftItem] }),
+          list({ id: "invalid-opt-elem", items: [invalidOptionsElement as unknown as DraftItem] }),
+          list({ id: "invalid-opt-key", items: [invalidOptionsKey as unknown as DraftItem] }),
+          list({ id: "invalid-prod-float", items: [invalidProductIdFloat as unknown as DraftItem] }),
+          list({ id: "invalid-prod-str", items: [invalidProductIdString as unknown as DraftItem] }),
+          list({ id: "invalid-accept", items: [invalidAccept as unknown as DraftItem] }),
+          list({ id: "invalid-locked", items: [invalidLocked as unknown as DraftItem] }),
+          list({ id: "invalid-image", items: [invalidImageUrl as unknown as DraftItem] }),
+        ],
+      }),
+    );
+
+    const loaded = loadLists(storage);
+    expect(loaded).toHaveLength(2);
+    expect(loaded.map((l) => l.id)).toEqual(["valid-full", "valid-legacy"]);
+    expect(loaded[1].items[0]).toMatchObject({
+      productId: null,
+      accept: "equivalent",
+      locked: false,
+      imageUrl: null,
+      options: [],
+    });
   });
 
   it("returns an empty list when storage throws", () => {
@@ -268,3 +356,95 @@ describe("cart storage", () => {
     expect(() => saveCart([cartLine()], storage)).not.toThrow();
   });
 });
+
+describe("origin and options storage (schema 3)", () => {
+  const origin: StoredOrigin = {
+    lat: 42.5987,
+    lon: -5.5671,
+    label: "Plaza Mayor, 24003 León",
+  };
+
+  const customOptions: StoredRouteOptions = {
+    mode: "car",
+    maxStores: 3,
+    priority: "savings",
+    returnToOrigin: false,
+  };
+
+  it("round-trips origin and options with schema version 3", () => {
+    const storage = memoryStorage();
+    saveOrigin(origin, storage);
+    saveOptions(customOptions, storage);
+
+    expect(loadOrigin(storage)).toEqual(origin);
+    expect(loadOptions(storage)).toEqual(customOptions);
+
+    const payload = JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}");
+    expect(payload.schema_version).toBe(3);
+  });
+
+  it("preserves lists and cart when updating origin or options", () => {
+    const storage = memoryStorage();
+    const savedList = list();
+    const cart = [cartLine()];
+    saveLists([savedList], storage);
+    saveCart(cart, storage);
+
+    saveOrigin(origin, storage);
+    saveOptions(customOptions, storage);
+
+    expect(loadLists(storage)).toEqual([savedList]);
+    expect(loadCart(storage)).toEqual(cart);
+    expect(loadOrigin(storage)).toEqual(origin);
+    expect(loadOptions(storage)).toEqual(customOptions);
+  });
+
+  it("migrates a version 1 payload: origin is null and options use defaults", () => {
+    const storage = memoryStorage();
+    const legacy = { schema_version: 1, lists: [list()] };
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    expect(loadLists(storage)).toHaveLength(1);
+    expect(loadCart(storage)).toEqual([]);
+    expect(loadOrigin(storage)).toBeNull();
+    expect(loadOptions(storage)).toEqual(DEFAULT_ROUTE_OPTIONS);
+  });
+
+  it("migrates a version 2 payload: lists and cart survive, origin is null, options use defaults", () => {
+    const storage = memoryStorage();
+    const legacy = { schema_version: 2, lists: [list()], cart: [cartLine()] };
+    storage.setItem(STORAGE_KEY, JSON.stringify(legacy));
+
+    expect(loadLists(storage)).toHaveLength(1);
+    expect(loadCart(storage)).toHaveLength(1);
+    expect(loadOrigin(storage)).toBeNull();
+    expect(loadOptions(storage)).toEqual(DEFAULT_ROUTE_OPTIONS);
+  });
+
+  it("handles saving null origin to clear it", () => {
+    const storage = memoryStorage();
+    saveOrigin(origin, storage);
+    expect(loadOrigin(storage)).toEqual(origin);
+
+    saveOrigin(null, storage);
+    expect(loadOrigin(storage)).toBeNull();
+  });
+
+  it("ignores corrupted origin or options and falls back to safe defaults", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schema_version: 3,
+        lists: [],
+        cart: [],
+        origin: { lat: "not a number", lon: -5.5, label: 123 },
+        options: { mode: "rocket", maxStores: "invalid" },
+      }),
+    );
+
+    expect(loadOrigin(storage)).toBeNull();
+    expect(loadOptions(storage)).toEqual(DEFAULT_ROUTE_OPTIONS);
+  });
+});
+
