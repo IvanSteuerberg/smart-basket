@@ -428,6 +428,32 @@ def test_backfill_skips_a_missing_response_file(db, tmp_path, caplog):
     assert "skipping missing or unreadable raw response" in caplog.text
 
 
+def test_backfill_never_reads_a_response_outside_the_data_directory(db, tmp_path, caplog):
+    caplog.set_level("WARNING", logger="smart_basket.ingestion")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    summary = run(db, (*CATEGORIES, product("100", "1.00")), T1, data_dir)
+    outside = tmp_path / "outside.json.gz"
+    with gzip.open(outside, "wt", encoding="utf-8") as body:
+        body.write(image_page(("100", "https://cdn.test/outside.jpg")).decode())
+    with db.engine.begin() as conn:
+        for path in ("../outside.json.gz", str(outside)):
+            conn.execute(
+                text(
+                    "insert into raw_response (run_id, url, fetched_at, status_code, sha256, path) "
+                    "values (:run, 'https://example.test/api/categories/', :at, 200, :sha, :path)"
+                ),
+                {"run": summary.run_id, "at": T1, "sha": "0" * 64, "path": path},
+            )
+
+    backfilled = backfill_images("mercadona", data_dir=data_dir, database_url=db.url)
+
+    assert (backfilled.updated, backfilled.unchanged, backfilled.missing) == (0, 0, 1)
+    assert backfilled.responses_skipped == 2
+    assert photo(db) is None
+    assert caplog.text.count("skipping raw response outside the data directory") == 2
+
+
 def test_price_per_unit_change_closes_the_old_interval(db, tmp_path):
     run(db, (*CATEGORIES, product("100", "1.00", price_per_unit="1.00")), T1, tmp_path)
     second = run(db, (*CATEGORIES, product("100", "1.00", price_per_unit="1.10")), T2, tmp_path)

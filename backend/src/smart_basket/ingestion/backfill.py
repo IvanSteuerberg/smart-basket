@@ -8,13 +8,12 @@ mentions a SKU wins, as in a crawl, and later crawls keep the column current.
 import gzip
 import json
 import logging
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
 from smart_basket.db import session_scope
 from smart_basket.ingestion.mercadona import iter_product_images
@@ -25,6 +24,9 @@ log = logging.getLogger("smart_basket.ingestion")
 IMAGE_EXTRACTORS: dict[str, Callable[[Mapping[str, Any]], Iterator[tuple[str, str]]]] = {
     "mercadona": iter_product_images,
 }
+
+# Rows per update statement, so a large catalog does not send one huge batch.
+UPDATE_BATCH_SIZE = 500
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,26 +63,46 @@ def backfill_images(
             ),
             {"chain": chain_code},
         ).all()
-        images, responses_skipped = _images_from_archive(
-            session,
-            chain_code=chain_code,
-            targets={row.chain_sku for row in products},
-            data_dir=data_dir,
-            extractor=extractor,
+        response_paths = (
+            session.execute(
+                text(
+                    "select r.path from raw_response r "
+                    "join ingest_run i on i.id = r.run_id "
+                    "join chain c on c.id = i.chain_id "
+                    "where c.code = :chain order by r.fetched_at desc, r.id desc"
+                ),
+                {"chain": chain_code},
+            )
+            .scalars()
+            .all()
         )
-        updated = unchanged = missing = 0
-        for row in products:
-            image = images.get(row.chain_sku)
-            if image is None:
-                missing += 1
-            elif image == row.image_url:
-                unchanged += 1
-            else:
+
+    images, responses_skipped = _images_from_archive(
+        response_paths,
+        targets={row.chain_sku for row in products},
+        data_dir=data_dir,
+        extractor=extractor,
+    )
+
+    updated = unchanged = missing = 0
+    updates: list[dict[str, Any]] = []
+    for row in products:
+        image = images.get(row.chain_sku)
+        if image is None:
+            missing += 1
+        elif image == row.image_url:
+            unchanged += 1
+        else:
+            updates.append({"image": image, "id": row.id})
+            updated += 1
+
+    if updates:
+        with session_scope(database_url) as session:
+            for start in range(0, len(updates), UPDATE_BATCH_SIZE):
                 session.execute(
                     text("update chain_product set image_url = :image where id = :id"),
-                    {"image": image, "id": row.id},
+                    updates[start : start + UPDATE_BATCH_SIZE],
                 )
-                updated += 1
 
     return ImageBackfillSummary(
         updated=updated,
@@ -91,9 +113,8 @@ def backfill_images(
 
 
 def _images_from_archive(
-    session: Session,
+    response_paths: Iterable[str],
     *,
-    chain_code: str,
     targets: set[str],
     data_dir: Path,
     extractor: Callable[[Mapping[str, Any]], Iterator[tuple[str, str]]],
@@ -102,27 +123,25 @@ def _images_from_archive(
 
     Responses are read newest first, so the first sighting of a SKU is the one kept. Files that
     are missing or unreadable are counted and skipped with a warning: one lost archive entry must
-    not stop the backfill.
+    not stop the backfill. A path that resolves outside `data_dir` is skipped the same way, so a
+    bad row can never make the backfill read the rest of the disk.
     """
+    root = data_dir.resolve()
     images: dict[str, str] = {}
     skipped = 0
     read: set[str] = set()
-    rows = session.execute(
-        text(
-            "select r.path from raw_response r "
-            "join ingest_run i on i.id = r.run_id "
-            "join chain c on c.id = i.chain_id "
-            "where c.code = :chain order by r.fetched_at desc, r.id desc"
-        ),
-        {"chain": chain_code},
-    ).scalars()
-    for path in rows:
+    for path in response_paths:
         if path in read:
             continue
         read.add(path)
         if len(images) == len(targets):
             break
-        payload = _read_response(data_dir / path)
+        file = (root / path).resolve()
+        if not file.is_relative_to(root):
+            skipped += 1
+            log.warning("skipping raw response outside the data directory %s", path)
+            continue
+        payload = _read_response(file)
         if payload is None:
             skipped += 1
             log.warning("skipping missing or unreadable raw response %s", path)
