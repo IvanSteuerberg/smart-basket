@@ -57,14 +57,8 @@ chosen as (
 )
 """
 
-#: A listed product: active and available in its chain's zone, with a current price.
-_PRODUCT_COLUMNS = """
-    cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
-    cp.chain_id, ch.name as chain_name, pc.price,
-    cp.canonical_id, canon.name as canonical_name,
-    ec.id as category_id, ec.key as category_key, ec.name as category_name
-"""
-_PRODUCT_FROM = """
+#: Active product joined with its chain and chosen zone with a current price.
+_ACTIVE_PRICED_PRODUCT_FROM = """
 from chain_product cp
 join chain ch on ch.id = cp.chain_id
 join chosen cz on cz.chain_id = cp.chain_id
@@ -72,10 +66,23 @@ join chain_product_zone cpz
     on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
 join price_current pc
     on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
+"""
+
+#: A listed product: active and available in its chain's zone, with a current price.
+_PRODUCT_COLUMNS = """
+    cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
+    cp.chain_id, ch.name as chain_name, pc.price,
+    cp.canonical_id, canon.name as canonical_name,
+    ec.id as category_id, ec.key as category_key, ec.name as category_name
+"""
+_PRODUCT_FROM = (
+    _ACTIVE_PRICED_PRODUCT_FROM
+    + """
 left join canonical_product canon on canon.id = cp.canonical_id
 left join chain_category ccat on ccat.id = cp.chain_category_id
 join category ec on ec.id = coalesce(canon.category_id, ccat.category_id)
 """
+)
 
 _ORDERS = {
     # Same rule as `_unit_price`: a product counted by units without a size is priced per unit;
@@ -200,29 +207,27 @@ def _regex_escape(word: str) -> str:
     )
 
 
-def _word_pattern(word: str) -> str:
-    """Whole-word pattern for `word`, tolerating a plural -s or -es on either side."""
+def _word_regex_body(word: str) -> str:
+    """Alternation of `word` and its -s/-es plural or singular variants."""
     variants = {word, word + "s", word + "es"}
     if word.endswith("s") and len(word) > 1:
         variants.add(word[:-1])
     if word.endswith("es") and len(word) > 2:
         variants.add(word[:-2])
-    body = "|".join(
+    return "|".join(
         _regex_escape(variant) for variant in sorted(variants, key=len, reverse=True) if variant
     )
+
+
+def _word_pattern(word: str) -> str:
+    """Whole-word pattern for `word`, tolerating a plural -s or -es on either side."""
+    body = _word_regex_body(word)
     return rf"(^|[^a-z0-9])({body})([^a-z0-9]|$)"
 
 
 def _start_pattern(word: str) -> str:
     """Start-of-string whole-word pattern for `word`, tolerating plural -s or -es."""
-    variants = {word, word + "s", word + "es"}
-    if word.endswith("s") and len(word) > 1:
-        variants.add(word[:-1])
-    if word.endswith("es") and len(word) > 2:
-        variants.add(word[:-2])
-    body = "|".join(
-        _regex_escape(variant) for variant in sorted(variants, key=len, reverse=True) if variant
-    )
+    body = _word_regex_body(word)
     return rf"^({body})([^a-z0-9]|$)"
 
 
@@ -284,14 +289,12 @@ def _search_sql(q: str, forms: Mapping[int, Iterable[str]], params: dict[str, An
     )
 
 
-def _filters(
+def _taxonomy_conditions(
     section_id: int | None,
     category_id: int | None,
-    q: str,
-    forms: Mapping[int, Iterable[str]],
     params: dict[str, Any],
-) -> tuple[str, bool]:
-    conditions = []
+) -> list[str]:
+    conditions: list[str] = []
     if section_id is not None:
         params["section_id"] = section_id
         conditions.append(
@@ -302,6 +305,17 @@ def _filters(
         conditions.append(
             "ec.id in (select descendant_id from category_closure where ancestor_id = :category_id)"
         )
+    return conditions
+
+
+def _filters(
+    section_id: int | None,
+    category_id: int | None,
+    q: str,
+    forms: Mapping[int, Iterable[str]],
+    params: dict[str, Any],
+) -> tuple[str, bool]:
+    conditions = _taxonomy_conditions(section_id, category_id, params)
     search = _search_sql(q, forms, params)
     if search is not None:
         conditions.append(search)

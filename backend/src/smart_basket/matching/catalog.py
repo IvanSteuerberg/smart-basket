@@ -14,10 +14,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from smart_basket.config import Settings
 
 from smart_basket.matching.names import canonical_name, name_match, variant_key
 from smart_basket.matching.rules import Candidate, Section, decide
@@ -111,20 +114,12 @@ class DecisionFileError(ValueError):
     """A decisions file the importer cannot apply; the message names the line."""
 
 
-class DecisionsSummary(int):
+@dataclass(frozen=True, slots=True)
+class DecisionsSummary:
     """The number of decisions applied, plus how many were skipped when `skip_missing`."""
 
     applied: int
-    skipped: int
-
-    def __new__(cls, applied: int, skipped: int = 0):
-        obj = super().__new__(cls, applied)
-        obj.applied = applied
-        obj.skipped = skipped
-        return obj
-
-    def __repr__(self) -> str:
-        return f"DecisionsSummary(applied={self.applied}, skipped={self.skipped})"
+    skipped: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -512,7 +507,7 @@ def export_decisions(session: Session, path: Path) -> int:
     return len(entries)
 
 
-def sync_decisions(session: Session, settings: Any = None) -> MatchResult | None:
+def sync_decisions(session: Session, settings: Settings | None = None) -> MatchResult | None:
     """Apply reproducible decisions if configured and then run classification."""
     if settings is None:
         from smart_basket.config import get_settings

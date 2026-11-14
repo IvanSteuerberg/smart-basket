@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from tests.api.test_products import (
@@ -39,15 +40,29 @@ def test_canonicals_listing_category_filter_and_fields(client, session: Session,
     manzana_cat = _chain_category(session, chain_id, "T-MANZANA", "manzana")
     manzana_canon = _canonical(session, "manzana", "Manzana Golden")
 
+    # Product 1: cheaper package price ("1.00"), but higher unit price ("2.00") and no photo
     _product(
         session,
         chain_id=chain_id,
         chain_category_id=manzana_cat,
         zone_id=zone_id,
-        sku="manzana-1",
-        name="Manzana Golden",
+        sku="manzana-small",
+        name="Manzana Golden pequeña",
+        price="1.00",
+        quantity="0.5",
+        unit="kg",
+        canonical_id=manzana_canon,
+    )
+    # Product 2: higher package price ("1.80"), but lowest unit price ("0.90") with photo
+    _product(
+        session,
+        chain_id=chain_id,
+        chain_category_id=manzana_cat,
+        zone_id=zone_id,
+        sku="manzana-big",
+        name="Manzana Golden bolsa grande",
         price="1.80",
-        quantity="1",
+        quantity="2",
         unit="kg",
         image_url=IMAGE_MANZANA,
         canonical_id=manzana_canon,
@@ -77,10 +92,11 @@ def test_canonicals_listing_category_filter_and_fields(client, session: Session,
 
     manzana_item = by_name["Manzana Golden"]
     assert manzana_item["category_key"] == "manzana"
-    assert manzana_item["from_price"] == "1.8"
-    assert manzana_item["from_unit_price"] == "1.8"
+    assert manzana_item["from_price"] == "1"
+    assert manzana_item["from_unit_price"] == "0.9"
     assert manzana_item["image_url"] == IMAGE_MANZANA
-    assert manzana_item["product_count"] == 1
+    assert manzana_item["base_unit"] == "kg"
+    assert manzana_item["product_count"] == 2
 
 
 def test_canonicals_detail_returns_products_sorted_by_unit_price(client, catalog: Catalog):
@@ -144,12 +160,103 @@ def test_canonicals_detail_404_when_missing_or_no_priced_products(
     assert res2.status_code == 404
     assert res2.json()["detail"] == "Producto no encontrado."
 
+    # Canonical whose products have no size (base_quantity is None)
+    chain_id = _scalar(session, "select id from chain where code = 'mercadona'")
+    zone_id = _scalar(
+        session,
+        "select z.id from zone z join chain c on c.id = z.chain_id"
+        " where c.code = 'mercadona' and z.kind = 'warehouse' order by z.id limit 1",
+    )
+    platano_cat = _scalar(session, "select id from chain_category where code = 'T-PLATANO'")
+    no_size_canon = _canonical(session, "platano", "Plátano sin tamaño")
+    _product(
+        session,
+        chain_id=chain_id,
+        chain_category_id=platano_cat,
+        zone_id=zone_id,
+        sku="platano-no-size",
+        name="Plátano sin tamaño",
+        price="1.00",
+        quantity=None,
+        unit=None,
+        canonical_id=no_size_canon,
+    )
+    session.flush()
+    res3 = client.get(f"/api/canonicals/{no_size_canon}")
+    assert res3.status_code == 404
+    assert res3.json()["detail"] == "Producto no encontrado."
 
-def test_canonicals_chain_filter(client, catalog: Catalog):
-    res_mercadona = client.get("/api/canonicals", params={"chain": "mercadona"})
+    # And it must be excluded from the listing
+    res_list = client.get("/api/canonicals", params={"category": "platano"})
+    assert res_list.status_code == 200
+    listed_names = [item["name"] for item in res_list.json()["items"]]
+    assert "Plátano sin tamaño" not in listed_names
+
+
+def test_canonicals_chain_filter(client, session: Session, catalog: Catalog):
+    platano_canon = catalog.canonicals["platano"]
+    dia_chain_id = _scalar(session, "select id from chain where code = 'dia'")
+    dia_zone_id = _scalar(
+        session,
+        "select id from zone where chain_id = :chain order by id limit 1",
+        chain=dia_chain_id,
+    )
+    session.execute(
+        text(
+            "insert into store (chain_id, zone_id, name, geom)"
+            " values (:chain, :zone, 'Dia León',"
+            "  st_setsrid(st_makepoint(-5.57, 42.6), 4326)::geography)"
+        ),
+        {"chain": dia_chain_id, "zone": dia_zone_id},
+    )
+    dia_cat = _chain_category(session, dia_chain_id, "T-DIA-PLATANO", "platano")
+    _product(
+        session,
+        chain_id=dia_chain_id,
+        chain_category_id=dia_cat,
+        zone_id=dia_zone_id,
+        sku="dia-platano-1",
+        name="Plátano Dia",
+        price="0.80",
+        quantity="1",
+        unit="kg",
+        canonical_id=platano_canon,
+    )
+    session.flush()
+
+    # Without filter, lists both chains and product_count is 4
+    res_all = client.get("/api/canonicals", params={"category": "platano"})
+    assert res_all.status_code == 200
+    item_all = res_all.json()["items"][0]
+    assert item_all["from_price"] == "0.8"
+    assert item_all["from_unit_price"] == "0.8"
+    assert item_all["product_count"] == 4
+    assert item_all["chains"] == ["dia", "mercadona"]
+
+    # Filtered by mercadona: from_* and product_count trim to mercadona, but chains lists both
+    res_mercadona = client.get(
+        "/api/canonicals", params={"chain": "mercadona", "category": "platano"}
+    )
     assert res_mercadona.status_code == 200
-    names_mercadona = [item["name"] for item in res_mercadona.json()["items"]]
-    assert "Plátano de Canarias" in names_mercadona
+    items_mercadona = res_mercadona.json()["items"]
+    assert len(items_mercadona) == 1
+    item_mercadona = items_mercadona[0]
+    assert item_mercadona["name"] == "Plátano de Canarias"
+    assert item_mercadona["from_price"] == "1.2"
+    assert item_mercadona["from_unit_price"] == "1.2"
+    assert item_mercadona["product_count"] == 3
+    assert item_mercadona["chains"] == ["dia", "mercadona"]
+
+    # Filtered by dia: from_* and product_count trim to dia, chains lists both
+    res_dia = client.get("/api/canonicals", params={"chain": "dia", "category": "platano"})
+    assert res_dia.status_code == 200
+    items_dia = res_dia.json()["items"]
+    assert len(items_dia) == 1
+    item_dia = items_dia[0]
+    assert item_dia["from_price"] == "0.8"
+    assert item_dia["from_unit_price"] == "0.8"
+    assert item_dia["product_count"] == 1
+    assert item_dia["chains"] == ["dia", "mercadona"]
 
     res_otra = client.get("/api/canonicals", params={"chain": "otra"})
     assert res_otra.status_code == 200
@@ -166,13 +273,15 @@ def test_canonicals_search_relevance_ranks_prefix_and_category_first(
         "select z.id from zone z join chain c on c.id = z.chain_id"
         " where c.code = 'mercadona' and z.kind = 'warehouse' order by z.id limit 1",
     )
-    yogur_cat = _scalar(session, "select id from chain_category where code = 'T-YOGUR'")
-    bebida_canon = _canonical(session, "yogur_natural", "Bebida de plátano")
+    # Put "Bebida de plátano" in category "bebidas" (alphabetically before "Plátano")
+    # and cheaper (0.50 < 1.20)
+    bebidas_cat = _chain_category(session, chain_id, "T-BEBIDAS", "bebidas")
+    bebida_canon = _canonical(session, "bebidas", "Bebida de plátano")
 
     _product(
         session,
         chain_id=chain_id,
-        chain_category_id=yogur_cat,
+        chain_category_id=bebidas_cat,
         zone_id=zone_id,
         sku="bebida-platano-canon",
         name="Bebida de plátano",
@@ -182,15 +291,46 @@ def test_canonicals_search_relevance_ranks_prefix_and_category_first(
         image_url=IMAGE_BEBIDA,
         canonical_id=bebida_canon,
     )
+
+    # Category-form branch case: "Banana de Canarias" in category "platano".
+    # Its name does not start with "platano" and does not contain the word "platano",
+    # but the query "platanos" matches category "platano" (forms include "plátano" and "banana").
+    platano_cat = _scalar(session, "select id from chain_category where code = 'T-PLATANO'")
+    banana_canon = _canonical(session, "platano", "Banana de Canarias")
+    _product(
+        session,
+        chain_id=chain_id,
+        chain_category_id=platano_cat,
+        zone_id=zone_id,
+        sku="banana-canon",
+        name="Banana de Canarias",
+        price="2.50",
+        quantity="1",
+        unit="kg",
+        canonical_id=banana_canon,
+    )
     session.flush()
 
-    response = client.get("/api/canonicals", params={"q": "platanos"})
+    response = client.get("/api/canonicals", params={"q": "platano"})
     assert response.status_code == 200
     names = [item["name"] for item in response.json()["items"]]
     assert "Plátano de Canarias" in names
+    assert "Banana de Canarias" in names
     assert "Bebida de plátano" in names
-    # "Plátano de Canarias" has relevance rank 0; "Bebida de plátano" has rank 1.
+    # Name prefix relevance (rank 0) beats non-matching category (rank 1),
+    # despite "Bebidas" < "Plátano"
     assert names.index("Plátano de Canarias") < names.index("Bebida de plátano")
+    # Category form branch relevance (rank 0) beats non-matching category (rank 1),
+    # despite "Bebidas" < "Plátano"
+    assert names.index("Banana de Canarias") < names.index("Bebida de plátano")
+
+    # Prefix match without category form: plural "platanos"
+    res_prefix = client.get("/api/canonicals", params={"q": "platanos"})
+    assert res_prefix.status_code == 200
+    names_prefix = [item["name"] for item in res_prefix.json()["items"]]
+    assert "Plátano de Canarias" in names_prefix
+    assert "Bebida de plátano" in names_prefix
+    assert names_prefix.index("Plátano de Canarias") < names_prefix.index("Bebida de plátano")
 
 
 def test_canonicals_validation_errors(client, catalog: Catalog):

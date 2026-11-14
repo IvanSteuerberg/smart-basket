@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.api.lexicon_cache import search_forms_for
 from smart_basket.api.products import (
+    _ACTIVE_PRICED_PRODUCT_FROM,
     _CHAIN_ZONE,
     _ORDERS,
     CATEGORY_ERROR,
@@ -27,6 +28,7 @@ from smart_basket.api.products import (
     _category_id,
     _fold_sql,
     _relevance_sql,
+    _taxonomy_conditions,
     _to_product,
     _unit_price,
     search_params,
@@ -49,8 +51,8 @@ class CanonicalSummary(BaseModel):
     category_name: str
     image_url: str | None
     from_price: str
-    from_unit_price: str | None
-    base_unit: str | None
+    from_unit_price: str
+    base_unit: str
     product_count: int
     chains: list[str]
 
@@ -74,16 +76,12 @@ select
     cp.chain_id, ch.code as chain_code, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
     ec.id as category_id, ec.key as category_key, ec.name as category_name
-from chain_product cp
-join chain ch on ch.id = cp.chain_id
-join chosen cz on cz.chain_id = cp.chain_id
-join chain_product_zone cpz
-    on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
-join price_current pc
-    on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
+"""
+    + _ACTIVE_PRICED_PRODUCT_FROM
+    + """
 join canonical_product canon on canon.id = cp.canonical_id
 join category ec on ec.id = canon.category_id
-where cp.is_active and cp.canonical_id = :canonical_id
+where cp.is_active and cp.canonical_id = :canonical_id and cp.base_quantity is not null
 order by
 """
     + _ORDERS["unit_price"]
@@ -111,32 +109,19 @@ active_products as (
         ch.code as chain_code,
         row_number() over (
             partition by cp.canonical_id
-            order by
-                (cp.base_quantity is null and cp.base_unit is distinct from 'ud'),
-                coalesce(
-                    pc.price / nullif(cp.base_quantity, 0),
-                    case when cp.base_unit = 'ud' then pc.price end
-                ),
-                cp.name,
-                cp.id
+            order by {_ORDERS["unit_price"]}
         ) as rn
-    from chain_product cp
-    join chain ch on ch.id = cp.chain_id
-    join chosen cz on cz.chain_id = cp.chain_id
-    join chain_product_zone cpz
-        on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
-    join price_current pc
-        on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
+    {_ACTIVE_PRICED_PRODUCT_FROM}
     where cp.is_active
       and cp.canonical_id is not null
+      and cp.base_quantity is not null
       {chain_cond}
 ),
 canonical_summary as (
     select
         canonical_id,
         min(price) as from_price,
-        count(*) as product_count,
-        array_agg(distinct chain_code order by chain_code) as chains
+        count(*) as product_count
     from active_products
     group by canonical_id
 ),
@@ -149,6 +134,16 @@ cheapest_product as (
         base_unit as best_unit
     from active_products
     where rn = 1
+),
+all_chains as (
+    select
+        cp.canonical_id,
+        array_agg(distinct ch.code order by ch.code) as chains
+    {_ACTIVE_PRICED_PRODUCT_FROM}
+    where cp.is_active
+      and cp.canonical_id is not null
+      and cp.base_quantity is not null
+    group by cp.canonical_id
 )
 select
     canon.id,
@@ -161,11 +156,12 @@ select
     cp.best_quantity,
     cp.best_unit,
     cs.product_count,
-    cs.chains
+    ac.chains
 from canonical_product canon
 join category ec on ec.id = canon.category_id
 join canonical_summary cs on cs.canonical_id = canon.id
 join cheapest_product cp on cp.canonical_id = canon.id
+join all_chains ac on ac.canonical_id = canon.id
 {where_sql}
 order by {order_clause}
 limit :size offset :offset
@@ -182,15 +178,10 @@ active_products as (
     select
         cp.canonical_id,
         cp.name as product_name
-    from chain_product cp
-    join chain ch on ch.id = cp.chain_id
-    join chosen cz on cz.chain_id = cp.chain_id
-    join chain_product_zone cpz
-        on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
-    join price_current pc
-        on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
+    {_ACTIVE_PRICED_PRODUCT_FROM}
     where cp.is_active
       and cp.canonical_id is not null
+      and cp.base_quantity is not null
       {chain_cond}
 ),
 canonical_summary as (
@@ -226,21 +217,10 @@ def canonicals(
     category_id = _category_id(session, category, CATEGORY_ERROR) if category else None
 
     params: dict[str, Any] = {}
-    where_parts: list[str] = []
+    where_parts: list[str] = _taxonomy_conditions(section_id, category_id, params)
 
     if chain:
         params["chain"] = chain
-
-    if section_id is not None:
-        params["section_id"] = section_id
-        where_parts.append(
-            "ec.id in (select descendant_id from category_closure where ancestor_id = :section_id)"
-        )
-    if category_id is not None:
-        params["category_id"] = category_id
-        where_parts.append(
-            "ec.id in (select descendant_id from category_closure where ancestor_id = :category_id)"
-        )
 
     query, category_ids = search_params(q, search_forms_for(session), params)
     if query:
@@ -276,21 +256,25 @@ def canonicals(
     count_sql = _canonicals_count_sql(chain_filter=bool(chain), where_sql=where_sql)
     total = session.execute(text(count_sql), params).scalar_one()
 
-    items = [
-        CanonicalSummary(
-            id=row["id"],
-            name=row["name"],
-            category_key=row["category_key"],
-            category_name=row["category_name"],
-            image_url=row["image_url"],
-            from_price=decimal_text(row["from_price"]),
-            from_unit_price=_unit_price(row["best_price"], row["best_quantity"], row["best_unit"]),
-            base_unit=row["best_unit"],
-            product_count=row["product_count"],
-            chains=list(row["chains"]),
+    items = []
+    for row in rows:
+        unit_price = _unit_price(row["best_price"], row["best_quantity"], row["best_unit"])
+        assert unit_price is not None
+        assert row["best_unit"] is not None
+        items.append(
+            CanonicalSummary(
+                id=row["id"],
+                name=row["name"],
+                category_key=row["category_key"],
+                category_name=row["category_name"],
+                image_url=row["image_url"],
+                from_price=decimal_text(row["from_price"]),
+                from_unit_price=unit_price,
+                base_unit=row["best_unit"],
+                product_count=row["product_count"],
+                chains=list(row["chains"]),
+            )
         )
-        for row in rows
-    ]
     return CanonicalsResponse(
         items=items,
         total=total,
@@ -311,6 +295,10 @@ def canonical(canonical_id: int, session: SessionDep) -> CanonicalDetail:
         raise HTTPException(status_code=404, detail=CANONICAL_ERROR)
 
     best = rows[0]
+    unit_price = _unit_price(best["price"], best["base_quantity"], best["base_unit"])
+    if unit_price is None or best["base_unit"] is None:
+        raise HTTPException(status_code=404, detail=CANONICAL_ERROR)
+
     brands = brands_for(session)
     products = [_to_product(row, brands) for row in rows]
     return CanonicalDetail(
@@ -320,7 +308,7 @@ def canonical(canonical_id: int, session: SessionDep) -> CanonicalDetail:
         category_name=best["category_name"],
         image_url=best["image_url"],
         from_price=decimal_text(min(row["price"] for row in rows)),
-        from_unit_price=_unit_price(best["price"], best["base_quantity"], best["base_unit"]),
+        from_unit_price=unit_price,
         base_unit=best["base_unit"],
         product_count=len(rows),
         chains=sorted({row["chain_code"] for row in rows}),

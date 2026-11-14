@@ -60,10 +60,7 @@ def main(argv: list[str] | None = None) -> None:
                 count = import_decisions(session, args.file, skip_missing=args.skip_missing)
             except DecisionFileError as error:
                 raise SystemExit(str(error)) from error
-        if args.skip_missing:
-            print(f"decisions applied: {count.applied}, skipped: {count.skipped}")
-        else:
-            print(f"decisions applied: {count}")
+        print(f"decisions applied: {count.applied}, skipped: {count.skipped}")
     elif args.command == "export-decisions":
         with session_scope() as session:
             count = export_decisions(session, args.file)

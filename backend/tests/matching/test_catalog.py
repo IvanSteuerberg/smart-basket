@@ -199,7 +199,7 @@ def test_import_decisions_then_run_keeps_the_human_decision(catalog, tmp_path):
         ),
         encoding="utf-8",
     )
-    assert import_decisions(catalog.session, path) == 2
+    assert import_decisions(catalog.session, path).applied == 2
 
     row = assignment(catalog.session, "M5")
     assert row["category_key"] == "galletas"
@@ -305,7 +305,7 @@ def test_a_decision_without_variants_reads_them_from_the_name(catalog, tmp_path)
         json.dumps([{"product_id": catalog.products["M2"], "category_key": "leche"}]),
         encoding="utf-8",
     )
-    assert import_decisions(catalog.session, path) == 1
+    assert import_decisions(catalog.session, path).applied == 1
     row = assignment(catalog.session, "M2")
     assert row["category_key"] == "leche"
     assert row["variant_key"] == "sin_lactosa"
@@ -328,7 +328,8 @@ def test_import_decisions_by_chain_and_sku(catalog, tmp_path):
         encoding="utf-8",
     )
     result = import_decisions(catalog.session, path)
-    assert result == 1
+    assert result.applied == 1
+    assert result.skipped == 0
     row = assignment(catalog.session, "M1")
     assert row["category_key"] == "platano"
     assert row["match_method"] == "review"
@@ -412,7 +413,8 @@ def test_export_decisions_roundtrip(catalog, tmp_path):
 
     # Re-importing on the same base maintains the same assignment
     re_applied = import_decisions(catalog.session, out_path)
-    assert re_applied == count
+    assert re_applied.applied == count
+    assert re_applied.skipped == 0
     row = assignment(catalog.session, "M1")
     assert row["category_key"] == "platano"
     assert row["match_method"] == "review"
@@ -420,6 +422,17 @@ def test_export_decisions_roundtrip(catalog, tmp_path):
 
 def test_sync_decisions_without_file(catalog, capsys):
     settings = Settings(match_decisions_file=None)
+    result = sync_decisions(catalog.session, settings)
+    assert result is None
+    captured = capsys.readouterr()
+    assert "no decisions file" in captured.out
+
+
+def test_sync_decisions_empty_file_env_resolves_to_none(catalog, capsys, monkeypatch):
+    monkeypatch.setenv("MATCH_DECISIONS_FILE", "")
+    settings = Settings()
+    assert settings.match_decisions_file is None
+    assert settings.resolve_match_decisions_file() is None
     result = sync_decisions(catalog.session, settings)
     assert result is None
     captured = capsys.readouterr()
