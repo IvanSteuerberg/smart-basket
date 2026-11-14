@@ -188,6 +188,15 @@ def test_an_empty_answer_deactivates_nothing(db):
     assert scalar(db, "select count(*) from ingest_run where kind = 'stores'") == 2
 
 
+def test_an_answer_with_less_than_half_of_the_stores_deactivates_nothing(db):
+    # A truncated Overpass answer once listed 13 of 41 stores; it must not wipe the map.
+    load(db, [element(n, "Mercadona") for n in range(1, 5)])
+    partial = load(db, [element(1, "Mercadona")])
+
+    assert partial.deactivated == 0
+    assert scalar(db, "select count(*) from store where is_active") == 4
+
+
 def test_a_store_that_reappears_becomes_active_again(db):
     load(db, [element(1, "Mercadona"), element(2, "Mercadona")])
     load(db, [element(1, "Mercadona")])

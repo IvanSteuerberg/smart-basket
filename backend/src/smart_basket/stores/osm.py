@@ -113,9 +113,12 @@ class BoundingBox:
         corners = f"{self.south},{self.west},{self.north},{self.east}"
         return (
             f"[out:json][timeout:{OVERPASS_QUERY_TIMEOUT_SECONDS}];\n"
-            f'nwr["shop"~"^(supermarket|hypermarket)$"]({corners});\n'
-            f'nwr["building"]["brand"~"{CHAIN_SEARCH}",i]({corners});\n'
-            f'nwr["building"]["name"~"{CHAIN_SEARCH}",i]({corners});\n'
+            # A union: without it, `out` would print only the last statement's result.
+            "(\n"
+            f'  nwr["shop"~"^(supermarket|hypermarket)$"]({corners});\n'
+            f'  nwr["building"]["brand"~"{CHAIN_SEARCH}",i]({corners});\n'
+            f'  nwr["building"]["name"~"{CHAIN_SEARCH}",i]({corners});\n'
+            ");\n"
             "out center tags;"
         )
 

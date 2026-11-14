@@ -309,7 +309,26 @@ def _deactivate_unseen(
     trusted: the caller returns before reaching this function in that case.
     """
     seen = sorted({observation.osm_id for observation in observations})
+    box = {"west": bbox.west, "south": bbox.south, "east": bbox.east, "north": bbox.north}
     with session_scope(database_url) as session:
+        active = session.execute(
+            text(
+                "select count(*) from store where is_active and chain_id in ("
+                "select id from chain where code = any(cast(:codes as text[]))) "
+                "and ST_Covers("
+                "ST_MakeEnvelope(:west, :south, :east, :north, 4326)::geography, geom)"
+            ),
+            {"codes": sorted(CHAIN_CODES), **box},
+        ).scalar_one()
+        # A truncated or broken answer must not wipe the map: like catalog ingestion (0016),
+        # an import that sees fewer than half of the active stores deactivates nothing.
+        if len(seen) * 2 < active:
+            log.warning(
+                "store import saw %s stores but %s are active in the box: nothing deactivated",
+                len(seen),
+                active,
+            )
+            return 0
         result = session.execute(
             text(
                 "update store set is_active = false where is_active and chain_id in ("

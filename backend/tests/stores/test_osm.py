@@ -245,7 +245,10 @@ def test_the_query_asks_for_supermarkets_and_chain_named_buildings_inside_the_bb
     assert 'nwr["shop"~"^(supermarket|hypermarket)$"](42.56,-5.62,42.63,-5.52)' in query
     assert 'nwr["building"]["name"~' in query
     assert "merc[aá]dona" in query
-    assert query.endswith("out center tags;")
+    # The three statements are one union, so `out` prints all of them, not only the last.
+    union = query[query.index("(\n") : query.index(");\nout")]
+    assert union.count("nwr[") == 3
+    assert query.endswith(");\nout center tags;")
 
 
 def test_the_client_posts_the_query_identifying_itself():
