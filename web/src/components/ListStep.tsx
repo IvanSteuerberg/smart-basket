@@ -21,7 +21,6 @@ const TEXTAREA_PLACEHOLDER =
 
 export interface ListStepProps {
   items: DraftItem[];
-  onQuantityChange: (id: string, quantity: string) => void;
   onRemoveItem: (id: string) => void;
   onUpdateItem: (id: string, patch: Partial<DraftItem>) => void;
 
@@ -48,7 +47,6 @@ export interface ListStepProps {
 
 export function ListStep({
   items,
-  onQuantityChange,
   onRemoveItem,
   onUpdateItem,
   text,
@@ -169,7 +167,7 @@ export function ListStep({
                         inputMode="decimal"
                         value={item.quantity}
                         aria-label={`Cantidad de ${item.text}`}
-                        onChange={(event) => onQuantityChange(item.id, event.target.value)}
+                        onChange={(event) => onUpdateItem(item.id, { quantity: event.target.value })}
                         className="w-14 rounded-lg border border-stone-200 bg-white px-2 py-1 text-center text-sm font-semibold text-slate-900 outline-none focus:border-brand"
                       />
                       <span className="text-xs font-medium text-stone-500">{item.unit}</span>

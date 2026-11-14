@@ -66,7 +66,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
-function isDraftItem(value: unknown): value is DraftItem {
+/** A line saved before the concrete-product fields existed allows them missing. */
+type StoredDraftItem = Omit<
+  DraftItem,
+  "productId" | "accept" | "locked" | "imageUrl" | "options"
+> &
+  Partial<Omit<DraftItem, "options">> & {
+    options?: DraftItem["options"];
+  };
+
+function isDraftItem(value: unknown): value is StoredDraftItem {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&
@@ -76,11 +85,29 @@ function isDraftItem(value: unknown): value is DraftItem {
     typeof value.quantity === "string" &&
     isUnit(value.unit) &&
     typeof value.brand === "string" &&
-    typeof value.privateLabelOk === "boolean"
+    typeof value.privateLabelOk === "boolean" &&
+    (value.productId === undefined ||
+      value.productId === null ||
+      (typeof value.productId === "number" && Number.isInteger(value.productId))) &&
+    (value.accept === undefined || value.accept === "exact" || value.accept === "equivalent") &&
+    (value.locked === undefined || typeof value.locked === "boolean") &&
+    (value.imageUrl === undefined || value.imageUrl === null || typeof value.imageUrl === "string") &&
+    (value.options === undefined ||
+      (Array.isArray(value.options) &&
+        value.options.every(
+          (opt) =>
+            isRecord(opt) &&
+            typeof opt.category_key === "string" &&
+            typeof opt.name === "string",
+        )))
   );
 }
 
-function isSavedList(value: unknown): value is SavedList {
+interface StoredSavedList extends Omit<SavedList, "items"> {
+  items: StoredDraftItem[];
+}
+
+function isSavedList(value: unknown): value is StoredSavedList {
   if (!isRecord(value)) return false;
   return (
     typeof value.id === "string" &&

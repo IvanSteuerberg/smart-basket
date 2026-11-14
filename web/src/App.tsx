@@ -283,12 +283,6 @@ export default function App() {
     setCalcError(null);
   }
 
-  function handleQuantityChange(id: string, quantity: string) {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, quantity } : item)),
-    );
-  }
-
   function handleRemoveItem(id: string) {
     setItems((current) => current.filter((item) => item.id !== id));
   }
@@ -328,6 +322,7 @@ export default function App() {
     targetItems: DraftItem[],
     targetOrigin: StoredOrigin,
     targetOptions: RouteOptions,
+    isDegraded: boolean = degraded,
   ) {
     busyRef.current = true;
     setCalculating(true);
@@ -340,7 +335,7 @@ export default function App() {
         max_stores: targetOptions.maxStores,
         priority_mode: targetOptions.priority,
         return_to_origin: targetOptions.returnToOrigin,
-        degraded,
+        degraded: isDegraded,
         chains: chainFilter,
       });
       setRecommendation(result);
@@ -366,12 +361,22 @@ export default function App() {
     }
   }
 
+  async function recalculateWithItems(
+    nextItems: DraftItem[],
+    isDegraded: boolean = degraded,
+  ) {
+    if (busyRef.current || !origin) return;
+    setItems(nextItems);
+    await executeRecommendation(nextItems, origin, options, isDegraded);
+  }
+
   async function handleCalculate() {
     if (busyRef.current) return;
     setCalcError(null);
     setInterpretError(null);
 
     let currentItems = items;
+    let currentDegraded = degraded;
     const trimmed = text.trim();
 
     if (trimmed !== "") {
@@ -381,6 +386,7 @@ export default function App() {
         const response = await interpretText(trimmed);
         const newItems = response.items.map(draftFromInterpreted);
         currentItems = [...items, ...newItems];
+        currentDegraded = response.degraded;
         setItems(currentItems);
         setText("");
         setDegraded(response.degraded);
@@ -402,7 +408,7 @@ export default function App() {
     }
 
     if (allResolved(currentItems) && origin) {
-      await executeRecommendation(currentItems, origin, options);
+      await recalculateWithItems(currentItems, currentDegraded);
     }
   }
 
@@ -444,13 +450,13 @@ export default function App() {
     setInterpretError(null);
     setCalcError(null);
     setRecommendation(null);
+    setStep("list");
     setCartOpen(false);
     navigate(LIST_HASH);
 
     if (origin && allResolved(cartItems)) {
-      executeRecommendation(cartItems, origin, options);
+      void recalculateWithItems(cartItems, false);
     } else {
-      setStep("list");
       if (!origin) {
         setOriginOpen(true);
       }
@@ -458,21 +464,16 @@ export default function App() {
   }
 
   async function handleChangeProduct(lineId: number, productId: number) {
-    if (!origin) return;
     const nextItems = items.map((item, index) =>
       index === lineId
         ? { ...item, productId, accept: "exact" as const }
         : item,
     );
-    setItems(nextItems);
-    await executeRecommendation(nextItems, origin, options);
+    await recalculateWithItems(nextItems);
   }
 
   async function handleApplyAnyBrand() {
-    if (!origin) return;
-    const nextItems = applyAnyBrand(items);
-    setItems(nextItems);
-    await executeRecommendation(nextItems, origin, options);
+    await recalculateWithItems(applyAnyBrand(items));
   }
 
   const flow = (
@@ -480,7 +481,6 @@ export default function App() {
       {step === "list" && (
         <ListStep
           items={items}
-          onQuantityChange={handleQuantityChange}
           onRemoveItem={handleRemoveItem}
           onUpdateItem={handleUpdateItem}
           text={text}
@@ -507,6 +507,8 @@ export default function App() {
         <BasketStep
           recommendation={recommendation}
           origin={origin}
+          calculating={calculating}
+          calcError={calcError}
           onBack={() => setStep("list")}
           onNewList={handleNewList}
           onApplyAnyBrand={handleApplyAnyBrand}

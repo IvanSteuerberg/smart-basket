@@ -106,6 +106,87 @@ describe("loadLists", () => {
     expect(loadLists(storage)).toHaveLength(1);
   });
 
+  it("validates draft items with new fields and discards invalid ones", () => {
+    const storage = memoryStorage();
+    const baseValidItem = item();
+
+    // Valid item with all new fields
+    const fullValidItem = item({
+      productId: 101,
+      accept: "exact",
+      locked: true,
+      imageUrl: "https://photos.test/p.png",
+      options: [
+        {
+          category_key: "pollo_pechuga",
+          name: "Pechuga de pollo",
+          image_url: null,
+          from_unit_price: "2.50",
+          base_unit: "kg",
+        },
+      ],
+    });
+
+    // Valid item without new fields (legacy)
+    const legacyItem = {
+      id: "leg-1",
+      text: "leche",
+      categoryKey: "leche-entera",
+      categoryName: "Leche entera",
+      quantity: "1",
+      unit: "l",
+      brand: "Pascual",
+      privateLabelOk: true,
+    };
+
+    // Invalid: options is not an array
+    const invalidOptionsType = { ...baseValidItem, options: "not an array" };
+    // Invalid: options array contains invalid element (missing name)
+    const invalidOptionsElement = { ...baseValidItem, options: [{ category_key: "k" }] };
+    // Invalid: options array contains non-string category_key
+    const invalidOptionsKey = { ...baseValidItem, options: [{ category_key: 123, name: "Name" }] };
+    // Invalid: productId is a float
+    const invalidProductIdFloat = { ...baseValidItem, productId: 1.5 };
+    // Invalid: productId is a string
+    const invalidProductIdString = { ...baseValidItem, productId: "101" };
+    // Invalid: accept is not exact or equivalent
+    const invalidAccept = { ...baseValidItem, accept: "other" };
+    // Invalid: locked is not boolean
+    const invalidLocked = { ...baseValidItem, locked: "true" };
+    // Invalid: imageUrl is not string or null
+    const invalidImageUrl = { ...baseValidItem, imageUrl: 123 };
+
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schema_version: SCHEMA_VERSION,
+        lists: [
+          list({ id: "valid-full", items: [fullValidItem] }),
+          list({ id: "valid-legacy", items: [legacyItem as unknown as DraftItem] }),
+          list({ id: "invalid-opt-type", items: [invalidOptionsType as unknown as DraftItem] }),
+          list({ id: "invalid-opt-elem", items: [invalidOptionsElement as unknown as DraftItem] }),
+          list({ id: "invalid-opt-key", items: [invalidOptionsKey as unknown as DraftItem] }),
+          list({ id: "invalid-prod-float", items: [invalidProductIdFloat as unknown as DraftItem] }),
+          list({ id: "invalid-prod-str", items: [invalidProductIdString as unknown as DraftItem] }),
+          list({ id: "invalid-accept", items: [invalidAccept as unknown as DraftItem] }),
+          list({ id: "invalid-locked", items: [invalidLocked as unknown as DraftItem] }),
+          list({ id: "invalid-image", items: [invalidImageUrl as unknown as DraftItem] }),
+        ],
+      }),
+    );
+
+    const loaded = loadLists(storage);
+    expect(loaded).toHaveLength(2);
+    expect(loaded.map((l) => l.id)).toEqual(["valid-full", "valid-legacy"]);
+    expect(loaded[1].items[0]).toMatchObject({
+      productId: null,
+      accept: "equivalent",
+      locked: false,
+      imageUrl: null,
+      options: [],
+    });
+  });
+
   it("returns an empty list when storage throws", () => {
     const storage = {
       getItem: () => {

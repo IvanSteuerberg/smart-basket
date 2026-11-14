@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   describeError,
   getCanonical,
@@ -24,6 +24,8 @@ import { ProductImage } from "./ProductImage";
 export interface BasketStepProps {
   recommendation: Recommendation;
   origin: StoredOrigin | null;
+  calculating?: boolean;
+  calcError?: string | null;
   onBack: () => void;
   onNewList: () => void;
   onApplyAnyBrand: () => void;
@@ -49,6 +51,22 @@ function ProductAlternativesModal({
   const [detail, setDetail] = useState<CanonicalDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      opener?.focus();
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -83,6 +101,7 @@ function ProductAlternativesModal({
             <p className="text-xs text-stone-500">Elige otra opción de este producto genérico</p>
           </div>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-slate-800"
@@ -146,6 +165,8 @@ function ProductAlternativesModal({
 export function BasketStep({
   recommendation,
   origin,
+  calculating = false,
+  calcError = null,
   onBack,
   onNewList,
   onApplyAnyBrand,
@@ -180,6 +201,12 @@ export function BasketStep({
       <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
         <h2 className="mb-4 text-xl font-bold tracking-tight text-slate-900">Tu cesta</h2>
 
+        {calcError && (
+          <p className="mb-4 text-xs font-semibold text-price" role="alert">
+            {calcError}
+          </p>
+        )}
+
         {/* Flex savings banner */}
         {recommendation.flex_savings && parseDecimal(recommendation.flex_savings.total) > 0 && (
           <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-brand/20 bg-brand-soft p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -189,7 +216,8 @@ export function BasketStep({
             <button
               type="button"
               onClick={onApplyAnyBrand}
-              className="shrink-0 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors hover:bg-brand-dark"
+              disabled={calculating}
+              className="shrink-0 rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
             >
               Aplicar a toda la lista
             </button>
@@ -262,6 +290,9 @@ export function BasketStep({
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-slate-900">
                                 {line.product_name}
+                                {line.brand && (
+                                  <span className="font-normal text-stone-500"> · {line.brand}</span>
+                                )}
                               </p>
                               <p className="text-xs text-stone-500">
                                 «{line.text}» · {line.packs}{" "}
@@ -282,13 +313,14 @@ export function BasketStep({
                             {line.canonical_id !== null && (
                               <button
                                 type="button"
+                                disabled={calculating}
                                 onClick={() =>
                                   setEditingLine({
                                     lineId: line.line_id,
                                     canonicalId: line.canonical_id!,
                                   })
                                 }
-                                className="rounded-lg border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft"
+                                className="rounded-lg border border-brand px-2.5 py-1 text-xs font-semibold text-brand hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 Cambiar
                               </button>
