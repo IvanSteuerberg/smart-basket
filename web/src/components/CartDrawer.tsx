@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   draftItemsFromCart,
   isGenericLine,
@@ -68,14 +68,26 @@ export function CartDrawer({
   onSaveList,
   onCalculate,
 }: CartDrawerProps) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // The parent passes a new onClose on every render; the effect below must run only when the
+  // drawer opens or closes, or the focus would jump back on every quantity change.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
+    // A modal dialog takes the focus and gives it back to whatever opened it (WAI-ARIA).
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      opener?.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -100,6 +112,7 @@ export function CartDrawer({
         <header className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
           <h2 className="text-lg font-extrabold">{CART_TITLE}</h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             aria-label="Cerrar"

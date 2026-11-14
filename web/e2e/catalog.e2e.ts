@@ -176,6 +176,15 @@ test("home, section, sort, product page and cart reach the origin step", async (
   await firstLine.getByRole("button", { name: "Sumar cantidad" }).click();
   await expect(firstLine.getByText("2", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cesta", exact: true })).toContainText("3");
+  // Changing a quantity does not move the focus out of the line.
+  await expect(firstLine.getByRole("button", { name: "Sumar cantidad" })).toBeFocused();
+
+  // Escape closes the dialog and gives the focus back to the button that opened it.
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(page.getByRole("button", { name: "Cesta", exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "Cesta", exact: true }).click();
+  await expect(drawer.getByRole("button", { name: "Cerrar" })).toBeFocused();
 
   await drawer.getByRole("button", { name: "Calcular cesta" }).click();
   await expect(page).toHaveURL(/#\/lista$/);
