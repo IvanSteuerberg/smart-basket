@@ -31,8 +31,6 @@ export interface OriginStepProps {
   onOptionsChange: (patch: Partial<RouteOptions>) => void;
   open: boolean;
   onToggleOpen: () => void;
-  onCalculate?: () => void;
-  calculating?: boolean;
 }
 
 export function OriginStep({
@@ -42,8 +40,6 @@ export function OriginStep({
   onOptionsChange,
   open,
   onToggleOpen,
-  onCalculate,
-  calculating,
 }: OriginStepProps) {
   const [locationError, setLocationError] = useState<string | null>(null);
 
@@ -205,17 +201,6 @@ export function OriginStep({
           />
           Vuelvo al punto de salida
         </label>
-
-        {onCalculate && (
-          <button
-            type="button"
-            onClick={onCalculate}
-            disabled={!origin || calculating}
-            className="mt-2 w-full rounded-2xl bg-brand py-2.5 text-center text-sm font-bold text-white shadow-xs transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Calcular cesta
-          </button>
-        )}
       </div>
     </section>
   );

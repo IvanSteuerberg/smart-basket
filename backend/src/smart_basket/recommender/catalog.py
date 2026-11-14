@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.brands import Brands, matches_brand
 from smart_basket.optimizer.models import BaseUnit, Line, LinePreferences, Product, Unit
+from smart_basket.preprocessor import rules_es as R
 from smart_basket.preprocessor.text import same_word, words
 from smart_basket.seed import DEFAULT_DATA_DIR
 
@@ -89,11 +90,16 @@ class CatalogEntry:
 
 @dataclass(frozen=True, slots=True)
 class VariantTerm:
-    """One general variant, with the word forms that name it in a text or product name."""
+    """One general variant, with the word forms that name it in a text or product name.
+
+    `plain` marks a canonical variant that a line without variants still accepts ("atún"
+    takes tinned tuna in olive oil); the rest change the product enough to be asked for.
+    """
 
     key: str
     forms: tuple[tuple[str, ...], ...]
     canonical: bool
+    plain: bool = False
 
 
 def load_categories(session: Session, keys: set[str]) -> dict[str, CategoryInfo]:
@@ -177,16 +183,30 @@ def _generic_entry(
     groups: dict[int, frozenset[str]] = {}
     for row in item_rows:
         groups.setdefault(row["canonical_id"], _variant_keys(row["variant_key"]))
-    exact_ids = {canonical_id for canonical_id, keys in groups.items() if keys == canonical_keys}
-    chosen_ids = exact_ids
-    if not chosen_ids:
+    if canonical_keys:
         chosen_ids = {
-            canonical_id for canonical_id, keys in groups.items() if canonical_keys <= keys
+            canonical_id for canonical_id, keys in groups.items() if keys == canonical_keys
         }
+        if not chosen_ids:
+            chosen_ids = {
+                canonical_id for canonical_id, keys in groups.items() if canonical_keys <= keys
+            }
+    else:
+        # Without a requested variant, the plain canonicals are the ordinary products: one
+        # with no variant at all, or only variants that do not really change it.
+        chosen_ids = {
+            canonical_id
+            for canonical_id, keys in groups.items()
+            if all(_is_plain(key) for key in keys)
+        }
+        if not chosen_ids:
+            chosen_ids = set(groups)
     item_rows = [row for row in item_rows if row["canonical_id"] in chosen_ids]
     # Variants that do not change the canonical still filter products by name.
     name_variants = [key for key in requested if not terms[key].canonical]
     item_rows = _with_variant_names(item_rows, name_variants)
+    # Words beyond the category (and the variants) narrow the canonicals the same way.
+    item_rows = _with_line_words(item_rows, _content_words(item, category, brands))
     canonical_id = -(index + 1)
     chosen = _candidates(item_rows, item, brands, category.base_unit, canonical_id)
     products_by_zone, names, canonicals, brand_names, images = _collect(chosen, brands)
@@ -437,6 +457,57 @@ def _with_variant_names(
     return kept
 
 
+def _content_words(item: Item, category: CategoryInfo, brands: Brands) -> tuple[str, ...]:
+    """What the line says beyond its category, its variants and its brand.
+
+    Short words, numbers, units, connectors and the words already handled by the category
+    name, the variant filter or the brand filter cannot narrow the products of the category.
+    """
+    excluded = set(words(category.name))
+    excluded.update(R.CONNECTORS)
+    excluded.update(R.NUMBER_WORDS)
+    excluded.update(R.FRACTION_WORDS)
+    excluded.update(term.form for term in R.UNITS)
+    for term in _variant_terms():
+        for form in term.forms:
+            excluded.update(form)
+    if item.brand:
+        for brand_term in brands.terms(item.brand):
+            excluded.update(words(brand_term))
+    content: list[str] = []
+    for word in words(item.text):
+        if len(word) < 3 or any(char.isdigit() for char in word):
+            continue
+        if not any(char.isalpha() for char in word):
+            continue
+        if any(same_word(word, excluded_word) for excluded_word in excluded):
+            continue
+        content.append(word)
+    return tuple(content)
+
+
+def _with_line_words(
+    rows: Sequence[Mapping[str, Any]], content_words: Sequence[str]
+) -> list[Mapping[str, Any]]:
+    """Keep the products whose name contains a line word, when only some of them do.
+
+    A word no product or every product names narrows nothing, so a line never loses its
+    candidates to a word that is not on the shelf ("yogur grande").
+    """
+    kept = list(rows)
+    for word in content_words:
+        matching = [row for row in kept if _contains_form(words(row["name"]), (word,))]
+        if matching and len(matching) < len(kept):
+            kept = matching
+    return kept
+
+
+def _is_plain(key: str) -> bool:
+    """Whether a canonical variant key is accepted by a line that requests no variant."""
+    term = _term_by_key().get(key)
+    return term is not None and term.plain
+
+
 def _variant_keys(raw: str | None) -> frozenset[str]:
     """The variant keys stored in a canonical product, sorted and `|`-joined."""
     return frozenset(key for key in (raw or "").split("|") if key)
@@ -454,6 +525,7 @@ def _variant_terms() -> tuple[VariantTerm, ...]:
                 for form in variant.get("forms") or [variant.get("name", variant["key"])]
             ),
             canonical=bool(variant.get("canonical", False)),
+            plain=bool(variant.get("plain", False)),
         )
         for variant in data.get("variants", [])
     )

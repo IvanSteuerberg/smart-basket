@@ -251,6 +251,31 @@ def test_request_body_is_not_mutated_by_the_endpoint(world):
     assert body == original
 
 
+@pytest.mark.parametrize(
+    ("text", "category_key", "quantity", "unit", "variants", "expected"),
+    [
+        ("arroz basmati", "arroz_variedad", "1", "kg", None, "Arroz basmati Hacendado"),
+        ("arroz", "arroz_variedad", "1", "kg", None, "Arroz redondo Hacendado"),
+        ("pasta espaguetis", "pasta", "0.5", "kg", None, "Espaguetis Hacendado"),
+        ("pasta/espaguetis", "pasta", "0.5", "kg", None, "Espaguetis Hacendado"),
+        ("cerveza", "cerveza", "1", "ud", None, "Cerveza normal Hacendado"),
+        ("coca-cola", "refresco_cola", "1", "ud", None, "Coca-Cola Hacendado"),
+        ("yogur", "yogur", "4", "ud", None, "Yogur natural Hacendado"),
+        ("pasta", "pasta", "0.5", "kg", ["integral"], "Macarrón rayado integral Hacendado"),
+        ("atún", "atun", "1", "ud", ["al_natural"], "Atún al natural Hacendado"),
+    ],
+)
+def test_line_words_and_plain_variants_pick_the_right_product(
+    world, text, category_key, quantity, unit, variants, expected
+):
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item(text, category_key, quantity, unit, variants=variants)]),
+    ).json()
+    assert body["missing"] == []
+    assert body["stores"][0]["lines"][0]["product_name"] == expected
+
+
 def test_brand_filter_matches_whole_words_only(world):
     response = world.client.post(
         "/api/recommendations",

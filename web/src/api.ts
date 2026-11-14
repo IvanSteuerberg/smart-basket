@@ -64,6 +64,8 @@ export interface InterpretedItem {
   alternatives: unknown[];
   resolved: boolean;
   needs_llm: boolean;
+  /** Photo of the cheapest product per unit of its category, if any. */
+  image_url: string | null;
   /** Choices for a vague term ("pollo", "fruta"); empty when the line is not vague. */
   options: InterpretOption[];
 }

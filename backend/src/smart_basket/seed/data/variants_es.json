@@ -63,6 +63,7 @@
    "key": "desnatada",
    "name": "desnatada",
    "canonical": true,
+   "plain": true,
    "forms": [
     "desnatada",
     "desnatado",
@@ -75,6 +76,7 @@
    "key": "semidesnatada",
    "name": "semidesnatada",
    "canonical": true,
+   "plain": true,
    "forms": [
     "semidesnatada",
     "semidesnatado",
@@ -126,6 +128,7 @@
    "key": "ecologico",
    "name": "ecológico",
    "canonical": true,
+   "plain": true,
    "forms": [
     "ecológico",
     "ecológica",
@@ -244,7 +247,8 @@
     "en aceite de oliva",
     "con aceite de oliva"
    ],
-   "canonical": true
+   "canonical": true,
+   "plain": true
   },
   {
    "key": "en_aceite_girasol",
@@ -253,7 +257,8 @@
     "en aceite de girasol",
     "con aceite de girasol"
    ],
-   "canonical": true
+   "canonical": true,
+   "plain": true
   },
   {
    "key": "al_natural",
@@ -261,7 +266,8 @@
    "forms": [
     "al natural"
    ],
-   "canonical": true
+   "canonical": true,
+   "plain": true
   },
   {
    "key": "picante",
@@ -279,7 +285,8 @@
     "dulce",
     "dulces"
    ],
-   "canonical": true
+   "canonical": true,
+   "plain": true
   }
  ]
 }

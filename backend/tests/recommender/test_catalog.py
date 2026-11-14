@@ -59,11 +59,46 @@ def names(catalog_entry) -> set[str]:
     return set(catalog_entry.product_names.values())
 
 
-def test_a_generic_line_takes_the_canonicals_whose_variant_set_is_empty(world):
-    # "leche" asks for no variant, so the semi-skimmed, skimmed and lactose-free canonicals
-    # are not exact matches; only the plain canonical products remain.
+def test_a_generic_line_takes_the_plain_canonicals(world):
+    # "leche" asks for no variant: the plain canonicals remain (none at all, or a plain one),
+    # so the semi-skimmed is still a candidate but the lactose-free one is not.
     assert names(entry(world, "leche", "leche", "1", "l")) == {
         "Leche entera Pascual",
+        "Leche semidesnatada Hacendado",
+    }
+
+
+def test_a_content_word_narrows_the_products_of_the_category(world):
+    assert names(entry(world, "arroz basmati", "arroz_variedad", "1", "kg")) == {
+        "Arroz basmati Hacendado",
+    }
+    assert names(entry(world, "arroz", "arroz_variedad", "1", "kg")) == {
+        "Arroz basmati Hacendado",
+        "Arroz redondo Hacendado",
+    }
+
+
+def test_a_content_word_that_no_product_names_does_not_restrict(world):
+    assert names(entry(world, "yogur grande", "yogur", "4", "ud")) == {
+        "Yogur natural Hacendado",
+        "Yogur griego Hacendado",
+    }
+
+
+def test_a_line_without_variants_accepts_the_plain_canonicals(world):
+    assert names(entry(world, "atún", "atun", "1", "ud")) == {
+        "Atún en tomate Hacendado",
+        "Atún al natural Hacendado",
+        "Atún en aceite de oliva Hacendado",
+    }
+    assert names(entry(world, "atún", "atun", "1", "ud", variants=("al_natural",))) == {
+        "Atún al natural Hacendado",
+    }
+
+
+def test_a_line_word_picks_the_named_pasta_shape(world):
+    assert names(entry(world, "pasta espaguetis", "pasta", "0.5", "kg")) == {
+        "Espaguetis Hacendado",
     }
 
 
