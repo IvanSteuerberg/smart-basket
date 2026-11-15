@@ -1610,6 +1610,15 @@
        ]
       },
       {
+       "key": "kefir",
+       "name": "Kéfir",
+       "base_unit": "kg",
+       "forms": [
+        "kéfir",
+        "kefir"
+       ]
+      },
+      {
        "key": "bifidus",
        "name": "Bífidus",
        "base_unit": "kg",
@@ -2231,7 +2240,7 @@
     },
     {
      "key": "arroz_legumbres_pasta",
-     "name": "Arroz, legumbres y pasta",
+     "name": "Arroz y legumbres",
      "vague": true,
      "children": [
       {
@@ -2311,29 +2320,52 @@
        ]
       },
       {
+       "key": "pasta_oriental",
+       "name": "Fideos orientales",
+       "base_unit": "kg",
+       "forms": [
+        "fideos orientales",
+        "noodles",
+        "fideos de arroz"
+       ]
+      },
+      {
+       "key": "lasana_canelones",
+       "name": "Lasaña y canelones",
+       "base_unit": "kg",
+       "forms": [
+        "placas de lasaña",
+        "lasaña",
+        "canelones"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "pasta",
+     "name": "Pasta",
+     "vague": true,
+     "forms": [
+      "pasta"
+     ],
+     "options": [
+      "pasta_corta",
+      "pasta_larga",
+      "pasta_sopa",
+      "pasta_rellena"
+     ],
+     "children": [
+      {
        "key": "pasta_corta",
        "name": "Macarrones y pasta corta",
        "base_unit": "kg",
        "default_quantity": 0.5,
        "forms": [
         "macarrones",
-        "pasta",
         "hélices",
         "pajaritas",
         "penne",
         "espirales"
-       ]
-      },
-      {
-       "key": "pasta_sopa",
-       "name": "Pasta para sopa",
-       "base_unit": "kg",
-       "forms": [
-        "pasta estrellas",
-        "pasta maravilla",
-        "pasta para sopa",
-        "pasta tiburones",
-        "tiburones"
        ]
       },
       {
@@ -2346,6 +2378,18 @@
         "spaghetti",
         "tallarines",
         "espagueti"
+       ]
+      },
+      {
+       "key": "pasta_sopa",
+       "name": "Pasta para sopa",
+       "base_unit": "kg",
+       "forms": [
+        "pasta estrellas",
+        "pasta maravilla",
+        "pasta para sopa",
+        "pasta tiburones",
+        "tiburones"
        ]
       },
       {
@@ -2378,26 +2422,6 @@
         "gnocchi",
         "gnocchis",
         "ñoquis"
-       ]
-      },
-      {
-       "key": "pasta_oriental",
-       "name": "Fideos orientales",
-       "base_unit": "kg",
-       "forms": [
-        "fideos orientales",
-        "noodles",
-        "fideos de arroz"
-       ]
-      },
-      {
-       "key": "lasana_canelones",
-       "name": "Lasaña y canelones",
-       "base_unit": "kg",
-       "forms": [
-        "placas de lasaña",
-        "lasaña",
-        "canelones"
        ]
       }
      ]
@@ -4671,13 +4695,22 @@
       },
       {
        "key": "limpiahogar",
-       "name": "Limpiahogar y desinfectante",
+       "name": "Limpiahogar y multiusos",
        "base_unit": "l",
        "forms": [
         "limpiahogar",
-        "desinfectante",
         "limpiador multiusos",
         "multiusos"
+       ]
+      },
+      {
+       "key": "desinfectante",
+       "name": "Desinfectante multiusos",
+       "base_unit": "l",
+       "forms": [
+        "desinfectante",
+        "multiusos desinfectante",
+        "pastillas desinfectantes"
        ]
       },
       {
