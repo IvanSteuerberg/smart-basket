@@ -287,6 +287,41 @@
    ],
    "canonical": true,
    "plain": true
+  },
+  {
+   "key": "marinado",
+   "name": "marinado",
+   "canonical": true,
+   "forms": [
+    "marinado",
+    "marinada"
+   ]
+  },
+  {
+   "key": "en_tomate",
+   "name": "en tomate",
+   "canonical": true,
+   "forms": [
+    "en tomate",
+    "en salsa de tomate"
+   ]
+  },
+  {
+   "key": "en_escabeche",
+   "name": "en escabeche",
+   "canonical": true,
+   "forms": [
+    "en escabeche"
+   ]
+  },
+  {
+   "key": "wrap",
+   "name": "wrap",
+   "canonical": true,
+   "forms": [
+    "wrap",
+    "wraps"
+   ]
   }
  ]
 }
