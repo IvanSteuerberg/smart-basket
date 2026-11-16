@@ -189,14 +189,16 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
         row = session.execute(
             text(
                 "insert into category "
-                "(key, name, parent_id, level, base_unit, default_quantity, forms, is_vague) "
+                "(key, name, parent_id, level, base_unit, default_quantity, forms, is_vague, "
+                "options, exact_only) "
                 "values (:key, :name, (select id from category where key = :parent_key), "
-                ":level, :base_unit, :default_quantity, :forms, :is_vague) "
+                ":level, :base_unit, :default_quantity, :forms, :is_vague, :options, :exact_only) "
                 "on conflict (key) do update set "
                 "name = excluded.name, parent_id = excluded.parent_id, level = excluded.level, "
                 "base_unit = excluded.base_unit, "
                 "default_quantity = excluded.default_quantity, forms = excluded.forms, "
-                "is_vague = excluded.is_vague "
+                "is_vague = excluded.is_vague, options = excluded.options, "
+                "exact_only = excluded.exact_only "
                 "returning id, (xmax = 0) as inserted"
             ),
             {
@@ -208,6 +210,8 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
                 "default_quantity": category.default_quantity,
                 "forms": category.forms,
                 "is_vague": category.is_vague,
+                "options": category.options,
+                "exact_only": category.exact_only,
             },
         ).one()
         category_ids[category.key] = row.id

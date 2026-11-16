@@ -1,6 +1,9 @@
 // The editable line the user reviews before asking for a basket.
 
 import type {
+  Accept,
+  ChoiceRequiredDetail,
+  InterpretOption,
   InterpretedItem,
   RecommendationItemRequest,
   SearchResult,
@@ -19,6 +22,17 @@ export interface DraftItem {
   unit: Unit;
   brand: string;
   privateLabelOk: boolean;
+  /** Concrete product the line was added from; null for a generic line ("Cualquier X"). */
+  productId: number | null;
+  /** Only meaningful with `productId`: "exact" buys that product, "equivalent" any of its canonical. */
+  accept: Accept;
+  /** Pinned with the padlock: the global "Me da igual la marca" switch leaves it "exact". */
+  locked: boolean;
+  imageUrl: string | null;
+  /** Choices for a vague line ("¿Qué pollo?"); the line cannot be sent until one is chosen. */
+  options: InterpretOption[];
+  /** The category only sells concrete products (shades): the line needs a product to be sent. */
+  exactOnly: boolean;
 }
 
 export function newId(): string {
@@ -39,7 +53,30 @@ export function draftFromInterpreted(item: InterpretedItem): DraftItem {
     unit: item.unit,
     brand: item.brand ?? "",
     privateLabelOk: true,
+    ...GENERIC_DEFAULTS,
+    imageUrl: item.image_url,
+    options: item.options,
+    exactOnly: item.exact_only,
   };
+}
+
+/** Defaults of a generic line, the shape every line has unless it names a product. */
+export const GENERIC_DEFAULTS = {
+  productId: null,
+  accept: "equivalent",
+  locked: false,
+  imageUrl: null,
+  options: [],
+  exactOnly: false,
+} as const satisfies Pick<
+  DraftItem,
+  "productId" | "accept" | "locked" | "imageUrl" | "options" | "exactOnly"
+>;
+
+/** Lines saved before the concrete-product fields existed read as generic lines. */
+export function withLineDefaults(item: Omit<DraftItem, keyof typeof GENERIC_DEFAULTS> &
+  Partial<DraftItem>): DraftItem {
+  return { ...GENERIC_DEFAULTS, ...item, options: item.options ?? [] };
 }
 
 export function draftFromSearchResult(result: SearchResult): DraftItem {
@@ -52,11 +89,57 @@ export function draftFromSearchResult(result: SearchResult): DraftItem {
     unit: "ud",
     brand: "",
     privateLabelOk: true,
+    ...GENERIC_DEFAULTS,
+    exactOnly: result.exact_only,
   };
 }
 
+/** A vague line becomes the option the user picked: a generic line of that category. */
+export function chooseOption(item: DraftItem, option: InterpretOption): DraftItem {
+  return {
+    ...item,
+    categoryKey: option.category_key,
+    categoryName: option.name,
+    imageUrl: option.image_url,
+    options: [],
+    exactOnly: option.exact_only,
+  };
+}
+
+/** A resolved category the user picked for an unknown line, as the fields of that line. */
+export function lineFromSearchResult(result: SearchResult): Partial<DraftItem> {
+  return {
+    categoryKey: result.key,
+    categoryName: result.name,
+    options: [],
+    exactOnly: result.exact_only,
+  };
+}
+
+/**
+ * The line the server refused with a 422 because the user must choose first: a vague one goes
+ * back to "unknown", one of shades waits for a concrete product.
+ */
+export function markChoiceRequired(item: DraftItem, code: ChoiceRequiredDetail["code"]): DraftItem {
+  if (code === "EXACT_ONLY") return { ...item, productId: null, exactOnly: true };
+  return { ...item, categoryKey: null, productId: null, options: [] };
+}
+
 export function isResolved(item: DraftItem): boolean {
-  return item.categoryKey !== null;
+  if (item.exactOnly && item.productId === null) return false;
+  return item.options.length === 0 && (item.productId !== null || item.categoryKey !== null);
+}
+
+/**
+ * "Me da igual la marca": every concrete line that is not pinned accepts its whole canonical.
+ * Pinned lines keep their choice (decision 0019: the line's own choice wins over the switch).
+ */
+export function applyAnyBrand(items: DraftItem[]): DraftItem[] {
+  return items.map((item) =>
+    item.productId !== null && !item.exactOnly && !item.locked && item.accept === "exact"
+      ? { ...item, accept: "equivalent" }
+      : item,
+  );
 }
 
 export function allResolved(items: DraftItem[]): boolean {
@@ -70,12 +153,16 @@ export function normalizeQuantity(value: string): string {
 
 export function toRequestItem(item: DraftItem): RecommendationItemRequest {
   const brand = item.brand.trim();
+  const target =
+    item.productId !== null
+      ? { product_id: item.productId, accept: item.accept, unit: "ud" as const }
+      : { category_key: item.categoryKey, accept: "equivalent" as const, unit: item.unit };
   return {
     text: item.text,
-    category_key: item.categoryKey,
+    ...target,
     quantity: normalizeQuantity(item.quantity),
-    unit: item.unit,
-    brand: brand === "" ? null : brand,
+    // A concrete line names its product; its brand is not a filter.
+    brand: item.productId !== null || brand === "" ? null : brand,
     private_label_ok: item.privateLabelOk,
   };
 }

@@ -58,3 +58,65 @@ Se separa el modelo transaccional del analítico dentro del mismo PostgreSQL (de
 \end{itemize}
 
 \vspace{0.5cm}
+
+% ------------------- ENTRADA 8 -------------------
+\subsection{Señal de Tiempo 8: Preferencias del Comprador y Base de Datos de Grafos}
+\textbf{Fecha:} 14 de noviembre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / DeepSeek V4.1 Flash (OpenCode Go) \\
+\textbf{Objetivo:} Decidir dónde y cómo se guardan y aprenden las preferencias del comprador (elección habitual para términos ambiguos, marcas fijadas, cadenas preferidas y reglas como ``sin lactosa siempre''), tanto en el MVP sin cuentas como en un posible producto posterior con cuentas y suscripciones de pago, y si eso justifica una base de datos de grafos como Neo4j.
+
+\textit{Nota: Claude respondió con el contexto del proyecto; DeepSeek recibió el prompt sin contexto previo y con búsqueda web. Su respuesta original, con el prompt completo, está en \url{docs/memoria-prompts/fuentes/2026-11-14-st8-deepseek.md}.}
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como arquitecto de software especializado en sistemas de recomendación, bases de datos relacionales y de grafos, y protección de datos (RGPD). Diseño cómo guarda y aprende las preferencias del comprador una aplicación que recomienda en qué supermercados de León comprar una lista para minimizar coste + lambda * minutos de desplazamiento, con un máximo de 3 tiendas.
+
+	Decisiones ya tomadas: un único PostgreSQL 18 con PostGIS y pgvector, FastAPI y una PWA en React con Docker Compose, sin Neo4j salvo que los recorridos de varios saltos o los algoritmos de grafos sean centrales; producto canónico sin marca ni formato y taxonomía de 338 categorías; lista interpretada por reglas y un LLM local, cesta calculada por un optimizador determinista; navegación por supermercado o por producto genérico, un gesto para pasar toda la lista a ``me da igual la marca'' sin tocar las marcas fijadas, y preguntas en línea.
+
+	Preferencias: elección habitual para términos ambiguos (``fruta'' $\rightarrow$ plátanos y mandarinas, o ``la de temporada''), marcas fijadas (``leche'' $\rightarrow$ Pascual), cadenas preferidas o excluidas y reglas como ``sin lactosa siempre''. Escenarios: (A) MVP académico sin cuentas, con los datos personales solo en el navegador; (B) producto con cuentas y suscripciones, preferencias en el servidor y recomendaciones entre usuarios. El perfil local debe tener la misma forma que el del servidor.
+
+	Compara un perfil local aprendido del historial, tablas de PostgreSQL, Apache AGE y Neo4j: qué permiten (sustituciones de varios saltos, ``quien compra X también compra Y'', perfiles similares), coste y operación, RGPD y migración de A a B. Preguntas: (1) cómo aprender ``lo de siempre'' y distinguir lo fijado de lo aprendido; (2) esquema del perfil en JSON y DDL y sincronización; (3) almacenamiento en el navegador; (4) si basta PostgreSQL para el filtrado colaborativo, umbrales para AGE o Neo4j y su estado actual; (5) RGPD en B, incluido si ``sin lactosa'' o ``sin gluten'' son datos de salud del artículo 9.
+
+	Da una recomendación concreta para A y para B. Busca información actual (hoy es 14 de noviembre de 2026) sobre Apache AGE, Neo4j, pgvector y los criterios de la AEPD y el CEPD, cita las fuentes con URL e indica qué no has podido verificar. No ejecutes comandos ni modifiques archivos.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Las preferencias no piden un grafo:} son datos de un solo usuario, y aprender ``lo de siempre'' es contar elecciones con más peso para las recientes. Propone dos entidades iguales en el navegador y en el servidor: preferencias (con origen fijado o aprendido) e historial de elecciones, con identificadores generados en el cliente para que el primer inicio de sesión sea una simple subida.
+
+		\item \textbf{Lo aprendido nunca se aplica en silencio:} aparece preseleccionado en la pregunta en línea y se acepta con un toque. Orden de prioridad: la propia línea, lo fijado, lo aprendido y, por último, el interruptor ``me da igual la marca'', que no toca las marcas fijadas. Las reglas dietéticas solo las pone el usuario.
+
+		\item \textbf{Con cuentas, todo en PostgreSQL:} coocurrencias en una vista materializada para ``quien compra X también compra Y'', pgvector para perfiles similares y una consulta recursiva de hasta tres saltos para las sustituciones. Apache AGE (con soporte de PostgreSQL 18 desde la versión 1.7.0) sería el primer paso si hicieran falta consultas de grafos, porque mantiene una sola base y un solo camino de borrado.
+
+		\item \textbf{RGPD:} el Tribunal de Justicia de la UE consideró datos de salud los datos de pedidos de productos de farmacia (asunto C-21/23, Lindenapotheke, 2024), así que una regla como ``sin lactosa'' puede serlo y, con cuentas, exigiría consentimiento explícito y separado.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Tres capas en lugar de un documento:} hechos fijados por el usuario (se sincronizan elemento a elemento), eventos (se suben y se unen sin conflictos) y derivados, como ``lo de siempre'', que son una caché recalculable que nunca se sincroniza. La exportación usa el mismo formato que la sincronización, lo que cubre la portabilidad.
+
+		\item \textbf{Las preferencias no entran en la función objetivo:} solo restringen los candidatos, deshacen empates y alimentan la explicación (``cuesta 1,20 € más porque fijaste Pascual''), para no perder determinismo ni explicabilidad.
+
+		\item \textbf{Aprender con conteos con decaimiento y umbrales:} con confianza alta se aplica sin preguntar, mostrando ``asumido: plátanos · cambiar''; con confianza media se pregunta en línea. Propone preguntar solo si la ambigüedad cambia la cesta (más de 0,50 € o 2 minutos), con un máximo de dos preguntas por lista, y mostrar al azar la segunda opción en un 10 \% de las listas para que el perfil no se cierre sobre sí mismo.
+
+		\item \textbf{Riesgos prácticos:} Safari borra los datos de una web que no se visita en 7 días, por lo que exportar el perfil no es opcional; al importar hay que remapear los productos canónicos que se hayan fusionado.
+
+		\item \textbf{PostgreSQL basta con margen:} orienta a AGE entre 20.000 y 200.000 usuarios activos con recorridos de 2--3 saltos en cada petición, y a Neo4j por encima de 200.000 o si los algoritmos de grafos (comunidades, similitud) son una función central. Neo4j Community es GPLv3, de una sola base de datos y sin clustering ni control de acceso por roles.
+
+		\item \textbf{RGPD:} ``sin lactosa'' y ``sin gluten'' deben tratarse como datos de salud (cita C-184/20 y C-21/23 sin haber podido leerlas), solo explícitos y con consentimiento del artículo 9.2.a; inferirlos del historial sería tratar datos de salud sin base jurídica. Con cuentas: base jurídica por finalidad, evaluación de impacto, retención limitada y recomendaciones entre usuarios solo con consentimiento.
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Revisión de afirmaciones:} DeepSeek afirma que Apache AGE no tiene una versión estable para PostgreSQL 18 porque su etiqueta termina en \texttt{-rc0}. Es incorrecto: AGE publica sus versiones con ese nombre, y su página de notas de versión enlaza \texttt{PG18/v1.7.0-rc0} como la versión 1.7.0, publicada en enero de 2026 (\url{https://age.apache.org/release-notes}); la 1.8.0 figura en agosto de 2026. No se ha verificado la nota de la AEPD del 5 de noviembre de 2026 que cita, y sus umbrales de usuarios y aristas son orientativos. Su búsqueda web volvió a fallar y leyó directamente las páginas oficiales. De nuevo trata el proyecto como un TFG, algo que no podía saber sin contexto.
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+No se añade una base de datos de grafos para las preferencias, ni en el MVP ni con cuentas. El autor aprueba la propuesta combinada (decisión 0019 de la base de conocimiento):
+
+\begin{itemize}
+	\item \textbf{Un único modelo de perfil en tres capas}, como propone DeepSeek: lo fijado, el historial de elecciones y lo aprendido, que se recalcula y no se sincroniza. En el MVP vive en el navegador (IndexedDB, con exportación a JSON); con cuentas, las mismas tablas pasan a PostgreSQL y el perfil local se sube al iniciar sesión.
+	\item \textbf{Aprendizaje por conteo:} lo aprendido se aplica sin preguntar cuando la confianza es alta, con un aviso visible para cambiarlo (de DeepSeek, porque encaja con el criterio del autor de mínimos pasos), y se pregunta en línea cuando es media. Se descarta mostrar opciones al azar y se aplaza preguntar solo cuando cambie la cesta, porque obliga a recalcularla y la interpretación ya supera el tiempo objetivo.
+	\item \textbf{Las preferencias restringen la cesta, pero no entran en la función objetivo}, y las reglas dietéticas solo pueden ser explícitas, por ser posibles datos de salud.
+	\item \textbf{Con cuentas, las recomendaciones entre usuarios empiezan en PostgreSQL}; Apache AGE sería el primer paso si hicieran falta recorridos de varios saltos, y Neo4j solo como copia analítica si los algoritmos de grafos pasan a ser centrales. El alcance del MVP no cambia: el producto con cuentas y suscripciones queda como nota posterior al MVP.
+\end{itemize}
+
+\vspace{0.5cm}

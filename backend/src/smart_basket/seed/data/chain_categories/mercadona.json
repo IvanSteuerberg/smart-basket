@@ -1308,13 +1308,13 @@
    "code": "823",
    "name": "Chopped",
    "parent_code": "49",
-   "category": "chopped_mortadela"
+   "category": "chopped"
   },
   {
    "code": "296",
    "name": "Mortadela",
    "parent_code": "49",
-   "category": "chopped_mortadela"
+   "category": "mortadela"
   },
   {
    "code": "51",
@@ -1326,7 +1326,7 @@
    "code": "301",
    "name": "Salchichón",
    "parent_code": "51",
-   "category": "salchichon"
+   "category": "salchichon_curado"
   },
   {
    "code": "824",
@@ -3012,13 +3012,13 @@
    "code": "809",
    "name": "Dorada",
    "parent_code": "31",
-   "category": "dorada_lubina"
+   "category": "dorada"
   },
   {
    "code": "810",
    "name": "Lubina",
    "parent_code": "31",
-   "category": "dorada_lubina"
+   "category": "lubina"
   },
   {
    "code": "816",
@@ -3036,25 +3036,25 @@
    "code": "880",
    "name": "Corvina",
    "parent_code": "31",
-   "category": "pescado_blanco_otro"
+   "category": "corvina"
   },
   {
    "code": "808",
    "name": "Sepia, pulpo y calamar",
    "parent_code": "31",
-   "category": "cefalopodos"
+   "category": "pescado_fresco"
   },
   {
    "code": "815",
    "name": "Trucha",
    "parent_code": "31",
-   "category": "pescado_blanco_otro"
+   "category": "trucha"
   },
   {
    "code": "848",
    "name": "Rodaballo",
    "parent_code": "31",
-   "category": "pescado_blanco_otro"
+   "category": "rodaballo"
   },
   {
    "code": "851",
@@ -3696,13 +3696,13 @@
    "code": "398",
    "name": "Melocotón",
    "parent_code": "100",
-   "category": "zumo_melocoton_pina"
+   "category": "zumos"
   },
   {
    "code": "397",
    "name": "Piña",
    "parent_code": "100",
-   "category": "zumo_melocoton_pina"
+   "category": "zumos"
   },
   {
    "code": "143",

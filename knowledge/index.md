@@ -22,6 +22,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 
 * [System overview](/architecture/system-overview.md) - Modules and how a recommendation flows through them.
 * [Data model](/architecture/data-model.md) - Transactional entities and the BI star schema of the MVP.
+* [Agents](/architecture/agents.md) - Draft map of the system's agents (recommender, catalog agent, watcher), their shared harness and memory, and the multi-agent process iteration 12 ran outside the product.
 
 ## Data
 
@@ -47,6 +48,9 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0016 Ingestion adapters](/decisions/0016-ingestion-adapters.md) - One adapter per chain, shared persistence with change-only prices, run bookkeeping that survives failures and safeguards before marking products unavailable.
 * [0017 Single-chain recommendation end to end](/decisions/0017-single-chain-recommendation.md) - The API routes, one provisional comparable product per list line with unit, name and brand guards, the brand seed, a template explanation and an anonymous record without the origin.
 * [0018 Stores from OpenStreetMap and geocoding through the backend](/decisions/0018-osm-stores-and-backend-geocoding.md) - Supermarkets of the ten chains imported monthly from Overpass, and typed addresses geocoded with Nominatim through the backend, kept out of logs.
+* [0019 Shopper preferences](/decisions/0019-shopper-preferences.md) - One profile model in three layers, in the browser for the MVP and in PostgreSQL with accounts; preferences constrain the basket but never enter the objective; no graph store until thresholds are met.
+* [0020 Rule-based canonical matching and canonical baskets](/decisions/0020-rule-based-canonical-matching.md) - Products assigned to canonicals by rules with a review queue decided by the author, decisions re-applied by chain and SKU from outside the repository, and list lines resolved through canonicals with vague terms asked.
+* [0021 Supermarket-style web and low-friction list](/decisions/0021-supermarket-style-web.md) - Catalog with photos, generic and concrete products, Tailwind and logos, cart lines that say what they accept, a one-screen typed list and a minimal browser profile.
 
 ## Evaluation
 

@@ -198,7 +198,7 @@
 	\end{description}
 
 	\section*{Semana 10: 9 -- 15 de noviembre}
-	\textit{Resumen:} Semana en curso.
+	\textit{Resumen:} Semana de implementación: taxonomía semilla y recogida real del catálogo de Mercadona (iteración 10), demo de punta a punta con una cadena probada con las listas del autor (iteración 11), y catálogo con productos canónicos, fotos y lista sin fricción, con el catálogo entero revisado dos veces (iteración 12, decisiones 0015 a 0021); decisión sobre las preferencias del comprador (Señal de Tiempo 8).
 
 	\subsection*{Lunes 9 de noviembre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
@@ -218,18 +218,44 @@
 	\subsection*{Sábado 14 de noviembre}
 	\begin{description}[leftmargin=0pt, itemsep=6pt]
 		\actividad{Análisis}{Prueba real con el sistema completo en el portátil: 126 marcas y 41 supermercados de León cargados, y las dos listas reales del autor recomendadas a pie y en coche desde un origen en León. Todas las líneas se interpretan; la recomendación tarda 0,1--0,2 s y la interpretación de la lista larga (17 líneas) unos 6,5 s, por encima de los 5 s del requisito. La revisión final encuentra fallos de privacidad (la dirección escrita llegaba a los registros del servidor) y de elección de producto, que se corrigen.}{Decisiones 0017 (recomendación con una cadena) y 0018 (tiendas de OpenStreetMap y geocodificación a través del servidor).}
+		\actividad{Análisis}{Prueba del autor con una lista suya desde la Universidad: la cesta le mandaba a un Mercadona lejano (el cercano solo está en OpenStreetMap como edificio) y elegía mal los productos (pechuga empanada en lugar de fresca, pasta normal en lugar de integral). Se corrige la importación de tiendas, la comparación por precio por kilo, las variantes pedidas y los productos elaborados. Comparación de diseño con QuéFalta.}{Iteración 11 fusionada en la rama principal; nueva lista real del autor para evaluar.}
+		\actividad{Tarea}{Primera tanda de la iteración 12, con implementadores de IA y revisión de cada entrega por Gemini: fotos de los 4.307 productos, clasificador de productos en productos canónicos (categoría más variantes como sin lactosa o integral, sin marca ni tamaño), API de catálogo y catálogo web con aspecto de supermercado (fotos, precio por kilo, ficha de producto, lista como carrito y logos de las cadenas), hecho con Tailwind CSS.}{Catálogo navegable con fotos; 1.051 pruebas superadas.}
+		\actividad{Decisión}{Revisión con el autor de la clasificación del catálogo real, propuesta por Gemini y consolidada por Claude: se parten las categorías que mezclaban productos no intercambiables (pollo en pechuga, muslo, alitas, entero y carcasa; naranja y mandarina; embutidos; pescados; zumos), se crean las que faltaban (especias, verduras, frutas, atún fresco) y se fijan las variantes que distinguen productos.}{99,9~\% de los productos con su producto canónico (717 canónicos).}
+		\actividad{Análisis}{Criterios de uso con el autor para la siguiente tanda: navegar por supermercado o por producto genérico, pasar toda la lista a «cualquier marca» de un gesto y fijar marcas sueltas con un toque, y la lista escrita a mano con los mínimos pasos. Se abre una decisión aparte sobre dónde guardar las preferencias del usuario (con o sin cuentas) y si una base de datos de grafos está justificada.}{Plan de la segunda tanda de la iteración 12.}
+		\actividad{Decisión}{Dónde y cómo se guardan y aprenden las preferencias del comprador (elección habitual, marcas fijadas, cadenas y reglas como ``sin lactosa''), en el MVP sin cuentas y en un posible producto con cuentas y suscripciones, y si eso justifica Neo4j. Se comparan un perfil en el navegador, tablas de PostgreSQL, Apache AGE y Neo4j con Claude y DeepSeek como fuentes. No se añade un grafo: el perfil tiene la misma forma en el navegador y en el servidor, las preferencias restringen la cesta sin entrar en su coste, y las reglas dietéticas, posibles datos de salud, solo las fija el usuario.}{Señal de Tiempo 8, decisión 0019 (borrador) y nota posterior al MVP en el alcance.}
+		\actividad{Tarea}{Segunda tanda de la iteración 12, en cinco entregas repartidas entre DeepSeek V4.1 Flash y Gemini 3.8 Flash, cada una revisada por el otro modelo, con revisión final de Claude Opus: la cesta se calcula sobre productos canónicos (producto concreto o «cualquiera», filtro de cadenas y ahorro si se acepta cualquier marca), lo ambiguo («pollo», «fruta») se pregunta con fotos, catálogo por producto genérico, carrito con candado e interruptor «Me da igual la marca», lista escrita a mano en una sola pantalla, salida recordada y cesta con fotos. Las decisiones de clasificación se reaplican solas si se recrea la base de datos.}{Decisiones 0020 y 0021; 1.084 pruebas del backend y 119 de la web superadas.}
+		\actividad{Análisis}{Evaluación de la clasificación con una muestra de 299 productos etiquetada a ciegas por DeepSeek y revisada por Claude, y de las tres listas reales del autor antes y después. Acierto entre el 89,6 y el 92,6~\% (objetivo, 90~\%) y un 5~\% de productos no intercambiables tomados por equivalentes (objetivo, 3~\%). La cesta mejora con el pollo, los plátanos y el yogur, y empeora donde una categoría aún mezcla productos (arroz basmati, espaguetis, hamburguesas, atún, desinfectante).}{Resultados en las decisiones 0020 y 0021; arreglos propuestos para la siguiente sesión.}
+	\end{description}
+
+	\subsection*{Domingo 15 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Tercera tanda de la iteración 12. Se corrigen las líneas que empeoraron (las palabras de la línea eligen dentro de la categoría y, sin variante pedida, valen las habituales como «al natural» o «en aceite») y se revisa el catálogo entero dos veces: DeepSeek etiqueta a ciegas los 4.307 productos, Gemini arbitra los 709 desacuerdos y propone partir las categorías mezcladas, y Claude consolida y revisa los casos sin acuerdo. Aparece un fallo sistemático: el sabor solo se detectaba si el nombre decía «sabor». Se crean 75 categorías (arroz basmati, pasta para sopa, zanahoria rallada, tofu, seitán…) y el autor aprueba los cambios.}{Taxonomía de 446 categorías y 924 productos canónicos; todas las listas reales del autor salen bien salvo detalles.}
+		\actividad{Análisis}{Nueva medición con una muestra de 300 productos etiquetada por un modelo que no intervino en los arreglos (Claude Haiku) y revisada entera: 92~\% de acierto y 7,7~\% de productos distintos tomados por equivalentes (objetivo, 3~\%). Los errores que quedan son categorías mezcladas que ningún etiquetador detecta (cortes de cerdo, frutos secos, turrones) y los productos con tonos (tintes y maquillaje).}{Decisión 0020 actualizada; siguiente paso: revisar todas las categorías con sus productos.}
+		\actividad{Investigación}{Análisis de los modelos de decisión (Jev de TypeSafe, Gemini Decision 1, Kev-4B) frente a un LLM generativo para interpretar la lista en producción: más rápidos, baratos y con probabilidades calibradas. Estimación de coste y escala para 1.000 usuarios concurrentes.}{Tarea de la siguiente iteración, con su Señal de Tiempo.}
+	\end{description}
+
+	\section*{Semana 11: 16 -- 22 de noviembre}
+	\textit{Resumen:} Semana en curso.
+
+	\subsection*{Lunes 16 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Cuarta tanda de la iteración 12, solo con modelos de Claude: Claude Sonnet revisa una por una las 435 categorías con todos sus productos y propone partir las que mezclan productos distintos (cortes de cerdo, frutos secos, turrones, aceites…); los productos con tonos (tintes y maquillaje) pasan a ser «solo producto concreto», implementado por Claude Sonnet y revisado dos veces por Claude Haiku. El autor aprueba las particiones; solo preguntan los términos generales (cerdo, carne picada, hamburguesa, frutos secos…), y el resto va a su producto habitual.}{De 446 a 1.016 categorías y 1.850 productos canónicos; 1.112 pruebas del backend superadas.}
+		\actividad{Análisis}{Tercera medición con una muestra nueva de 298 productos etiquetada por Claude Haiku y revisada entera: 95,6~\% de acierto y 2,7~\% de productos distintos tomados por equivalentes (objetivos, 90~\% y 3~\%). Las listas del autor salen bien; las categorías más finas cuestan algo de ahorro donde el comprador aceptaría una hermana (lechuga iceberg).}{Decisiones 0020 y 0021 actualizadas; objetivos de calidad cumplidos en el valor medio.}
+		\actividad{Análisis}{Revisión del enfoque agéntico con Claude: hoy el LLM solo interpreta en una llamada las líneas que las reglas no resuelven, sin bucle de percepción y acción. Se valoran cuatro ampliaciones (conversacional, BI, vigilante de precios y folletos) y el coste, la latencia y la escala de usar Gemini. Se acuerda un agente racional (el optimizador decide la cesta) con un bucle que actúa cuando observa algo, un conjunto cerrado de acciones dentro de un harness común y varios agentes coordinados a través de la base de datos: recomendador, catalogador de productos nuevos y vigilante. La iteración 12 ya fue un proceso multiagente, pero en las sesiones de desarrollo y no en el producto.}{Borrador \texttt{knowledge/architecture/agents.md}; pendiente de Señal de Tiempo y de una decisión que revise la 0001.}
 	\end{description}
 
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Revisión por el autor de las decisiones 0017 y 0018 y de la demo en el navegador.
-		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
+		\item Cierre de la iteración 12 (pull request y OSF).
+		\item Señal de Tiempo sobre el agente recomendador y los agentes del sistema, con DeepSeek como segunda fuente y los libros de IA agéntica asignados como lectura; decisión que revise la 0001 y la 0005. La prueba de modelos (locales y de decisión, Gemini de reserva) pasa a medir si eligen bien la acción dentro del harness.
+		\item Siguiente iteración: harness común y agente recomendador, que complete el bucle con una línea vaga, un producto que falta en todas las tiendas y «¿y en coche?», con la traza visible en la web.
+		\item Después: segunda cadena (Dia) con el agente catalogador clasificando sus productos (búsqueda de parecidos con pgvector, medido como en la iteración 12); usabilidad de la web, vigilante de precios y comprobación de si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
 	
 	% ======================= PENDIENTES =======================
 	\section*{Encargos pendientes}
-	Encargos recogidos en las notas de clase que siguen sin hacer a 9 de noviembre de 2026:
+	Encargos recogidos en las notas de clase que siguen sin hacer a 16 de noviembre de 2026:
 	\begin{itemize}
 		\item Análisis o crítica de los cuatro libros asignados y de dos de libre elección (encargado el 23 de septiembre).
 	\end{itemize}

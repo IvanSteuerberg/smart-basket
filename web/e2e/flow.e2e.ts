@@ -1,5 +1,6 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, type Request, expect, test } from "@playwright/test";
 import type {
+  CanonicalDetail,
   CategoriesResponse,
   GeocodeResponse,
   Health,
@@ -7,11 +8,7 @@ import type {
   Recommendation,
   SearchResponse,
 } from "../src/api";
-
-const TRANSPARENT_1X1_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
-  "base64",
-);
+import { blockUnmocked, mockJson, TRANSPARENT_1X1_PNG } from "./mock";
 
 const mockHealth: Health = {
   status: "ok",
@@ -52,6 +49,7 @@ const mockSearch: SearchResponse = {
       name: "Leche entera",
       kind: "leaf",
       path: "Lácteos > Leche > Leche entera",
+      exact_only: false,
     },
   ],
 };
@@ -66,7 +64,7 @@ const mockGeocode: GeocodeResponse = {
   ],
 };
 
-const mockInterpret: InterpretResponse = {
+const mockInterpretResolved: InterpretResponse = {
   items: [
     {
       line: 1,
@@ -80,32 +78,65 @@ const mockInterpret: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
+      image_url: null,
+      options: [],
     },
+  ],
+  llm_used: false,
+  degraded: false,
+};
+
+const mockInterpretWithVague: InterpretResponse = {
+  items: [
     {
-      line: 2,
-      text: "pan de molde",
-      item: "pan de molde",
-      quantity: "1",
-      unit: "ud",
-      category_key: "pan-molde",
-      category_name: "Pan de molde",
+      line: 1,
+      text: "2 l de leche",
+      item: "leche",
+      quantity: "2",
+      unit: "l",
+      category_key: "leche-entera",
+      category_name: "Leche entera",
       brand: null,
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
+      image_url: null,
+      options: [],
     },
     {
-      line: 3,
-      text: "colacao",
-      item: "colacao",
+      line: 2,
+      text: "pollo",
+      item: "pollo",
       quantity: "1",
-      unit: "ud",
-      category_key: "cacao-soluble",
-      category_name: "Cacao soluble",
-      brand: "ColaCao",
+      unit: "kg",
+      category_key: null,
+      category_name: "Pollo",
+      brand: null,
       alternatives: [],
-      resolved: true,
+      resolved: false,
       needs_llm: false,
+      exact_only: false,
+      image_url: null,
+      options: [
+        {
+          category_key: "pollo_pechuga",
+          name: "Pechuga de pollo",
+          image_url: null,
+          from_unit_price: "2.50",
+          base_unit: "kg",
+          exact_only: false,
+        },
+        {
+          category_key: "pollo_muslos",
+          name: "Muslos de pollo",
+          image_url: null,
+          from_unit_price: "1.99",
+          base_unit: "kg",
+          exact_only: false,
+        },
+      ],
     },
   ],
   llm_used: false,
@@ -127,31 +158,23 @@ const mockRecommendation: Recommendation = {
       position: 1,
       lines: [
         {
+          line_id: 0,
           text: "2 l de leche",
+          product_id: 101,
+          canonical_id: 201,
+          exact_only: false,
+          brand: "Pascual",
+          image_url: null,
           product_name: "Leche entera Pascual 1L",
           packs: 2,
           quantity_bought: "2",
           cost: "1.90",
         },
-        {
-          text: "pan de molde",
-          product_name: "Pan de molde con corteza Hacendado",
-          packs: 1,
-          quantity_bought: "1",
-          cost: "1.25",
-        },
-        {
-          text: "colacao",
-          product_name: "Cacao soluble ColaCao Original 760g",
-          packs: 1,
-          quantity_bought: "1",
-          cost: "2.30",
-        },
       ],
-      subtotal: "5.45",
+      subtotal: "1.90",
     },
   ],
-  total_cost: "5.45",
+  total_cost: "1.90",
   minutes: "14.28",
   missing: [],
   route: [
@@ -160,94 +183,395 @@ const mockRecommendation: Recommendation = {
   ],
   explanation: "Tu cesta en Mercadona ahorra 2,30 € respecto a la segunda opción.",
   degraded: false,
+  flex_savings: null,
 };
 
-const LIST = "2 l de leche\npan de molde\ncolacao";
+const mockCanonicalDetail: CanonicalDetail = {
+  id: 201,
+  name: "Leche entera",
+  category_key: "leche-entera",
+  category_name: "Leche entera",
+  image_url: null,
+  from_price: "1.05",
+  from_unit_price: "1.05",
+  base_unit: "l",
+  product_count: 2,
+  chains: ["mercadona"],
+  exact_only: false,
+  products: [
+    {
+      id: 101,
+      name: "Leche entera Pascual 1L",
+      brand: "Pascual",
+      private_label: false,
+      packaging: "Botella 1 L",
+      image_url: null,
+      chain: "Mercadona",
+      price: "1.90",
+      unit_price: "1.90",
+      base_unit: "l",
+      base_quantity: "1",
+      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera", exact_only: false },
+    },
+    {
+      id: 999,
+      name: "Leche entera Hacendado 1L",
+      brand: "Hacendado",
+      private_label: true,
+      packaging: "Brik 1 L",
+      image_url: null,
+      chain: "Mercadona",
+      price: "1.05",
+      unit_price: "1.05",
+      base_unit: "l",
+      base_quantity: "1",
+      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera", exact_only: false },
+    },
+  ],
+};
+
 const ROUTE_ERROR = "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.";
 
-async function mockJson(page: Page, url: string, body: unknown, status = 200): Promise<void> {
-  await page.route(url, (route) =>
-    route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) }),
-  );
-}
-
 test.beforeEach(async ({ page }) => {
-  // Routes registered later take precedence. First block everything that is not the
-  // dev server, and any /api call without a fixture, so nothing reaches the network.
-  await page.route(
-    (url) => url.hostname !== "localhost",
-    (route) => route.abort(),
-  );
-  await page.route("**/api/**", (route) => route.abort());
-  // Map tiles: a transparent 1x1 PNG.
+  await blockUnmocked(page);
   await page.route(/tile\.openstreetmap\.org/, (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_1X1_PNG }),
   );
   await mockJson(page, "**/api/health", mockHealth);
   await mockJson(page, "**/api/categories", mockCategories);
+  await mockJson(page, "**/api/sections", { sections: [] });
   await mockJson(page, "**/api/search*", mockSearch);
   await mockJson(page, "**/api/geocode*", mockGeocode);
-  await mockJson(page, "**/api/interpret", mockInterpret);
+  await mockJson(page, "**/api/canonicals/201", mockCanonicalDetail);
 });
 
-/** Writes the list, interprets it, continues the review and picks the origin on the map. */
-async function goToOriginStep(page: Page): Promise<void> {
-  await page.goto("/");
-  await page.getByRole("textbox", { name: "Tu lista de la compra" }).fill(LIST);
-  const interpreted = page.waitForRequest("**/api/interpret");
-  await page.getByRole("button", { name: "Interpretar" }).click();
-  expect((await interpreted).postDataJSON()).toEqual({ text: LIST });
-
-  const continueButton = page.getByRole("button", { name: "Continuar" });
-  await expect(continueButton).toBeEnabled();
-  await continueButton.click();
-
-  const calculate = page.getByRole("button", { name: "Calcular cesta" });
-  await expect(calculate).toBeDisabled();
-  // The map has no accessible role: click its container to pick the origin.
-  await page.locator(".map").click();
-  await expect(calculate).toBeEnabled();
-
-  const car = page.getByRole("radio", { name: "En coche" });
-  await car.check();
-  await expect(car).toBeChecked();
+async function setPrestoredOrigin(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "smart-basket.lists",
+      JSON.stringify({
+        schema_version: 3,
+        lists: [],
+        cart: [],
+        origin: { lat: 42.5987, lon: -5.5671, label: "Plaza Mayor, 24003 León" },
+        options: { mode: "walk", maxStores: 2, priority: "balanced", returnToOrigin: true },
+      }),
+    );
+  });
 }
 
-test("full recommendation flow through list, review, origin and basket", async ({ page }) => {
+test("vague line presents choices inline and resolves before calculation", async ({ page }) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", mockInterpretWithVague);
   await mockJson(page, "**/api/recommendations", mockRecommendation);
-  await goToOriginStep(page);
 
-  const sent = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular cesta" }).click();
-  const body = (await sent).postDataJSON();
-  expect(body.mode).toBe("car");
-  expect(body.items).toHaveLength(3);
-  // The origin is the clicked point, around León.
-  expect(body.origin.lat).toBeGreaterThan(42.5);
-  expect(body.origin.lat).toBeLessThan(42.7);
-  expect(body.origin.lon).toBeGreaterThan(-5.7);
-  expect(body.origin.lon).toBeLessThan(-5.4);
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
 
-  await expect(page.getByText(mockRecommendation.explanation)).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "1. Mercadona – Mercadona Palomera" }),
-  ).toBeVisible();
+  await page.goto("/#/lista");
+  const textarea = page.getByRole("textbox", { name: "Tu lista" });
+  await textarea.fill("2 l de leche\npollo");
+
+  // Click Calcular
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  // Vague line header appears inline
+  await expect(page.getByRole("heading", { name: "¿Qué pollo?" })).toBeVisible();
+  // Two chips with options
+  const pechugaChip = page.getByRole("button", { name: /Pechuga de pollo/ });
+  const muslosChip = page.getByRole("button", { name: /Muslos de pollo/ });
+  await expect(pechugaChip).toBeVisible();
+  await expect(muslosChip).toBeVisible();
+  await expect(page.getByText(/desde 2,50\s*€\/kg/)).toBeVisible();
+
+  // No recommendation request yet
+  expect(recRequests).toHaveLength(0);
+
+  // Pick "Pechuga de pollo"
+  await pechugaChip.click();
+
+  // Now resolved, pick Calcular again
+  const recPromise = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  const sent = await recPromise;
+  const body = sent.postDataJSON();
+  expect(body.items).toHaveLength(2);
+  expect(body.items[0].category_key).toBe("leche-entera");
+  expect(body.items[1].category_key).toBe("pollo_pechuga");
+  expect(body.items[1].text).toBe("pollo");
+  expect(body.origin).toEqual({ lat: 42.5987, lon: -5.5671 });
+
+  // Basket is shown
+  await expect(page.getByRole("heading", { name: "Tu cesta" })).toBeVisible();
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
-  await expect(page.getByText("Pan de molde con corteza Hacendado")).toBeVisible();
-  await expect(page.getByText("Cacao soluble ColaCao Original 760g")).toBeVisible();
-  await expect(page.getByText(/Total:\s*5,45\s*€/)).toBeVisible();
-  // Minutes travel as a decimal string and are shown rounded.
-  await expect(page.getByText("14 min de trayecto")).toBeVisible();
-  await expect(page.getByText("Av. de Portugal, 12")).toBeVisible();
+  expect(recRequests).toHaveLength(1);
+});
 
-  // Map: the origin marker plus one numbered marker per store, and the route line.
-  await expect(page.locator(".map .leaflet-marker-icon")).toHaveCount(
-    1 + mockRecommendation.stores.length,
-  );
-  await expect(page.locator(".map path.leaflet-interactive")).toHaveCount(1);
+test("a line with shades asks for a concrete product and sends no basket request", async ({
+  page,
+}) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", {
+    items: [
+      {
+        line: 1,
+        text: "tinte",
+        item: "tinte",
+        quantity: "1",
+        unit: "ud",
+        category_key: "tinte",
+        category_name: "Tinte de pelo",
+        brand: null,
+        alternatives: [],
+        resolved: false,
+        needs_llm: false,
+        exact_only: true,
+        image_url: null,
+        options: [],
+      },
+    ],
+    llm_used: false,
+    degraded: false,
+  } satisfies InterpretResponse);
+
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("tinte");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  await expect(
+    page.getByText("«tinte» depende del tono o del color: elige el producto concreto."),
+  ).toBeVisible();
+  expect(recRequests).toHaveLength(0);
+
+  await page.getByRole("button", { name: "Elegir en el catálogo" }).click();
+  await expect(page).toHaveURL(/#\/catalogo$/);
+  await expect(page.getByPlaceholder(/Busca un producto/).first()).toHaveValue("tinte");
+  expect(recRequests).toHaveLength(0);
+});
+
+test("basket with flex_savings offers applying any brand", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "smart-basket.lists",
+      JSON.stringify({
+        schema_version: 3,
+        lists: [],
+        cart: [
+          {
+            id: "cart-1",
+            product_id: 101,
+            name: "Leche entera Pascual 1L",
+            brand: "Pascual",
+            packaging: "Botella 1 L",
+            image_url: null,
+            category_key: "leche-entera",
+            category_name: "Leche entera",
+            quantity: 2,
+            accept: "exact",
+            locked: false,
+          },
+        ],
+        origin: { lat: 42.5987, lon: -5.5671, label: "Plaza Mayor, 24003 León" },
+        options: { mode: "walk", maxStores: 2, priority: "balanced", returnToOrigin: true },
+      }),
+    );
+  });
+
+  const flexRecommendation: Recommendation = {
+    ...mockRecommendation,
+    flex_savings: {
+      total: "0.85",
+      lines: [{ line_id: 0, savings: "0.85" }],
+    },
+  };
+  await mockJson(page, "**/api/recommendations", flexRecommendation);
+
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  await page.goto("/#/lista");
+  // Open cart drawer and calculate basket from concrete item
+  await page.getByRole("button", { name: "Cesta" }).click();
+  const firstRecPromise = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Calcular cesta" }).click();
+
+  const firstReq = await firstRecPromise;
+  const firstBody = firstReq.postDataJSON();
+  expect(firstBody.items[0].product_id).toBe(101);
+  expect(firstBody.items[0].accept).toBe("exact");
+
+  // Savings notice is visible
+  await expect(page.getByText(/Con cualquier marca ahorrarías 0,85\s*€\./)).toBeVisible();
+  await expect(page.getByText(/0,85\s*€ menos con cualquier marca/)).toBeVisible();
+
+  // Click "Aplicar a toda la lista"
+  const secondRecPromise = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Aplicar a toda la lista" }).click();
+
+  const secondReq = await secondRecPromise;
+  const secondBody = secondReq.postDataJSON();
+  expect(secondBody.items[0].product_id).toBe(101);
+  expect(secondBody.items[0].accept).toBe("equivalent");
+
+  await expect.poll(() => recRequests.length).toBe(2);
+});
+
+test("basket line with canonical_id can be swapped for an alternative product", async ({ page }) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", mockInterpretResolved);
+  await mockJson(page, "**/api/recommendations", mockRecommendation);
+
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  const firstRecPromise = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await firstRecPromise;
+
+  await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
+  expect(recRequests).toHaveLength(1);
+
+  // Click "Cambiar" on the basket line
+  await page.getByRole("button", { name: "Cambiar" }).click();
+
+  // Modal appears with alternatives
+  const hacendadoOption = page.getByRole("button", { name: /Leche entera Hacendado 1L/ });
+  await expect(hacendadoOption).toBeVisible();
+
+  const secondRecPromise = page.waitForRequest("**/api/recommendations");
+  await hacendadoOption.click();
+
+  const sent = await secondRecPromise;
+  const body = sent.postDataJSON();
+  expect(body.items[0].product_id).toBe(999);
+  expect(body.items[0].accept).toBe("exact");
+
+  await expect.poll(() => recRequests.length).toBe(2);
+});
+
+test("a basket line of a product with shades offers no Cambiar", async ({ page }) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", mockInterpretResolved);
+  const shades: Recommendation = {
+    ...mockRecommendation,
+    stores: mockRecommendation.stores.map((store) => ({
+      ...store,
+      lines: store.lines.map((line) => ({ ...line, exact_only: true })),
+    })),
+  };
+  await mockJson(page, "**/api/recommendations", shades);
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cambiar" })).toHaveCount(0);
+});
+
+test("a search result with shades leaves the unknown line waiting for a product", async ({
+  page,
+}) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", {
+    items: [
+      {
+        line: 1,
+        text: "cosa rara",
+        item: "cosa rara",
+        quantity: "1",
+        unit: "ud",
+        category_key: null,
+        category_name: null,
+        brand: null,
+        alternatives: [],
+        resolved: false,
+        needs_llm: false,
+        exact_only: false,
+        image_url: null,
+        options: [],
+      },
+    ],
+    llm_used: false,
+    degraded: false,
+  } satisfies InterpretResponse);
+  await mockJson(page, "**/api/search**", {
+    results: [{ key: "tinte", name: "Tinte de pelo", kind: "leaf", path: "Cuidado", exact_only: true }],
+  } satisfies SearchResponse);
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("cosa rara");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  const search = page.getByPlaceholder("Busca el producto");
+  await search.fill("tinte");
+  await search.press("Enter");
+  await page.getByRole("button", { name: /Tinte de pelo/ }).click();
+
+  await expect(page.getByRole("button", { name: "Elegir en el catálogo" })).toBeVisible();
+});
+
+test("remembered origin appears folded on reload and is reused without prompting", async ({ page }) => {
+  // Do not seed localStorage: pick an origin using the simulated search
+  await mockJson(page, "**/api/interpret", mockInterpretResolved);
+  await mockJson(page, "**/api/recommendations", mockRecommendation);
+
+  await page.goto("/#/lista");
+  await expect(page.getByRole("heading", { name: "¿Desde dónde sales?" })).toBeVisible();
+
+  const address = page.getByRole("searchbox", { name: "Escribe una dirección de León" });
+  await address.fill("Plaza Mayor");
+  await page.getByRole("button", { name: "Buscar" }).click();
+  await page.getByRole("button", { name: /Plaza Mayor, 24003 León/ }).click();
+
+  // Folded origin row shows label
+  await expect(
+    page.getByText(/Desde:\s*Plaza Mayor, 24003 León\s*·\s*A pie\s*·\s*Hasta 2 tiendas/),
+  ).toBeVisible();
+
+  // Reload page
+  await page.reload();
+
+  // Folded origin row still visible
+  await expect(
+    page.getByText(/Desde:\s*Plaza Mayor, 24003 León\s*·\s*A pie\s*·\s*Hasta 2 tiendas/),
+  ).toBeVisible();
+
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  // Write list and calculate: goes directly to basket without asking for origin
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  const recPromise = page.waitForRequest("**/api/recommendations");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await recPromise;
+
+  await expect(page.getByRole("heading", { name: "Tu cesta" })).toBeVisible();
+  expect(recRequests).toHaveLength(1);
+  expect(recRequests[0].postDataJSON().origin).toEqual({ lat: 42.5987, lon: -5.5671 });
 });
 
 test("address search waits for Enter and three characters", async ({ page }) => {
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
   const searches: string[] = [];
   await page.route("**/api/geocode*", (route) => {
     searches.push(route.request().url());
@@ -257,7 +581,10 @@ test("address search waits for Enter and three characters", async ({ page }) => 
       body: JSON.stringify(mockGeocode),
     });
   });
-  await goToOriginStep(page);
+
+  await page.goto("/#/lista");
+  // Origin is not set yet, so unfolded origin section is open
+  await expect(page.getByRole("heading", { name: "¿Desde dónde sales?" })).toBeVisible();
 
   const address = page.getByRole("searchbox", { name: "Escribe una dirección de León" });
   const buscar = page.getByRole("button", { name: "Buscar" });
@@ -265,7 +592,6 @@ test("address search waits for Enter and three characters", async ({ page }) => 
 
   await address.fill("Ca");
   await expect(buscar).toBeDisabled();
-  // Long enough for the debounce to fire if typing still sent requests.
   await page.waitForTimeout(500);
   expect(searches).toHaveLength(0);
 
@@ -276,14 +602,25 @@ test("address search waits for Enter and three characters", async ({ page }) => 
   await expect.poll(() => searches.length).toBe(1);
   expect(searches[0]).toContain("q=Calle%20Ancha");
   await expect(page.getByText(mockGeocode.results[0].label)).toBeVisible();
+  expect(recRequests).toHaveLength(0);
 });
 
 test("recommendations 503 displays the error inline", async ({ page }) => {
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", mockInterpretResolved);
   await mockJson(page, "**/api/recommendations", { detail: ROUTE_ERROR }, 503);
-  await goToOriginStep(page);
-  await page.getByRole("button", { name: "Calcular cesta" }).click();
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
 
   await expect(page.getByRole("alert").filter({ hasText: ROUTE_ERROR })).toBeVisible();
-  // The flow stays on the origin step.
-  await expect(page.getByRole("button", { name: "Calcular cesta" })).toBeVisible();
+  // Flow remains on the list screen
+  await expect(page.getByRole("button", { name: "Calcular", exact: true })).toBeVisible();
+  await expect.poll(() => recRequests.length).toBe(1);
 });

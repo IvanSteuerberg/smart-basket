@@ -12,6 +12,8 @@ sources:
   - /decisions/0014-rule-based-preprocessor.md
   - /decisions/0015-seed-taxonomy.md
 ---
+> Line resolution (leaf as comparable product and its name, unit and processed guards) is superseded by [0020](/decisions/0020-rule-based-canonical-matching.md) since iteration 12.
+
 # Context
 
 Iteration 11 joins the parts built so far into one flow for Mercadona León:

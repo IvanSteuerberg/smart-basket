@@ -85,7 +85,7 @@ def test_seed_brand_aliases_and_implies_reach_the_lexicon(session, lexicon):
     assert hacendado.is_private_label is True
     assert hacendado.implies is None
 
-    assert brands["Actimel"].implies == "yogur_liquido"
+    assert brands["Actimel"].implies == "bebida_lactobacilos"
     assert brands["Activia"].implies == "bifidus"
     # `match_name` false exports only the explicit aliases, never the bare name.
     assert brands["Dia"].aliases == ()
@@ -102,6 +102,8 @@ def test_a_category_removed_from_the_file_leaves_the_lexicon(session, tmp_path):
         for node in nodes:
             if node["key"] == "platano":
                 continue
+            if "options" in node:
+                node["options"] = [option for option in node["options"] if option != "platano"]
             node["children"] = without_platano(node.get("children", []))
             kept.append(node)
         return kept
@@ -148,13 +150,13 @@ def test_preprocessor_resolves_seed_brands(pp: Preprocessor):
 
 def test_ordinary_words_are_not_taken_as_brands(pp: Preprocessor):
     gallo = pp.preprocess("1 kg de gallo").items[0]
-    assert gallo.generic_key == "pescado_blanco_otro"
+    assert gallo.generic_key == "gallo_pescado"
     assert gallo.brand is None
     assert gallo.resolved is True
 
     actimel = pp.preprocess("actimel").items[0]
     assert actimel.brand == "Actimel"
-    assert actimel.generic_key == "yogur_liquido"
+    assert actimel.generic_key == "bebida_lactobacilos"
     assert actimel.resolved is True
 
     pan = pp.preprocess("pan del dia").items[0]

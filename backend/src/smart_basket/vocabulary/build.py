@@ -86,6 +86,7 @@ def _load_variants(path: Path = VARIANTS_FILE) -> list[VariantTerm]:
             key=variant["key"],
             name=variant.get("name", variant["key"]),
             forms=tuple(variant.get("forms", [variant.get("name", variant["key"])])),
+            canonical=variant.get("canonical", False),
         )
         for variant in data.get("variants", [])
     ]
@@ -133,7 +134,14 @@ def _brand_entry(brand: BrandTerm) -> dict[str, Any]:
 
 
 def _variant_entry(variant: VariantTerm) -> dict[str, Any]:
-    return {"key": variant.key, "name": variant.name, "forms": list(variant.forms)}
+    entry: dict[str, Any] = {
+        "key": variant.key,
+        "name": variant.name,
+        "forms": list(variant.forms),
+    }
+    if variant.canonical:
+        entry["canonical"] = True
+    return entry
 
 
 def _json_number(value: Decimal) -> int | float:

@@ -114,7 +114,7 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     load(session, seed_dir)
     row = session.execute(
         text(
-            "select level, base_unit, default_quantity, forms, is_vague "
+            "select level, base_unit, default_quantity, forms, is_vague, options "
             "from category where key = 'yogur_griego'"
         )
     ).one()
@@ -123,6 +123,7 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     assert row.default_quantity == Decimal("0.5")
     assert row.forms == ["yogur griego", "griego"]
     assert row.is_vague is False
+    assert row.options == []
 
     natural = session.execute(
         text("select default_quantity, forms from category where key = 'yogur_natural'")
@@ -131,11 +132,31 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     assert natural.forms == ["yogur natural"]
 
     yogures = session.execute(
-        text("select base_unit, forms, is_vague from category where key = 'yogures'")
+        text("select base_unit, forms, is_vague, options from category where key = 'yogures'")
     ).one()
     assert yogures.base_unit is None
     assert yogures.forms == ["yogur", "yogures"]
     assert yogures.is_vague is True
+    assert yogures.options == ["yogur_griego", "yogur_natural"]
+
+
+def test_exact_only_is_stored_and_defaults_to_false(session, seed_dir, tmp_path):
+    data_dir = copy_seed(seed_dir, tmp_path)
+
+    def mark(data: dict) -> None:
+        for group in data["categories"]:
+            for child in group.get("children", []):
+                if child["key"] == "yogures":
+                    for leaf in child["children"]:
+                        if leaf["key"] == "yogur_natural":
+                            leaf["exact_only"] = True
+
+    update_json(data_dir / "taxonomy_es.json", mark)
+    load(session, data_dir)
+    flags = dict(session.execute(text("select key, exact_only from category")).all())
+    assert flags["yogur_natural"] is True
+    assert flags["yogur_griego"] is False
+    assert flags["yogures"] is False
 
 
 def test_mapping_change_on_the_second_load_updates_category_id(session, seed_dir, tmp_path):

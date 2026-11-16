@@ -46,6 +46,8 @@ export interface SearchResult {
   name: string;
   kind: SearchKind;
   path: string;
+  /** Only concrete products are bought here (shades): a list line for it needs a product. */
+  exact_only: boolean;
 }
 
 export interface SearchResponse {
@@ -64,12 +66,131 @@ export interface InterpretedItem {
   alternatives: unknown[];
   resolved: boolean;
   needs_llm: boolean;
+  /** Only concrete products are bought in this category (shades): the user picks a product. */
+  exact_only: boolean;
+  /** Photo of the cheapest product per unit of its category, if any. */
+  image_url: string | null;
+  /** Choices for a vague term ("pollo", "fruta"); empty when the line is not vague. */
+  options: InterpretOption[];
+}
+
+/** One choice offered for a vague line, shown as a chip with a photo. */
+export interface InterpretOption {
+  category_key: string;
+  name: string;
+  image_url: string | null;
+  from_unit_price: Decimal | null;
+  base_unit: BaseUnit;
+  /** Only concrete products are bought here (shades): choosing it still needs a product. */
+  exact_only: boolean;
 }
 
 export interface InterpretResponse {
   items: InterpretedItem[];
   llm_used: boolean;
   degraded: boolean;
+}
+
+/** Base unit the price per unit is expressed in, as the catalog returns it. */
+export type BaseUnit = "kg" | "l" | "ud";
+export type ProductSort = "unit_price" | "price" | "name";
+
+/** The catalog product a product is an option of. */
+export interface CanonicalProduct {
+  id: number;
+  name: string;
+  category_key: string;
+  category_name: string;
+  /** Products with shades: never swapped for another one of the canonical product. */
+  exact_only: boolean;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  brand: string | null;
+  private_label: boolean;
+  packaging: string | null;
+  image_url: string | null;
+  chain: string;
+  price: Decimal;
+  unit_price: Decimal;
+  base_unit: BaseUnit;
+  base_quantity: Decimal | null;
+  canonical: CanonicalProduct | null;
+}
+
+export interface ProductDetail extends Product {
+  /** Other products of the same canonical, cheapest per unit first. */
+  alternatives: Product[];
+}
+
+/** A top-level section of the catalog, with a representative photo. */
+export interface CatalogSection {
+  key: string;
+  name: string;
+  products: number;
+  image_url: string | null;
+}
+
+export interface SectionsResponse {
+  sections: CatalogSection[];
+}
+
+export interface ProductsPage {
+  items: Product[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface ProductsQuery {
+  section?: string | null;
+  category?: string | null;
+  q?: string | null;
+  sort?: ProductSort;
+  page?: number;
+  size?: number;
+}
+
+/** A generic product (canonical) as a catalog card: no brand or size. */
+export interface CanonicalCard {
+  id: number;
+  name: string;
+  category_key: string;
+  category_name: string;
+  /** Photo of its cheapest product per unit. */
+  image_url: string | null;
+  from_price: Decimal;
+  from_unit_price: Decimal;
+  base_unit: BaseUnit;
+  /** Number of concrete products of this canonical. */
+  product_count: number;
+  /** Chain codes that sell it, e.g. "mercadona". */
+  chains: string[];
+  /** Products with shades: never compared as generic, only a concrete product is bought. */
+  exact_only: boolean;
+}
+
+export interface CanonicalDetail extends CanonicalCard {
+  /** Its concrete products, cheapest per unit first. */
+  products: Product[];
+}
+
+export interface CanonicalsPage {
+  items: CanonicalCard[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface CanonicalsQuery {
+  section?: string | null;
+  category?: string | null;
+  q?: string | null;
+  chain?: string | null;
+  page?: number;
+  size?: number;
 }
 
 export interface GeocodeResult {
@@ -87,9 +208,21 @@ export interface LatLon {
   lon: number;
 }
 
+/** "exact": that product; "equivalent": any product of its canonical. */
+export type Accept = "exact" | "equivalent";
+
+/**
+ * A list line. It carries either `category_key` (generic) or `product_id`
+ * (concrete), never both. With `product_id`, `quantity` is the number of packs
+ * and `unit` is "ud". A generic line only accepts "equivalent".
+ */
 export interface RecommendationItemRequest {
   text: string;
-  category_key: string | null;
+  category_key?: string | null;
+  product_id?: number | null;
+  accept?: Accept;
+  /** Variant keys (e.g. "sin_lactosa"); when absent the server reads them from `text`. */
+  variants?: string[] | null;
   quantity: string;
   unit: Unit;
   brand: string | null;
@@ -104,11 +237,21 @@ export interface RecommendationRequest {
   priority_mode: PriorityMode;
   return_to_origin: boolean;
   degraded: boolean;
+  /** Chain codes to shop in ("Comprar solo en..."); absent or empty means every chain. */
+  chains?: string[] | null;
 }
 
 export interface BasketLine {
+  /** Index of the line in the request `items`. */
+  line_id: number;
   text: string;
+  product_id: number;
+  canonical_id: number | null;
+  /** The product has shades: it is never swapped, so the line offers no "Cambiar". */
+  exact_only: boolean;
   product_name: string;
+  brand: string | null;
+  image_url: string | null;
   packs: number;
   quantity_bought: Decimal;
   cost: Decimal;
@@ -135,6 +278,7 @@ export interface MissingStop {
 }
 
 export interface MissingItem {
+  line_id: number;
   text: string;
   reason: MissingReason;
   stop: MissingStop | null;
@@ -152,17 +296,48 @@ export interface Recommendation {
   route: [number, number][];
   explanation: string;
   degraded: boolean;
+  /** What the basket would save with every "exact" line as "equivalent"; null when nothing. */
+  flex_savings: FlexSavings | null;
+}
+
+export interface FlexSavings {
+  total: Decimal;
+  lines: { line_id: number; savings: Decimal }[];
+}
+
+/**
+ * `detail` of a 422 when a generic line needs the user to choose first: `VAGUE_LINE` when the
+ * category is too vague to buy, `EXACT_ONLY` when only a concrete product can be bought (shades).
+ */
+export interface ChoiceRequiredDetail {
+  code: "VAGUE_LINE" | "EXACT_ONLY";
+  line_id: number;
+  category_key: string;
+  message: string;
 }
 
 /** Error raised when the API answers with a non-2xx status and a `detail` message. */
 export class ApiError extends Error {
   readonly status: number;
+  /** The raw `detail` of the response body, when it had one (e.g. a ChoiceRequiredDetail). */
+  readonly detail: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, detail: unknown = null) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.detail = detail;
   }
+}
+
+export function isChoiceRequired(
+  error: unknown,
+): error is ApiError & { detail: ChoiceRequiredDetail } {
+  if (!(error instanceof ApiError) || error.detail === null || typeof error.detail !== "object") {
+    return false;
+  }
+  const code = (error.detail as { code?: unknown }).code;
+  return code === "VAGUE_LINE" || code === "EXACT_ONLY";
 }
 
 export function describeError(error: unknown): string {
@@ -170,26 +345,35 @@ export function describeError(error: unknown): string {
   return String(error);
 }
 
-async function detailOf(response: Response): Promise<string> {
+async function errorOf(response: Response): Promise<ApiError> {
+  let detail: unknown = null;
   try {
     const body: unknown = await response.json();
     if (body !== null && typeof body === "object" && "detail" in body) {
-      const detail = (body as { detail: unknown }).detail;
-      if (typeof detail === "string" && detail) return detail;
-      if (Array.isArray(detail)) {
-        const messages = detail.map((entry) => {
-          if (entry !== null && typeof entry === "object" && "msg" in entry) {
-            return String((entry as { msg: unknown }).msg);
-          }
-          return String(entry);
-        });
-        if (messages.length > 0) return messages.join(". ");
-      }
+      detail = (body as { detail: unknown }).detail;
     }
   } catch {
     // The body was not JSON; fall back to the status code.
   }
-  return `HTTP ${response.status}`;
+  return new ApiError(messageOf(detail) ?? `HTTP ${response.status}`, response.status, detail);
+}
+
+function messageOf(detail: unknown): string | null {
+  if (typeof detail === "string" && detail) return detail;
+  if (detail !== null && typeof detail === "object" && !Array.isArray(detail)) {
+    const message = (detail as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
+  if (Array.isArray(detail)) {
+    const messages = detail.map((entry) => {
+      if (entry !== null && typeof entry === "object" && "msg" in entry) {
+        return String((entry as { msg: unknown }).msg);
+      }
+      return String(entry);
+    });
+    if (messages.length > 0) return messages.join(". ");
+  }
+  return null;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -197,7 +381,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   headers.set("Accept", "application/json");
   const response = await fetch(path, { ...init, headers });
   if (!response.ok) {
-    throw new ApiError(await detailOf(response), response.status);
+    throw await errorOf(response);
   }
   return (await response.json()) as T;
 }
@@ -205,7 +389,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export async function getHealth(signal?: AbortSignal): Promise<Health> {
   const response = await fetch("/api/health", { signal, headers: { Accept: "application/json" } });
   if (!response.ok && response.status !== 503) {
-    throw new ApiError(await detailOf(response), response.status);
+    throw await errorOf(response);
   }
   return (await response.json()) as Health;
 }
@@ -231,6 +415,50 @@ export function interpretText(text: string, signal?: AbortSignal): Promise<Inter
 export function geocode(query: string, signal?: AbortSignal): Promise<GeocodeResult[]> {
   const path = `/api/geocode?q=${encodeURIComponent(query)}`;
   return request<GeocodeResponse>(path, { signal }).then((body) => body.results);
+}
+
+export function getSections(signal?: AbortSignal): Promise<SectionsResponse> {
+  return request<SectionsResponse>("/api/sections", { signal });
+}
+
+export function getProducts(
+  query: ProductsQuery = {},
+  signal?: AbortSignal,
+): Promise<ProductsPage> {
+  const params = new URLSearchParams();
+  if (query.section) params.set("section", query.section);
+  if (query.category) params.set("category", query.category);
+  if (query.q) params.set("q", query.q);
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page !== undefined) params.set("page", String(query.page));
+  if (query.size !== undefined) params.set("size", String(query.size));
+  const search = params.toString();
+  return request<ProductsPage>(`/api/products${search === "" ? "" : `?${search}`}`, { signal });
+}
+
+export function getProduct(id: number, signal?: AbortSignal): Promise<ProductDetail> {
+  return request<ProductDetail>(`/api/products/${id}`, { signal });
+}
+
+export function getCanonicals(
+  query: CanonicalsQuery = {},
+  signal?: AbortSignal,
+): Promise<CanonicalsPage> {
+  const params = new URLSearchParams();
+  if (query.section) params.set("section", query.section);
+  if (query.category) params.set("category", query.category);
+  if (query.q) params.set("q", query.q);
+  if (query.chain) params.set("chain", query.chain);
+  if (query.page !== undefined) params.set("page", String(query.page));
+  if (query.size !== undefined) params.set("size", String(query.size));
+  const search = params.toString();
+  return request<CanonicalsPage>(`/api/canonicals${search === "" ? "" : `?${search}`}`, {
+    signal,
+  });
+}
+
+export function getCanonical(id: number, signal?: AbortSignal): Promise<CanonicalDetail> {
+  return request<CanonicalDetail>(`/api/canonicals/${id}`, { signal });
 }
 
 export function requestRecommendation(

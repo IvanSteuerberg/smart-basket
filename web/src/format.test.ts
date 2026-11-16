@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatAmount,
   formatDateTime,
+  formatDistance,
   formatEuro,
   formatMinutes,
   formatQuantity,
+  formatUnitPrice,
+  haversineDistanceMeters,
   parseDecimal,
 } from "./format";
 
@@ -30,6 +33,18 @@ describe("money formatting", () => {
 
   it("keeps the raw value when it cannot be parsed", () => {
     expect(formatEuro("n/d")).toBe("n/d €");
+  });
+});
+
+describe("unit price formatting", () => {
+  it("adds the base unit after the price", () => {
+    expect(formatUnitPrice("1.15", "kg")).toBe("1,15 €/kg");
+    expect(formatUnitPrice("0.95", "l")).toBe("0,95 €/l");
+    expect(formatUnitPrice(2, "ud")).toBe("2,00 €/ud");
+  });
+
+  it("keeps the raw value when it cannot be parsed", () => {
+    expect(formatUnitPrice("n/d", "kg")).toBe("n/d €/kg");
   });
 });
 
@@ -61,3 +76,30 @@ describe("formatDateTime", () => {
     expect(formatDateTime("ayer")).toBe("ayer");
   });
 });
+
+describe("distance formatting", () => {
+  it("formats distances below 1000 meters in whole meters", () => {
+    expect(formatDistance(450)).toBe("a 450 m");
+    expect(formatDistance(450.4)).toBe("a 450 m");
+    expect(formatDistance(0)).toBe("a 0 m");
+    expect(formatDistance(999)).toBe("a 999 m");
+  });
+
+  it("formats distances of 1000 meters or more in kilometers with one Spanish decimal", () => {
+    expect(formatDistance(1000)).toBe("a 1,0 km");
+    expect(formatDistance(1200)).toBe("a 1,2 km");
+    expect(formatDistance(1234)).toBe("a 1,2 km");
+    expect(formatDistance(2500)).toBe("a 2,5 km");
+  });
+
+  it("computes haversine distance between coordinates", () => {
+    // Plaza Mayor (León) to Mercadona Palomera (~220m)
+    const p1 = { lat: 42.5987, lon: -5.5671 };
+    const p2 = { lat: 42.6001, lon: -5.565 };
+    const meters = haversineDistanceMeters(p1, p2);
+    expect(meters).toBeGreaterThan(200);
+    expect(meters).toBeLessThan(260);
+    expect(formatDistance(meters)).toBe("a 232 m");
+  });
+});
+

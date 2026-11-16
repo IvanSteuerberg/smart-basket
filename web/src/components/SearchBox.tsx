@@ -88,8 +88,8 @@ export function SearchBox<T>({
   const tooShort = query.trim().length < minLength;
 
   return (
-    <form className="search-box" onSubmit={submit}>
-      <div className="search-row">
+    <form className="relative my-2 grid gap-1.5" onSubmit={submit}>
+      <div className="flex gap-2">
         <input
           type="search"
           value={query}
@@ -97,25 +97,34 @@ export function SearchBox<T>({
           aria-label={placeholder}
           autoComplete="off"
           onChange={(event) => setQuery(event.target.value)}
+          className="w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-brand focus:ring-1 focus:ring-brand"
         />
         {onDemand && (
-          <button type="submit" disabled={tooShort || searching}>
+          <button
+            type="submit"
+            disabled={tooShort || searching}
+            className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+          >
             Buscar
           </button>
         )}
       </div>
       {error && (
-        <p className="error" role="alert">
+        <p className="text-xs font-semibold text-price" role="alert">
           {error}
         </p>
       )}
       {results.length > 0 && (
-        <ul className="search-results">
+        <ul className="mt-1 divide-y divide-stone-100 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
           {results.map((item) => (
             <li key={keyOf(item)}>
-              <button type="button" className="search-result" onClick={() => choose(item)}>
+              <button
+                type="button"
+                className="flex w-full flex-col p-2.5 text-left text-sm text-slate-900 transition-colors hover:bg-brand-soft"
+                onClick={() => choose(item)}
+              >
                 <span>{labelOf(item)}</span>
-                {hintOf && <span className="small muted">{hintOf(item)}</span>}
+                {hintOf && <span className="text-xs text-stone-500">{hintOf(item)}</span>}
               </button>
             </li>
           ))}

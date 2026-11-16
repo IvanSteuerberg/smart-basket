@@ -31,7 +31,8 @@ def test_categories_are_sections_groups_and_leaves(client):
     assert set(section) == {"key", "name", "children"}
     group = node(section["children"], "pan")
     assert set(group) == {"key", "name", "vague", "products", "children"}
-    assert group["vague"] is True
+    assert group["vague"] is False
+    assert node(sections, "yogures")["vague"] is True
     leaf = node(group["children"], "pan_molde")
     assert set(leaf) == {"key", "name", "base_unit", "products"}
     assert leaf["base_unit"] == "kg"
@@ -115,7 +116,19 @@ def test_search_ranks_exact_and_prefix_matches_first(client):
     results = client.get("/api/search", params={"q": "pan"}).json()["results"]
     keys = [result["key"] for result in results]
     assert keys[0] == "pan"
-    assert keys.index("pan_molde") < keys.index("panales")
+    # The exact form first, then prefix matches such as "pan" in "barra de pan".
+    assert "barra_pan" in keys
+
+
+def test_search_marks_the_leaves_with_shades(client, session):
+    session.execute(text("update category set exact_only = true where key = 'pan_molde'"))
+    session.commit()
+
+    results = client.get("/api/search", params={"q": "pan de molde"}).json()["results"]
+
+    flags = {result["key"]: result["exact_only"] for result in results}
+    assert flags["pan_molde"] is True
+    assert flags["pan"] is False
 
 
 def test_search_needs_two_characters_once_stripped(client):

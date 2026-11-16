@@ -1,8 +1,10 @@
 """List interpretation through the API, with fake LLM providers (no network)."""
 
 import os
+from decimal import Decimal
 
 import pytest
+from sqlalchemy import text
 
 from smart_basket.api.catalog import get_llm_provider
 from smart_basket.llm import LLMError
@@ -54,7 +56,12 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
         "alternatives",
         "resolved",
         "needs_llm",
+        "exact_only",
+        "image_url",
+        "options",
     }
+    assert item["image_url"] is None
+    assert item["options"] == []
     assert item["line"] == 0
     assert item["quantity"] == "2"
     assert item["unit"] == "l"
@@ -62,6 +69,7 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
     assert item["category_name"] == "Leche"
     assert item["resolved"] is True
     assert item["needs_llm"] is False
+    assert item["exact_only"] is False
 
 
 def test_rule_lines_keep_the_category_of_their_own_match(client):
@@ -73,8 +81,9 @@ def test_rule_lines_keep_the_category_of_their_own_match(client):
     colacao, pasta = body["items"]
     assert colacao["category_key"] == "cacao_soluble"
     assert colacao["category_name"] == "Cacao soluble"
-    assert pasta["category_key"] == "pasta_corta"
-    assert pasta["category_name"] == "Macarrones y pasta corta"
+    # "pasta" alone is vague; the specific alternative wins.
+    assert pasta["category_key"] == "espaguetis"
+    assert pasta["category_name"] == "Espaguetis"
 
 
 def test_unresolved_lines_go_to_the_llm(client):
@@ -161,3 +170,204 @@ def test_text_length_is_validated(client):
     assert client.post("/api/interpret", json={"text": ""}).status_code == 422
     assert client.post("/api/interpret", json={"text": "x" * 2001}).status_code == 422
     assert client.post("/api/interpret", json={"text": "x" * 2000}).status_code == 200
+
+
+def add_option_product(
+    session,
+    category_key: str,
+    *,
+    sku: str,
+    base_quantity: str,
+    base_unit: str,
+    price: str,
+    image_url: str,
+) -> None:
+    """A priced synthetic product in a seeded leaf, matched to a canonical product."""
+    category_id = session.execute(
+        text("select id from category where key = :key"), {"key": category_key}
+    ).scalar_one()
+    canonical_id = session.execute(
+        text(
+            "insert into canonical_product (category_id, name, variant_key, base_unit)"
+            " values (:category, :name, '', :unit) returning id"
+        ),
+        {"category": category_id, "name": f"Canónico {sku}", "unit": base_unit},
+    ).scalar_one()
+    product_id = session.execute(
+        text(
+            "insert into chain_product (chain_id, chain_sku, name, base_quantity, base_unit,"
+            " canonical_id, match_method, match_confidence, image_url)"
+            " select c.id, :sku, :name, :quantity, :unit, :canonical, 'rule', 1.0, :image"
+            " from chain c where c.code = 'mercadona' returning id"
+        ),
+        {
+            "sku": sku,
+            "name": f"Producto {sku}",
+            "quantity": Decimal(base_quantity),
+            "unit": base_unit,
+            "canonical": canonical_id,
+            "image": image_url,
+        },
+    ).scalar_one()
+    zone_id = session.execute(
+        text(
+            "select z.id from zone z join chain c on c.id = z.chain_id"
+            " where c.code = 'mercadona' order by z.id limit 1"
+        )
+    ).scalar_one()
+    session.execute(
+        text(
+            "insert into chain_product_zone (chain_product_id, zone_id, is_available)"
+            " values (:product, :zone, true)"
+        ),
+        {"product": product_id, "zone": zone_id},
+    )
+    session.execute(
+        text(
+            "insert into price_current (chain_product_id, zone_id, price, valid_from, last_seen_at)"
+            " values (:product, :zone, :price, '2026-11-13 05:00:00+00',"
+            " '2026-11-13 05:07:00+00')"
+        ),
+        {"product": product_id, "zone": zone_id, "price": Decimal(price)},
+    )
+    session.flush()
+
+
+def test_an_interpreted_line_carries_the_photo_of_its_cheapest_product(client, session):
+    add_option_product(
+        session,
+        "leche",
+        sku="LECHE1",
+        base_quantity="1",
+        base_unit="l",
+        price="0.95",
+        image_url="https://example.test/leche.jpg",
+    )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "leche"}).json()
+
+    (item,) = body["items"]
+    assert item["category_key"] == "leche"
+    assert item["image_url"] == "https://example.test/leche.jpg"
+
+
+def test_a_vague_category_offers_its_option_leaves_with_the_cheapest_price(client, session):
+    for sku, quantity, price, image in (
+        ("PECHUGA", "1", "5.00", "https://example.test/pechuga.jpg"),
+        ("MUSLO", "0.5", "1.75", "https://example.test/muslo.jpg"),
+        ("ALITAS", "1.5", "4.80", "https://example.test/alitas.jpg"),
+        ("ENTERO", "2", "6.00", "https://example.test/entero.jpg"),
+    ):
+        key = {
+            "PECHUGA": "pollo_pechuga",
+            "MUSLO": "pollo_muslo_contramuslo",
+            "ALITAS": "pollo_alitas",
+            "ENTERO": "pollo_entero",
+        }[sku]
+        add_option_product(
+            session,
+            key,
+            sku=sku,
+            base_quantity=quantity,
+            base_unit="kg",
+            price=price,
+            image_url=image,
+        )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "pollo"}).json()
+
+    (item,) = body["items"]
+    assert item["category_key"] == "pollo"
+    assert item["resolved"] is False
+    assert [
+        (option["category_key"], option["name"], option["from_unit_price"], option["base_unit"])
+        for option in item["options"]
+    ] == [
+        ("pollo_pechuga", "Pechuga de pollo", "5", "kg"),
+        ("pollo_muslo_contramuslo", "Muslos y contramuslos de pollo", "3.5", "kg"),
+        ("pollo_alitas", "Alitas de pollo", "3.2", "kg"),
+        ("pollo_entero", "Pollo entero y troceado", "3", "kg"),
+    ]
+    assert item["options"][0]["image_url"] == "https://example.test/pechuga.jpg"
+
+
+def test_a_vague_node_without_an_option_list_offers_its_priced_children(client, session):
+    add_option_product(
+        session,
+        "gamba_langostino",
+        sku="GAMBA1",
+        base_quantity="1",
+        base_unit="kg",
+        price="6.00",
+        image_url="https://example.test/gamba1.jpg",
+    )
+    add_option_product(
+        session,
+        "gamba_langostino",
+        sku="GAMBA2",
+        base_quantity="1",
+        base_unit="kg",
+        price="7.00",
+        image_url="https://example.test/gamba2.jpg",
+    )
+    add_option_product(
+        session,
+        "surimi",
+        sku="SURIMI",
+        base_quantity="1",
+        base_unit="kg",
+        price="2.00",
+        image_url="https://example.test/surimi.jpg",
+    )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "marisco"}).json()
+
+    (item,) = body["items"]
+    assert item["category_key"] == "marisco"
+    assert item["resolved"] is False
+    # Two products first; the child with none is not offered.
+    assert [option["category_key"] for option in item["options"]] == [
+        "gamba_langostino",
+        "surimi",
+    ]
+    assert [option["from_unit_price"] for option in item["options"]] == ["6", "2"]
+
+
+def test_an_exact_only_category_is_never_resolved(client):
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "tinte\nleche"}).json()
+
+    tinte, leche = body["items"]
+    assert tinte["category_key"] == "tinte"
+    assert tinte["exact_only"] is True
+    assert tinte["resolved"] is False
+    assert leche["exact_only"] is False
+    assert leche["resolved"] is True
+
+
+def test_options_of_a_vague_term_are_marked_when_they_have_shades(client, session):
+    session.execute(text("update category set exact_only = true where key = 'pollo_pechuga'"))
+    add_option_product(
+        session,
+        "pollo_pechuga",
+        sku="p1",
+        base_quantity="1",
+        base_unit="kg",
+        price="5",
+        image_url="https://example.test/pechuga.jpg",
+    )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "pollo"}).json()
+
+    (item,) = body["items"]
+    flags = {option["category_key"]: option["exact_only"] for option in item["options"]}
+    assert flags["pollo_pechuga"] is True
+    assert not any(flag for key, flag in flags.items() if key != "pollo_pechuga")

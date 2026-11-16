@@ -369,12 +369,13 @@ def _upsert_product(
 ) -> int:
     product_id = session.execute(
         text(
-            "insert into chain_product (chain_id, chain_sku, name, packaging, url, "
+            "insert into chain_product (chain_id, chain_sku, name, packaging, url, image_url, "
             "base_quantity, base_unit, pack_count, chain_category_id, first_seen, last_seen, "
-            "is_active) values (:chain, :sku, :name, :packaging, :url, :quantity, :unit, "
-            ":pack_count, :category, :now, :now, true) "
+            "is_active) values (:chain, :sku, :name, :packaging, :url, :image_url, :quantity, "
+            ":unit, :pack_count, :category, :now, :now, true) "
             "on conflict (chain_id, chain_sku) do update set name = excluded.name, "
             "packaging = excluded.packaging, url = excluded.url, "
+            "image_url = excluded.image_url, "
             "base_quantity = excluded.base_quantity, base_unit = excluded.base_unit, "
             "pack_count = excluded.pack_count, chain_category_id = excluded.chain_category_id, "
             "last_seen = excluded.last_seen, is_active = true "
@@ -386,6 +387,7 @@ def _upsert_product(
             "name": product.name,
             "packaging": product.packaging,
             "url": product.url,
+            "image_url": product.image_url,
             "quantity": product.base_quantity,
             "unit": product.base_unit,
             "pack_count": product.pack_count,

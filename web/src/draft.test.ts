@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   allResolved,
+  applyAnyBrand,
+  chooseOption,
+  isResolved,
+  markChoiceRequired,
   draftFromInterpreted,
   draftFromSearchResult,
   normalizeQuantity,
+  GENERIC_DEFAULTS,
   toRequestItem,
   type DraftItem,
 } from "./draft";
@@ -19,6 +24,7 @@ function baseItem(overrides: Partial<DraftItem> = {}): DraftItem {
     unit: "l",
     brand: "",
     privateLabelOk: true,
+    ...GENERIC_DEFAULTS,
     ...overrides,
   };
 }
@@ -37,6 +43,9 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
+      image_url: null,
+      options: [],
     };
 
     const draft = draftFromInterpreted(interpreted);
@@ -49,6 +58,30 @@ describe("draftFromInterpreted", () => {
     expect(draft.brand).toBe("");
     expect(draft.privateLabelOk).toBe(true);
     expect(draft.id).not.toBe("");
+  });
+
+  it("keeps the exact_only flag and leaves such a line unresolved until it has a product", () => {
+    const draft = draftFromInterpreted({
+      line: 1,
+      text: "tinte",
+      item: "tinte",
+      quantity: "1",
+      unit: "ud",
+      category_key: "tinte",
+      category_name: "Tinte de pelo",
+      brand: null,
+      alternatives: [],
+      resolved: false,
+      needs_llm: false,
+      exact_only: true,
+      image_url: null,
+      options: [],
+    });
+
+    expect(draft.exactOnly).toBe(true);
+    expect(isResolved(draft)).toBe(false);
+    expect(isResolved({ ...draft, productId: 5, accept: "exact" })).toBe(true);
+    expect(applyAnyBrand([{ ...draft, productId: 5, accept: "exact" }])[0]?.accept).toBe("exact");
   });
 
   it("keeps an unresolved line without category", () => {
@@ -64,6 +97,9 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: false,
       needs_llm: true,
+      exact_only: false,
+      image_url: null,
+      options: [],
     });
 
     expect(draft.categoryKey).toBeNull();
@@ -78,6 +114,7 @@ describe("draftFromSearchResult", () => {
       name: "Yogur",
       kind: "leaf",
       path: "Lácteos › Yogur",
+      exact_only: false,
     });
 
     expect(draft.text).toBe("Yogur");
@@ -120,5 +157,77 @@ describe("toRequestItem", () => {
     expect(request.quantity).toBe("1.5");
     expect(request.private_label_ok).toBe(false);
     expect(request.category_key).toBe("leaf:leche");
+  });
+});
+
+describe("concrete lines and vague options", () => {
+  const option = {
+    category_key: "pollo_pechuga",
+    name: "Pechuga de pollo",
+    image_url: "https://example.test/pechuga.jpg",
+    from_unit_price: "6.50",
+    base_unit: "kg" as const,
+    exact_only: false,
+  };
+
+  it("keeps a vague line unresolved until an option is chosen", () => {
+    const vague = baseItem({ categoryKey: "pollo", options: [option] });
+    expect(isResolved(vague)).toBe(false);
+
+    const chosen = chooseOption(vague, option);
+    expect(isResolved(chosen)).toBe(true);
+    expect(chosen.categoryKey).toBe("pollo_pechuga");
+    expect(chosen.imageUrl).toBe(option.image_url);
+    expect(toRequestItem(chosen).category_key).toBe("pollo_pechuga");
+  });
+
+  it("keeps a line unresolved when the chosen option or search result has shades", () => {
+    const vague = baseItem({ categoryKey: "maquillaje", options: [option] });
+    const chosen = chooseOption(vague, { ...option, category_key: "labios", exact_only: true });
+    expect(chosen.exactOnly).toBe(true);
+    expect(chosen.productId).toBeNull();
+    expect(isResolved(chosen)).toBe(false);
+
+    const found = draftFromSearchResult({
+      key: "tinte",
+      name: "Tinte",
+      kind: "leaf",
+      path: "Cuidado personal",
+      exact_only: true,
+    });
+    expect(found.exactOnly).toBe(true);
+    expect(isResolved(found)).toBe(false);
+  });
+
+  it("marks the line a 422 refused according to its code", () => {
+    const line = baseItem({ categoryKey: "tinte", productId: 3, options: [option] });
+
+    expect(markChoiceRequired(line, "EXACT_ONLY")).toMatchObject({
+      productId: null,
+      exactOnly: true,
+    });
+    expect(markChoiceRequired(line, "VAGUE_LINE")).toMatchObject({
+      categoryKey: null,
+      productId: null,
+      options: [],
+    });
+  });
+
+  it("turns unpinned exact lines into equivalent ones and leaves pinned ones", () => {
+    const loose = baseItem({ id: "a", productId: 7, accept: "exact" });
+    const pinned = baseItem({ id: "b", productId: 8, accept: "exact", locked: true });
+    const generic = baseItem({ id: "c" });
+
+    const [a, b, c] = applyAnyBrand([loose, pinned, generic]);
+    expect(a?.accept).toBe("equivalent");
+    expect(b?.accept).toBe("exact");
+    expect(c).toBe(generic);
+  });
+
+  it("sends a generic line by category, always equivalent", () => {
+    const request = toRequestItem(baseItem({ accept: "exact" }));
+    expect(request.category_key).toBe("leaf:leche");
+    expect(request.product_id).toBeUndefined();
+    expect(request.accept).toBe("equivalent");
   });
 });
