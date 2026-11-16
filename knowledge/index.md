@@ -22,6 +22,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 
 * [System overview](/architecture/system-overview.md) - Modules and how a recommendation flows through them.
 * [Data model](/architecture/data-model.md) - Transactional entities and the BI star schema of the MVP.
+* [Agents](/architecture/agents.md) - Draft map of the system's agents (recommender, catalog agent, watcher), their shared harness and memory, and the multi-agent process iteration 12 ran outside the product.
 
 ## Data
 
