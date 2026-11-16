@@ -89,6 +89,7 @@ const lecheCard: CanonicalCard = {
   base_unit: "l",
   product_count: 2,
   chains: ["mercadona", "dia"],
+  exact_only: false,
 };
 
 const aceiteCard: CanonicalCard = {
@@ -102,6 +103,43 @@ const aceiteCard: CanonicalCard = {
   base_unit: "l",
   product_count: 1,
   chains: ["mercadona"],
+  exact_only: false,
+};
+
+// A product with shades: its leaf is exact-only, so it is never added as a generic line. It is
+// only reachable by searching "tinte" or by its page, to leave the other catalog counts alone.
+const tinteCard: CanonicalCard = {
+  id: 12,
+  name: "Tinte castaño",
+  category_key: "tinte",
+  category_name: "Tinte de pelo",
+  image_url: PHOTO,
+  from_price: "4.50",
+  from_unit_price: "4.50",
+  base_unit: "ud",
+  product_count: 1,
+  chains: ["dia"],
+  exact_only: true,
+};
+
+const tinteProduct: Product = {
+  id: 4,
+  name: "Tinte castaño oscuro 3.0",
+  brand: "Dia",
+  private_label: true,
+  packaging: "Caja 1 ud",
+  image_url: PHOTO,
+  chain: "dia",
+  price: "4.50",
+  unit_price: "4.50",
+  base_unit: "ud",
+  base_quantity: "1",
+  canonical: {
+    id: 12,
+    name: "Tinte castaño",
+    category_key: "tinte",
+    category_name: "Tinte de pelo",
+  },
 };
 
 const CANONICALS: { section: string; card: CanonicalCard }[] = [
@@ -203,6 +241,20 @@ test.beforeEach(async ({ page }) => {
   await page.route("**/api/canonicals**", (route) => {
     const url = new URL(route.request().url());
     const detail = /\/api\/canonicals\/(\d+)$/.exec(url.pathname);
+    if (detail && Number(detail[1]) === tinteCard.id) {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...tinteCard, products: [tinteProduct] }),
+      });
+    }
+    if (!detail && (url.searchParams.get("q") ?? "").toLowerCase() === "tinte") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ items: [tinteCard], total: 1, page: 1, size: 24 }),
+      });
+    }
     if (detail) {
       const entry = CANONICALS.find((candidate) => candidate.card.id === Number(detail[1]));
       if (!entry) {
@@ -387,6 +439,43 @@ test("a canonical page adds any product or one concrete one", async ({ page }) =
   await expect(
     concreteLine.getByRole("combobox", { name: "Qué acepta esta línea" }),
   ).toHaveValue("exact");
+});
+
+test("a product with shades offers no generic add and keeps its cart line exact", async ({
+  page,
+}) => {
+  await page.goto("/#/catalogo");
+  const search = page.getByRole("searchbox", { name: "Buscar en el catálogo" });
+  await search.fill("tinte");
+  await search.press("Enter");
+
+  // The card has no «Añadir»: it opens the page with its concrete products.
+  const card = page.locator("article").filter({ hasText: "Tinte castaño" });
+  await expect(card).toHaveCount(1);
+  await expect(card.getByRole("button", { name: "Añadir" })).toHaveCount(0);
+  await card.getByRole("link", { name: "Ver productos" }).click();
+
+  await expect(page).toHaveURL(/#\/generico\/12$/);
+  await expect(page.getByRole("heading", { name: "Elige uno concreto" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Añadir cualquier/ })).toHaveCount(0);
+
+  await page
+    .locator("article")
+    .filter({ hasText: tinteProduct.name })
+    .getByRole("button", { name: "Añadir" })
+    .click();
+  await page.getByRole("button", { name: "Cesta", exact: true }).click();
+  const drawer = page.getByRole("dialog", { name: "Tu cesta" });
+  const line = drawer.locator("li").filter({ hasText: tinteProduct.name });
+  await expect(line).toBeVisible();
+  await expect(line.getByText("Este producto", { exact: true })).toBeVisible();
+  await expect(line.getByRole("combobox", { name: "Qué acepta esta línea" })).toHaveCount(0);
+
+  // The switch leaves it alone: it is still a concrete product when the cart is stored.
+  await drawer.getByRole("switch", { name: "Me da igual la marca" }).click();
+  await expect(line.getByText("Este producto", { exact: true })).toBeVisible();
+  const stored = await page.evaluate(() => localStorage.getItem("smart-basket.lists"));
+  expect(JSON.parse(stored ?? "{}").cart[0]).toMatchObject({ accept: "exact", exact_only: true });
 });
 
 test("Me da igual la marca leaves the pinned line exact", async ({ page }) => {

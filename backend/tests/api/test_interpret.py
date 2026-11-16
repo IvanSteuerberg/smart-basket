@@ -56,6 +56,7 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
         "alternatives",
         "resolved",
         "needs_llm",
+        "exact_only",
         "image_url",
         "options",
     }
@@ -68,6 +69,7 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
     assert item["category_name"] == "Leche"
     assert item["resolved"] is True
     assert item["needs_llm"] is False
+    assert item["exact_only"] is False
 
 
 def test_rule_lines_keep_the_category_of_their_own_match(client):
@@ -335,3 +337,15 @@ def test_a_vague_node_without_an_option_list_offers_its_priced_children(client, 
         "surimi",
     ]
     assert [option["from_unit_price"] for option in item["options"]] == ["6", "2"]
+
+
+def test_an_exact_only_category_is_never_resolved(client):
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "tinte\nleche"}).json()
+
+    tinte, leche = body["items"]
+    assert tinte["category_key"] == "tinte"
+    assert tinte["exact_only"] is True
+    assert tinte["resolved"] is False
+    assert leche["exact_only"] is False
+    assert leche["resolved"] is True

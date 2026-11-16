@@ -466,6 +466,65 @@ def test_a_vague_line_is_rejected_before_calculating_the_basket(world):
     }
 
 
+def _make_exact_only(world, key: str) -> None:
+    world.connection.execute(
+        text("update category set exact_only = true where key = :key"), {"key": key}
+    )
+
+
+def test_a_generic_line_of_an_exact_only_category_is_rejected(world):
+    _make_exact_only(world, "leche")
+    response = world.client.post(
+        "/api/recommendations",
+        json=payload([item("yogur", "yogur", "1", "ud"), item("leche", "leche", "1", "l")]),
+    )
+    assert response.status_code == 422
+    assert response.json() == {
+        "detail": {
+            "code": "EXACT_ONLY",
+            "line_id": 1,
+            "category_key": "leche",
+            "message": (
+                "Elige el producto concreto: en «leche» los tonos no se cambian uno por otro."
+            ),
+        }
+    }
+
+
+def test_an_equivalent_concrete_line_of_an_exact_only_category_buys_that_product(world):
+    _make_exact_only(world, "leche")
+    row = product_row(world, "L4")
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload([item("leche sin lactosa", product_id=row["id"], quantity="1", unit="ud")]),
+    ).json()
+    line = body["stores"][0]["lines"][0]
+    assert line["product_id"] == row["id"]
+    assert body["total_cost"] == "1.05"
+    assert body["flex_savings"] is None
+
+
+def test_exact_only_lines_do_not_count_in_flex_savings(world):
+    _make_exact_only(world, "leche")
+    row = product_row(world, "L4")
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [
+                item(
+                    "leche sin lactosa",
+                    product_id=row["id"],
+                    accept="exact",
+                    quantity="1",
+                    unit="ud",
+                )
+            ]
+        ),
+    ).json()
+    assert body["total_cost"] == "1.05"
+    assert body["flex_savings"] is None
+
+
 def test_a_line_needs_exactly_one_of_category_and_product(world):
     both = item("leche", "leche", "1", "l", product_id=1)
     neither = item("leche", "1", "l")

@@ -4,6 +4,7 @@ import {
   getHealth,
   getSections,
   interpretText,
+  isExactOnly,
   isVagueLine,
   requestRecommendation,
   type Accept,
@@ -352,6 +353,15 @@ export default function App() {
         );
         setCalcError(error.detail.message);
         setStep("list");
+      } else if (isExactOnly(error)) {
+        const lineId = error.detail.line_id;
+        setItems((current) =>
+          current.map((item, index) =>
+            index === lineId ? { ...item, productId: null, exactOnly: true } : item,
+          ),
+        );
+        setCalcError(error.detail.message);
+        setStep("list");
       } else {
         setCalcError(describeError(error));
       }
@@ -428,8 +438,8 @@ export default function App() {
     navigate(CATALOG_HASH);
   }
 
-  function handleAddSpecific(product: Product) {
-    dispatch({ type: "add", line: specificLine(product, anyBrand) });
+  function handleAddSpecific(product: Product, exactOnly = false) {
+    dispatch({ type: "add", line: specificLine(product, anyBrand, exactOnly) });
   }
 
   function handleAddCanonical(card: CanonicalCard) {
@@ -483,6 +493,7 @@ export default function App() {
           items={items}
           onRemoveItem={handleRemoveItem}
           onUpdateItem={handleUpdateItem}
+          onChooseInCatalog={handleSearch}
           text={text}
           onTextChange={setText}
           onCalculate={handleCalculate}

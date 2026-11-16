@@ -13,6 +13,7 @@ import { askListName } from "../listName";
 import { CATALOG_HASH } from "../router";
 import type { SavedList, StoredOrigin } from "../storage";
 import { OriginStep, type RouteOptions } from "./OriginStep";
+import { EXACT_ONLY_PICK, exactOnlyLine } from "../texts";
 import { ProductImage } from "./ProductImage";
 import { SearchBox } from "./SearchBox";
 
@@ -23,6 +24,8 @@ export interface ListStepProps {
   items: DraftItem[];
   onRemoveItem: (id: string) => void;
   onUpdateItem: (id: string, patch: Partial<DraftItem>) => void;
+  /** Opens the catalog searching for the text of a line that needs a concrete product. */
+  onChooseInCatalog: (query: string) => void;
 
   text: string;
   onTextChange: (value: string) => void;
@@ -49,6 +52,7 @@ export function ListStep({
   items,
   onRemoveItem,
   onUpdateItem,
+  onChooseInCatalog,
   text,
   onTextChange,
   onCalculate,
@@ -190,6 +194,33 @@ export function ListStep({
         {unresolvedItems.length > 0 && (
           <div className="mb-4 flex flex-col gap-3">
             {unresolvedItems.map((item) => {
+              if (item.exactOnly) {
+                // Shades: only a concrete product can be bought.
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-2.5 rounded-2xl border border-stone-200 bg-stone-50/70 p-3.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-sm font-bold text-slate-900">{exactOnlyLine(item.text)}</h3>
+                      <button
+                        type="button"
+                        onClick={() => onRemoveItem(item.id)}
+                        className="shrink-0 text-xs font-semibold text-stone-400 hover:text-price"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onChooseInCatalog(item.text)}
+                      className="self-start rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
+                    >
+                      {EXACT_ONLY_PICK}
+                    </button>
+                  </div>
+                );
+              }
               if (item.options.length > 0) {
                 // Vague line
                 const term = (item.categoryName || item.text).toLowerCase();

@@ -20,6 +20,7 @@ from smart_basket.recommender import NoCandidateStores, RecommendationQuery, rec
 from smart_basket.recommender.catalog import Item, UnknownProduct, variant_keys
 from smart_basket.recommender.service import (
     BasketCalculationError,
+    ExactOnlyLine,
     RecommendationResponse,
     VagueLine,
 )
@@ -129,6 +130,16 @@ def create_recommendation(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "VAGUE_LINE",
+                "line_id": exc.line_id,
+                "category_key": exc.category_key,
+                "message": exc.message,
+            },
+        ) from None
+    except ExactOnlyLine as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "EXACT_ONLY",
                 "line_id": exc.line_id,
                 "category_key": exc.category_key,
                 "message": exc.message,

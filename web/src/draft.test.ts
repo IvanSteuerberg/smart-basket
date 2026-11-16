@@ -42,6 +42,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
       image_url: null,
       options: [],
     };
@@ -58,6 +59,30 @@ describe("draftFromInterpreted", () => {
     expect(draft.id).not.toBe("");
   });
 
+  it("keeps the exact_only flag and leaves such a line unresolved until it has a product", () => {
+    const draft = draftFromInterpreted({
+      line: 1,
+      text: "tinte",
+      item: "tinte",
+      quantity: "1",
+      unit: "ud",
+      category_key: "tinte",
+      category_name: "Tinte de pelo",
+      brand: null,
+      alternatives: [],
+      resolved: false,
+      needs_llm: false,
+      exact_only: true,
+      image_url: null,
+      options: [],
+    });
+
+    expect(draft.exactOnly).toBe(true);
+    expect(isResolved(draft)).toBe(false);
+    expect(isResolved({ ...draft, productId: 5, accept: "exact" })).toBe(true);
+    expect(applyAnyBrand([{ ...draft, productId: 5, accept: "exact" }])[0]?.accept).toBe("exact");
+  });
+
   it("keeps an unresolved line without category", () => {
     const draft = draftFromInterpreted({
       line: 2,
@@ -71,6 +96,7 @@ describe("draftFromInterpreted", () => {
       alternatives: [],
       resolved: false,
       needs_llm: true,
+      exact_only: false,
       image_url: null,
       options: [],
     });

@@ -64,6 +64,8 @@ export interface InterpretedItem {
   alternatives: unknown[];
   resolved: boolean;
   needs_llm: boolean;
+  /** Only concrete products are bought in this category (shades): the user picks a product. */
+  exact_only: boolean;
   /** Photo of the cheapest product per unit of its category, if any. */
   image_url: string | null;
   /** Choices for a vague term ("pollo", "fruta"); empty when the line is not vague. */
@@ -160,6 +162,8 @@ export interface CanonicalCard {
   product_count: number;
   /** Chain codes that sell it, e.g. "mercadona". */
   chains: string[];
+  /** Products with shades: never compared as generic, only a concrete product is bought. */
+  exact_only: boolean;
 }
 
 export interface CanonicalDetail extends CanonicalCard {
@@ -301,6 +305,14 @@ export interface VagueLineDetail {
   message: string;
 }
 
+/** `detail` of a 422 when a generic line names a category that only sells concrete products. */
+export interface ExactOnlyDetail {
+  code: "EXACT_ONLY";
+  line_id: number;
+  category_key: string;
+  message: string;
+}
+
 /** Error raised when the API answers with a non-2xx status and a `detail` message. */
 export class ApiError extends Error {
   readonly status: number;
@@ -320,6 +332,13 @@ export function isVagueLine(error: unknown): error is ApiError & { detail: Vague
     return false;
   }
   return (error.detail as { code?: unknown }).code === "VAGUE_LINE";
+}
+
+export function isExactOnly(error: unknown): error is ApiError & { detail: ExactOnlyDetail } {
+  if (!(error instanceof ApiError) || error.detail === null || typeof error.detail !== "object") {
+    return false;
+  }
+  return (error.detail as { code?: unknown }).code === "EXACT_ONLY";
 }
 
 export function describeError(error: unknown): string {

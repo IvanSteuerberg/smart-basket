@@ -66,6 +66,8 @@ class CategoryInfo:
     default_quantity: Decimal | None
     base_unit: str | None
     is_vague: bool
+    #: Leaf of products that are never interchangeable (shades): only a concrete product is bought.
+    exact_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +110,8 @@ def load_categories(session: Session, keys: set[str]) -> dict[str, CategoryInfo]
         return {}
     rows = session.execute(
         text(
-            "select key, id, parent_id, name, default_quantity, base_unit, is_vague "
+            "select key, id, parent_id, name, default_quantity, base_unit, is_vague, "
+            "exact_only "
             "from category where key in :keys"
         ).bindparams(bindparam("keys", expanding=True)),
         {"keys": sorted(keys)},
@@ -124,6 +127,7 @@ def _category(row: Mapping[str, Any]) -> CategoryInfo:
         default_quantity=row["default_quantity"],
         base_unit=row["base_unit"],
         is_vague=row["is_vague"],
+        exact_only=row["exact_only"],
     )
 
 
@@ -233,7 +237,9 @@ def _concrete_entry(
     header = _product_header(session, item.product_id)
     if header is None:
         raise UnknownProduct
-    canonical = header["canonical_id"] if item.accept == "equivalent" else None
+    # Products of an exact-only leaf are never swapped for another one of the canonical product.
+    equivalent = item.accept == "equivalent" and not header["exact_only"]
+    canonical = header["canonical_id"] if equivalent else None
     if canonical is not None:
         item_rows = [row for row in rows if row["canonical_id"] == canonical]
     else:
@@ -274,8 +280,12 @@ def _product_header(session: Session, product_id: int) -> Mapping[str, Any] | No
     return (
         session.execute(
             text(
-                "select id, canonical_id, base_quantity, base_unit, pack_count "
-                "from chain_product where id = :id and is_active"
+                "select p.id, p.canonical_id, p.base_quantity, p.base_unit, p.pack_count, "
+                "coalesce(c.exact_only, false) as exact_only "
+                "from chain_product p "
+                "left join canonical_product cp on cp.id = p.canonical_id "
+                "left join category c on c.id = cp.category_id "
+                "where p.id = :id and p.is_active"
             ),
             {"id": product_id},
         )

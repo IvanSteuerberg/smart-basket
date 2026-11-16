@@ -3,6 +3,7 @@ import {
   ApiError,
   geocode,
   interpretText,
+  isExactOnly,
   requestRecommendation,
   searchProducts,
   type RecommendationRequest,
@@ -25,6 +26,26 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+describe("isExactOnly", () => {
+  it("recognizes the 422 of a generic line of a category with shades", async () => {
+    const detail = {
+      code: "EXACT_ONLY",
+      line_id: 1,
+      category_key: "tinte",
+      message: "Elige el producto concreto.",
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ detail }, 422));
+
+    const error = await requestRecommendation({} as RecommendationRequest).catch(
+      (cause: unknown) => cause,
+    );
+
+    expect(isExactOnly(error)).toBe(true);
+    expect(isExactOnly(new ApiError("otro", 422, { code: "VAGUE_LINE" }))).toBe(false);
+    expect(isExactOnly(new Error("boom"))).toBe(false);
+  });
+});
 
 describe("searchProducts", () => {
   it("encodes the query and returns the results", async () => {

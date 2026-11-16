@@ -73,6 +73,7 @@ function cartLine(overrides: Partial<CartLine> = {}): CartLine {
     quantity: 2,
     accept: "exact",
     locked: false,
+    exact_only: false,
     ...overrides,
   };
 }
@@ -314,8 +315,8 @@ describe("cart storage", () => {
 
     const loaded = loadCart(storage);
 
-    expect(loaded[0]).toMatchObject({ accept: "exact", locked: false });
-    expect(loaded[1]).toMatchObject({ accept: "equivalent", locked: false });
+    expect(loaded[0]).toMatchObject({ accept: "exact", locked: false, exact_only: false });
+    expect(loaded[1]).toMatchObject({ accept: "equivalent", locked: false, exact_only: false });
   });
 
   it("ignores cart lines that do not match the stored shape", () => {

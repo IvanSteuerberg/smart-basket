@@ -76,6 +76,18 @@ class VagueLine(Exception):
         super().__init__(self.message)
 
 
+class ExactOnlyLine(Exception):
+    """A generic line names a leaf of shades, where only a concrete product can be bought."""
+
+    def __init__(self, line_id: int, category_key: str, name: str) -> None:
+        self.line_id = line_id
+        self.category_key = category_key
+        self.message = (
+            f"Elige el producto concreto: en «{name.lower()}» los tonos no se cambian uno por otro."
+        )
+        super().__init__(self.message)
+
+
 class LineResponse(BaseModel):
     line_id: int
     text: str
@@ -235,13 +247,15 @@ def recommend(
 
 
 def _reject_vague_lines(query: RecommendationQuery, categories: Mapping[str, CategoryInfo]) -> None:
-    """A vague category must be narrowed by the shopper before any basket is calculated."""
+    """A vague or exact-only category must be narrowed by the shopper before any calculation."""
     for index, item in enumerate(query.items):
         if item.category_key is None:
             continue
         category = categories.get(item.category_key)
         if category is not None and category.is_vague:
             raise VagueLine(index, item.category_key, category.name)
+        if category is not None and category.exact_only:
+            raise ExactOnlyLine(index, item.category_key, category.name)
 
 
 def _flex_savings(

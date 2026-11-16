@@ -106,6 +106,35 @@ def test_options_on_a_node_that_is_not_vague_are_rejected():
         taxonomy_file(node("fruta", name="Fruta", options=["manzana"], base_unit="kg"))
 
 
+def test_exact_only_is_carried_to_the_rows_of_leaves():
+    tree = taxonomy_file(
+        node(
+            "cuidado",
+            name="Cuidado",
+            children=[
+                node("tinte", name="Tinte", base_unit="ud", exact_only=True),
+                node("champu", name="Champú", base_unit="ud"),
+            ],
+        )
+    )
+    rows = {row.key: row for row in tree.rows()}
+    assert rows["tinte"].exact_only is True
+    assert rows["champu"].exact_only is False
+    assert rows["cuidado"].exact_only is False
+
+
+def test_exact_only_on_a_node_that_is_not_a_leaf_is_rejected():
+    with pytest.raises(ValidationError, match="'cuidado' is exact_only but is not a leaf"):
+        taxonomy_file(
+            node(
+                "cuidado",
+                name="Cuidado",
+                exact_only=True,
+                children=[node("tinte", name="Tinte", base_unit="ud")],
+            )
+        )
+
+
 def test_leaf_without_base_unit_is_rejected():
     with pytest.raises(ValidationError, match="leaf category 'hoja' has no base_unit"):
         taxonomy_file(node("hoja", name="Hoja"))

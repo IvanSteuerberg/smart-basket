@@ -77,6 +77,7 @@ const mockInterpretResolved: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
       image_url: null,
       options: [],
     },
@@ -99,6 +100,7 @@ const mockInterpretWithVague: InterpretResponse = {
       alternatives: [],
       resolved: true,
       needs_llm: false,
+      exact_only: false,
       image_url: null,
       options: [],
     },
@@ -114,6 +116,7 @@ const mockInterpretWithVague: InterpretResponse = {
       alternatives: [],
       resolved: false,
       needs_llm: false,
+      exact_only: false,
       image_url: null,
       options: [
         {
@@ -190,6 +193,7 @@ const mockCanonicalDetail: CanonicalDetail = {
   base_unit: "l",
   product_count: 2,
   chains: ["mercadona"],
+  exact_only: false,
   products: [
     {
       id: 101,
@@ -300,6 +304,53 @@ test("vague line presents choices inline and resolves before calculation", async
   await expect(page.getByRole("heading", { name: "Tu cesta" })).toBeVisible();
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
   expect(recRequests).toHaveLength(1);
+});
+
+test("a line with shades asks for a concrete product and sends no basket request", async ({
+  page,
+}) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", {
+    items: [
+      {
+        line: 1,
+        text: "tinte",
+        item: "tinte",
+        quantity: "1",
+        unit: "ud",
+        category_key: "tinte",
+        category_name: "Tinte de pelo",
+        brand: null,
+        alternatives: [],
+        resolved: false,
+        needs_llm: false,
+        exact_only: true,
+        image_url: null,
+        options: [],
+      },
+    ],
+    llm_used: false,
+    degraded: false,
+  } satisfies InterpretResponse);
+
+  const recRequests: Request[] = [];
+  page.on("request", (req) => {
+    if (req.url().includes("/api/recommendations")) recRequests.push(req);
+  });
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("tinte");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  await expect(
+    page.getByText("«tinte» depende del tono o del color: elige el producto concreto."),
+  ).toBeVisible();
+  expect(recRequests).toHaveLength(0);
+
+  await page.getByRole("button", { name: "Elegir en el catálogo" }).click();
+  await expect(page).toHaveURL(/#\/catalogo$/);
+  await expect(page.getByPlaceholder(/Busca un producto/).first()).toHaveValue("tinte");
+  expect(recRequests).toHaveLength(0);
 });
 
 test("basket with flex_savings offers applying any brand", async ({ page }) => {

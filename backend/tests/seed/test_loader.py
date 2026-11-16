@@ -140,6 +140,25 @@ def test_optional_fields_and_defaults_are_stored(session, seed_dir):
     assert yogures.options == ["yogur_griego", "yogur_natural"]
 
 
+def test_exact_only_is_stored_and_defaults_to_false(session, seed_dir, tmp_path):
+    data_dir = copy_seed(seed_dir, tmp_path)
+
+    def mark(data: dict) -> None:
+        for group in data["categories"]:
+            for child in group.get("children", []):
+                if child["key"] == "yogures":
+                    for leaf in child["children"]:
+                        if leaf["key"] == "yogur_natural":
+                            leaf["exact_only"] = True
+
+    update_json(data_dir / "taxonomy_es.json", mark)
+    load(session, data_dir)
+    flags = dict(session.execute(text("select key, exact_only from category")).all())
+    assert flags["yogur_natural"] is True
+    assert flags["yogur_griego"] is False
+    assert flags["yogures"] is False
+
+
 def test_mapping_change_on_the_second_load_updates_category_id(session, seed_dir, tmp_path):
     data_dir = copy_seed(seed_dir, tmp_path)
     load(session, data_dir)

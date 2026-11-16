@@ -14,7 +14,7 @@ import { ProductImage } from "./ProductImage";
 export interface CanonicalPageProps {
   id: number;
   onAddGeneric: (card: CanonicalDetail) => void;
-  onAddSpecific: (product: Product) => void;
+  onAddSpecific: (product: Product, exactOnly?: boolean) => void;
 }
 
 /** The generic product: one tap accepts any of its concrete products, or pick one. */
@@ -73,13 +73,15 @@ export function CanonicalPage({ id, onAddGeneric, onAddSpecific }: CanonicalPage
                 {canonical.product_count === 1 ? "producto" : "productos"}
               </p>
 
-              <button
-                type="button"
-                onClick={() => onAddGeneric(canonical)}
-                className="mt-5 w-full rounded-full bg-brand px-4 py-3 font-semibold text-white hover:bg-brand-dark"
-              >
-                {`${ADD_GENERIC_PREFIX} ${canonical.name.toLocaleLowerCase("es")}`}
-              </button>
+              {!canonical.exact_only && (
+                <button
+                  type="button"
+                  onClick={() => onAddGeneric(canonical)}
+                  className="mt-5 w-full rounded-full bg-brand px-4 py-3 font-semibold text-white hover:bg-brand-dark"
+                >
+                  {`${ADD_GENERIC_PREFIX} ${canonical.name.toLocaleLowerCase("es")}`}
+                </button>
+              )}
             </div>
           </div>
 
@@ -88,7 +90,11 @@ export function CanonicalPage({ id, onAddGeneric, onAddSpecific }: CanonicalPage
               <h2 className="text-xl font-extrabold text-slate-900">Elige uno concreto</h2>
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {canonical.products.map((product) => (
-                  <ProductCard key={product.id} product={product} onAdd={onAddSpecific} />
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onAdd={(chosen) => onAddSpecific(chosen, canonical.exact_only)}
+                  />
                 ))}
               </div>
             </section>

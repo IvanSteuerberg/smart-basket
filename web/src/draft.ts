@@ -30,6 +30,8 @@ export interface DraftItem {
   imageUrl: string | null;
   /** Choices for a vague line ("¿Qué pollo?"); the line cannot be sent until one is chosen. */
   options: InterpretOption[];
+  /** The category only sells concrete products (shades): the line needs a product to be sent. */
+  exactOnly: boolean;
 }
 
 export function newId(): string {
@@ -53,6 +55,7 @@ export function draftFromInterpreted(item: InterpretedItem): DraftItem {
     ...GENERIC_DEFAULTS,
     imageUrl: item.image_url,
     options: item.options,
+    exactOnly: item.exact_only,
   };
 }
 
@@ -63,7 +66,11 @@ export const GENERIC_DEFAULTS = {
   locked: false,
   imageUrl: null,
   options: [],
-} as const satisfies Pick<DraftItem, "productId" | "accept" | "locked" | "imageUrl" | "options">;
+  exactOnly: false,
+} as const satisfies Pick<
+  DraftItem,
+  "productId" | "accept" | "locked" | "imageUrl" | "options" | "exactOnly"
+>;
 
 /** Lines saved before the concrete-product fields existed read as generic lines. */
 export function withLineDefaults(item: Omit<DraftItem, keyof typeof GENERIC_DEFAULTS> &
@@ -97,6 +104,7 @@ export function chooseOption(item: DraftItem, option: InterpretOption): DraftIte
 }
 
 export function isResolved(item: DraftItem): boolean {
+  if (item.exactOnly && item.productId === null) return false;
   return item.options.length === 0 && (item.productId !== null || item.categoryKey !== null);
 }
 
@@ -106,7 +114,7 @@ export function isResolved(item: DraftItem): boolean {
  */
 export function applyAnyBrand(items: DraftItem[]): DraftItem[] {
   return items.map((item) =>
-    item.productId !== null && !item.locked && item.accept === "exact"
+    item.productId !== null && !item.exactOnly && !item.locked && item.accept === "exact"
       ? { ...item, accept: "equivalent" }
       : item,
   );
