@@ -85,7 +85,7 @@ def test_seed_brand_aliases_and_implies_reach_the_lexicon(session, lexicon):
     assert hacendado.is_private_label is True
     assert hacendado.implies is None
 
-    assert brands["Actimel"].implies == "yogur_liquido"
+    assert brands["Actimel"].implies == "bebida_lactobacilos"
     assert brands["Activia"].implies == "bifidus"
     # `match_name` false exports only the explicit aliases, never the bare name.
     assert brands["Dia"].aliases == ()
@@ -156,7 +156,7 @@ def test_ordinary_words_are_not_taken_as_brands(pp: Preprocessor):
 
     actimel = pp.preprocess("actimel").items[0]
     assert actimel.brand == "Actimel"
-    assert actimel.generic_key == "yogur_liquido"
+    assert actimel.generic_key == "bebida_lactobacilos"
     assert actimel.resolved is True
 
     pan = pp.preprocess("pan del dia").items[0]

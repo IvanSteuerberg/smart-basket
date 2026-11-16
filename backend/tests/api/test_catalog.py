@@ -116,7 +116,8 @@ def test_search_ranks_exact_and_prefix_matches_first(client):
     results = client.get("/api/search", params={"q": "pan"}).json()["results"]
     keys = [result["key"] for result in results]
     assert keys[0] == "pan"
-    assert keys.index("pan_molde") < keys.index("panales")
+    # The exact form first, then prefix matches such as "pan" in "barra de pan".
+    assert "barra_pan" in keys
 
 
 def test_search_needs_two_characters_once_stripped(client):

@@ -30,6 +30,14 @@
        ]
       },
       {
+       "key": "platano_macho",
+       "name": "Platano macho",
+       "base_unit": "kg",
+       "forms": [
+        "platano macho"
+       ]
+      },
+      {
        "key": "uva",
        "name": "Uva",
        "base_unit": "kg",
@@ -125,6 +133,14 @@
        ]
       },
       {
+       "key": "pina_rodajas",
+       "name": "Pina natural en rodajas",
+       "base_unit": "ud",
+       "forms": [
+        "pina natural en rodajas"
+       ]
+      },
+      {
        "key": "kiwi",
        "name": "Kiwi",
        "base_unit": "kg",
@@ -143,6 +159,12 @@
        ]
       },
       {
+       "key": "papaya",
+       "name": "Papaya",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
        "key": "fresa_frutos_rojos",
        "name": "Fresa y frutos rojos",
        "base_unit": "kg",
@@ -152,6 +174,22 @@
         "frambuesa",
         "arándano",
         "frutos rojos"
+       ]
+      },
+      {
+       "key": "frambuesas",
+       "name": "Frambuesas",
+       "base_unit": "kg",
+       "forms": [
+        "frambuesas"
+       ]
+      },
+      {
+       "key": "arandanos",
+       "name": "Arandanos",
+       "base_unit": "kg",
+       "forms": [
+        "arandanos"
        ]
       },
       {
@@ -215,6 +253,15 @@
        ]
       },
       {
+       "key": "patata_microondas",
+       "name": "Patatas para microondas",
+       "base_unit": "kg",
+       "forms": [
+        "patata microondas",
+        "patatas para microondas"
+       ]
+      },
+      {
        "key": "yuca",
        "name": "Yuca",
        "base_unit": "kg",
@@ -244,12 +291,37 @@
        ]
       },
       {
+       "key": "cebolla_tierna",
+       "name": "Cebolla tierna",
+       "base_unit": "kg",
+       "forms": [
+        "cebolla tierna",
+        "cebolletas"
+       ]
+      },
+      {
+       "key": "cebolla_roja",
+       "name": "Cebolla roja",
+       "base_unit": "kg",
+       "forms": [
+        "cebolla roja"
+       ]
+      },
+      {
        "key": "ajo",
        "name": "Ajo",
        "base_unit": "kg",
        "forms": [
         "ajo",
         "cabeza de ajo"
+       ]
+      },
+      {
+       "key": "ajo_negro",
+       "name": "Ajo negro",
+       "base_unit": "kg",
+       "forms": [
+        "ajo negro"
        ]
       },
       {
@@ -268,6 +340,14 @@
         "tomate",
         "tomate cherry",
         "tomate pera"
+       ]
+      },
+      {
+       "key": "tomate_cherry",
+       "name": "Tomate cherry",
+       "base_unit": "kg",
+       "forms": [
+        "tomates cherry"
        ]
       },
       {
@@ -349,6 +429,20 @@
        ]
       },
       {
+       "key": "lombarda",
+       "name": "Col lombarda",
+       "base_unit": "kg",
+       "forms": [
+        "col lombarda"
+       ]
+      },
+      {
+       "key": "coles_bruselas",
+       "name": "Coles de Bruselas",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
        "key": "brocoli",
        "name": "Brócoli",
        "base_unit": "kg",
@@ -373,6 +467,12 @@
         "champiñón",
         "champiñones"
        ]
+      },
+      {
+       "key": "champinon",
+       "name": "Champinones",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "hierbas_frescas",
@@ -450,6 +550,54 @@
         "escarola",
         "lechuga iceberg",
         "lechuga romana"
+       ],
+       "vague": true,
+       "options": [
+        "lechuga_romana",
+        "escarola",
+        "cogollos",
+        "lechuga_iceberg",
+        "endibia"
+       ]
+      },
+      {
+       "key": "lechuga_iceberg",
+       "name": "Lechuga iceberg",
+       "base_unit": "ud",
+       "forms": [
+        "iceberg"
+       ]
+      },
+      {
+       "key": "lechuga_romana",
+       "name": "Lechuga romana",
+       "base_unit": "ud",
+       "forms": [
+        "romana"
+       ]
+      },
+      {
+       "key": "cogollos",
+       "name": "Cogollos de lechuga",
+       "base_unit": "ud",
+       "forms": [
+        "cogollos",
+        "cogollos de lechuga"
+       ]
+      },
+      {
+       "key": "escarola",
+       "name": "Escarola",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "endibia",
+       "name": "Endibias",
+       "base_unit": "ud",
+       "forms": [
+        "endibias",
+        "endivias"
        ]
       },
       {
@@ -463,6 +611,33 @@
         "rúcula",
         "canónigos",
         "brotes tiernos"
+       ],
+       "vague": true,
+       "options": [
+        "ensalada_mezcla_lavada",
+        "canonigos",
+        "rucula"
+       ]
+      },
+      {
+       "key": "rucula",
+       "name": "Rucula",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "canonigos",
+       "name": "Canonigos",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "ensalada_mezcla_lavada",
+       "name": "Mezcla de ensalada lavada",
+       "base_unit": "kg",
+       "forms": [
+        "ensalada lavada",
+        "mezcla de ensalada"
        ]
       },
       {
@@ -531,6 +706,15 @@
         "mazorcas",
         "maíz en mazorca"
        ]
+      },
+      {
+       "key": "maiz_mazorca_cocido",
+       "name": "Maiz en mazorca cocido",
+       "base_unit": "ud",
+       "forms": [
+        "maiz cocido en mazorca",
+        "mazorca cocida"
+       ]
       }
      ]
     }
@@ -576,6 +760,14 @@
        ]
       },
       {
+       "key": "taquitos_pollo",
+       "name": "Taquitos de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "taquitos de pollo"
+       ]
+      },
+      {
        "key": "pollo_solomillo",
        "name": "Solomillo de pollo",
        "base_unit": "kg",
@@ -596,6 +788,12 @@
         "muslos",
         "contramuslos"
        ]
+      },
+      {
+       "key": "cuartos_traseros_pollo",
+       "name": "Cuartos traseros de pollo",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "pollo_alitas",
@@ -631,6 +829,20 @@
        ]
       },
       {
+       "key": "menudencias_pollo",
+       "name": "Hígados, corazones y mollejas de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "corazones de pollo"
+       ]
+      },
+      {
+       "key": "pollo_carcasa",
+       "name": "Carcasa de pollo",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
        "key": "pavo",
        "name": "Pavo",
        "base_unit": "kg",
@@ -639,7 +851,35 @@
         "pechuga de pavo fresca",
         "muslo de pavo",
         "filetes de pavo"
+       ],
+       "vague": true,
+       "options": [
+        "pavo_pechuga",
+        "pavo_contramuslo",
+        "solomillo_pavo"
        ]
+      },
+      {
+       "key": "solomillo_pavo",
+       "name": "Solomillo de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "solomillo de pavo"
+       ]
+      },
+      {
+       "key": "pavo_contramuslo",
+       "name": "Contramuslo de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "contramuslo de pavo"
+       ]
+      },
+      {
+       "key": "pavo_pechuga",
+       "name": "Pechuga de pavo",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "otras_aves",
@@ -649,6 +889,20 @@
         "codorniz",
         "pato",
         "picantón"
+       ]
+      },
+      {
+       "key": "picanton",
+       "name": "Picantón",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "magret_pato",
+       "name": "Magret de pato",
+       "base_unit": "kg",
+       "forms": [
+        "magret de pato"
        ]
       },
       {
@@ -673,6 +927,128 @@
         "panceta",
         "solomillo de cerdo",
         "secreto"
+       ],
+       "vague": true,
+       "options": [
+        "lomo_cerdo",
+        "costilla_cerdo",
+        "panceta_cerdo",
+        "casqueria_cerdo",
+        "chuletas_cerdo",
+        "lomo_cerdo_adobado",
+        "secreto_cerdo",
+        "carrillada_cerdo"
+       ]
+      },
+      {
+       "key": "manteca_cerdo",
+       "name": "Manteca de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "manteca de cerdo"
+       ]
+      },
+      {
+       "key": "casqueria_cerdo",
+       "name": "Casquería de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "careta de cerdo",
+        "hígado de cerdo",
+        "oreja de cerdo",
+        "rabo de cerdo"
+       ]
+      },
+      {
+       "key": "codillo_lacon_cerdo",
+       "name": "Codillo y lacón",
+       "base_unit": "kg",
+       "forms": [
+        "codillo de cerdo",
+        "lacón"
+       ]
+      },
+      {
+       "key": "taquitos_cerdo",
+       "name": "Taquitos y tacos de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "cerdo a tacos",
+        "taquitos de cerdo"
+       ]
+      },
+      {
+       "key": "panceta_cerdo",
+       "name": "Panceta de cerdo fresca",
+       "base_unit": "kg",
+       "forms": [
+        "panceta de cerdo",
+        "panceta fresca"
+       ]
+      },
+      {
+       "key": "carrillada_cerdo",
+       "name": "Carrillada de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "carrillada de cerdo",
+        "carrilleras de cerdo"
+       ]
+      },
+      {
+       "key": "presa_cerdo",
+       "name": "Presa de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "presa de cerdo",
+        "presa ibérica"
+       ]
+      },
+      {
+       "key": "secreto_cerdo",
+       "name": "Secreto de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "secreto de cerdo",
+        "secreto ibérico"
+       ]
+      },
+      {
+       "key": "solomillo_cerdo",
+       "name": "Solomillo de cerdo",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "lomo_cerdo_adobado",
+       "name": "Lomo de cerdo adobado",
+       "base_unit": "kg",
+       "forms": [
+        "filetes de lomo adobados",
+        "lomo de cerdo adobado"
+       ]
+      },
+      {
+       "key": "lomo_cerdo",
+       "name": "Lomo de cerdo fresco",
+       "base_unit": "kg",
+       "forms": [
+        "filetes de lomo de cerdo"
+       ]
+      },
+      {
+       "key": "chuletas_cerdo",
+       "name": "Chuletas de cerdo",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "costilla_cerdo",
+       "name": "Costilla de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "costilla de cerdo",
+        "costillas de cerdo"
        ]
       },
       {
@@ -686,6 +1062,63 @@
         "entrecot",
         "carne para guisar",
         "añojo"
+       ],
+       "vague": true,
+       "options": [
+        "entrecot_vacuno",
+        "solomillo_vacuno",
+        "higado_vacuno",
+        "tacos_vacuno",
+        "carpaccio_vacuno",
+        "steak_tartar"
+       ]
+      },
+      {
+       "key": "steak_tartar",
+       "name": "Steak tartar",
+       "base_unit": "kg",
+       "forms": [
+        "steak tartar"
+       ]
+      },
+      {
+       "key": "carpaccio_vacuno",
+       "name": "Carpaccio de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "carpaccio de ternera"
+       ]
+      },
+      {
+       "key": "tacos_vacuno",
+       "name": "Tacos de vacuno para guisar",
+       "base_unit": "kg",
+       "forms": [
+        "tacos de ternera"
+       ]
+      },
+      {
+       "key": "higado_vacuno",
+       "name": "Hígado de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "hígado de ternera"
+       ]
+      },
+      {
+       "key": "solomillo_vacuno",
+       "name": "Solomillo de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "solomillo de ternera"
+       ]
+      },
+      {
+       "key": "entrecot_vacuno",
+       "name": "Entrecot de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "entrecot de vacuno"
        ]
       },
       {
@@ -706,6 +1139,23 @@
        ]
       },
       {
+       "key": "asadura_cordero",
+       "name": "Asadura de cordero",
+       "base_unit": "kg",
+       "forms": [
+        "asadura de cordero"
+       ]
+      },
+      {
+       "key": "chuletas_lechazo",
+       "name": "Chuletas de lechazo",
+       "base_unit": "kg",
+       "forms": [
+        "chuletas de cordero",
+        "chuletas de lechazo"
+       ]
+      },
+      {
        "key": "carne_picada",
        "name": "Carne picada",
        "base_unit": "kg",
@@ -714,6 +1164,37 @@
         "picada",
         "picado de ternera",
         "picado mixto"
+       ],
+       "vague": true,
+       "options": [
+        "picada_vacuno_cerdo",
+        "picada_cerdo",
+        "picada_pollo"
+       ]
+      },
+      {
+       "key": "picada_vacuno_cerdo",
+       "name": "Carne picada mixta vacuno y cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "carne picada de vacuno y cerdo",
+        "carne picada mixta"
+       ]
+      },
+      {
+       "key": "picada_pollo",
+       "name": "Carne picada de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "carne picada de pollo"
+       ]
+      },
+      {
+       "key": "picada_cerdo",
+       "name": "Carne picada de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "carne picada de cerdo"
        ]
       },
       {
@@ -725,6 +1206,56 @@
         "carne de hamburguesa",
         "carne hamburguesa",
         "burger"
+       ],
+       "vague": true,
+       "options": [
+        "hamburguesa_pollo",
+        "hamburguesa_mixta",
+        "hamburguesa_cerdo",
+        "hamburguesa_pavo",
+        "hamburguesa_cordero"
+       ]
+      },
+      {
+       "key": "hamburguesa_cordero",
+       "name": "Hamburguesa de cordero",
+       "base_unit": "kg",
+       "forms": [
+        "hamburguesa de cordero"
+       ]
+      },
+      {
+       "key": "hamburguesa_pavo",
+       "name": "Hamburguesa de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "hamburguesa de pavo"
+       ]
+      },
+      {
+       "key": "hamburguesa_mixta",
+       "name": "Hamburguesa de vacuno y cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "burger de vacuno y cerdo",
+        "hamburguesa mixta"
+       ]
+      },
+      {
+       "key": "hamburguesa_cerdo",
+       "name": "Hamburguesa de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "hamburguesa de cerdo"
+       ]
+      },
+      {
+       "key": "hamburguesa_pollo",
+       "name": "Hamburguesa de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "burger de pollo",
+        "hamburguesa de pollo"
        ]
       },
       {
@@ -746,6 +1277,34 @@
         "chorizo para cocinar",
         "chorizo de cocinar",
         "chorizo criollo"
+       ],
+       "vague": true,
+       "options": [
+        "chistorra",
+        "zorza",
+        "chorizo_criollo"
+       ]
+      },
+      {
+       "key": "chorizo_criollo",
+       "name": "Chorizo criollo",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "zorza",
+       "name": "Zorza",
+       "base_unit": "kg",
+       "forms": [
+        "zorza"
+       ]
+      },
+      {
+       "key": "chistorra",
+       "name": "Chistorra",
+       "base_unit": "kg",
+       "forms": [
+        "chistorra"
        ]
       },
       {
@@ -756,6 +1315,14 @@
         "salchicha fresca",
         "longaniza",
         "butifarra"
+       ]
+      },
+      {
+       "key": "butifarra_fresca",
+       "name": "Butifarra fresca",
+       "base_unit": "kg",
+       "forms": [
+        "butifarra fresca"
        ]
       },
       {
@@ -780,6 +1347,66 @@
         "empanados",
         "pinchos morunos",
         "brochetas"
+       ],
+       "vague": true,
+       "options": [
+        "empanados_pollo",
+        "pinchos_brochetas",
+        "empanados_cerdo",
+        "albondigas_cerdo",
+        "albondigas_pollo",
+        "albondigas_vacuno"
+       ]
+      },
+      {
+       "key": "pinchos_brochetas",
+       "name": "Pinchos y brochetas",
+       "base_unit": "kg",
+       "forms": [
+        "pinchos de pollo"
+       ]
+      },
+      {
+       "key": "empanados_cerdo",
+       "name": "Empanados de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "lomo empanado",
+        "san jacobos"
+       ]
+      },
+      {
+       "key": "empanados_pollo",
+       "name": "Empanados de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "empanados de pollo",
+        "nuggets de pollo",
+        "pollo empanado"
+       ]
+      },
+      {
+       "key": "albondigas_vacuno",
+       "name": "Albóndigas de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "albóndigas de vacuno"
+       ]
+      },
+      {
+       "key": "albondigas_pollo",
+       "name": "Albóndigas de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "albóndigas de pollo"
+       ]
+      },
+      {
+       "key": "albondigas_cerdo",
+       "name": "Albóndigas de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "albóndigas de cerdo"
        ]
       },
       {
@@ -800,6 +1427,47 @@
         "arreglo",
         "arreglo para cocido",
         "huesos para caldo"
+       ],
+       "vague": true,
+       "options": [
+        "hueso_vacuno",
+        "espinazo_cerdo",
+        "manos_cerdo",
+        "tocino_cerdo"
+       ]
+      },
+      {
+       "key": "tocino_cerdo",
+       "name": "Tocino de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "tocino de cerdo"
+       ]
+      },
+      {
+       "key": "manos_cerdo",
+       "name": "Manos de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "manos de cerdo"
+       ]
+      },
+      {
+       "key": "espinazo_cerdo",
+       "name": "Espinazo de cerdo",
+       "base_unit": "kg",
+       "forms": [
+        "espinazo de cerdo"
+       ]
+      },
+      {
+       "key": "hueso_vacuno",
+       "name": "Huesos de vacuno",
+       "base_unit": "kg",
+       "forms": [
+        "hueso de rodilla",
+        "hueso de vacuno",
+        "hueso garrón"
        ]
       },
       {
@@ -996,6 +1664,23 @@
        ]
       },
       {
+       "key": "arreglo_marisco",
+       "name": "Arreglo de marisco pelado",
+       "base_unit": "kg",
+       "forms": [
+        "arreglo de marisco",
+        "marisco para arroz"
+       ]
+      },
+      {
+       "key": "langostino_cocido",
+       "name": "Langostino cocido",
+       "base_unit": "kg",
+       "forms": [
+        "langostino cocido"
+       ]
+      },
+      {
        "key": "salpicon_marisco",
        "name": "Salpicón de marisco",
        "base_unit": "kg",
@@ -1014,6 +1699,34 @@
         "navajas",
         "vieiras",
         "marisco de concha"
+       ],
+       "vague": true,
+       "options": [
+        "almejas_chirlas",
+        "berberechos",
+        "navajas"
+       ]
+      },
+      {
+       "key": "almejas_chirlas",
+       "name": "Almejas y chirlas",
+       "base_unit": "kg",
+       "forms": [
+        "chirlas"
+       ]
+      },
+      {
+       "key": "navajas",
+       "name": "Navajas",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "berberechos",
+       "name": "Berberechos frescos",
+       "base_unit": "kg",
+       "forms": [
+        "berberechos frescos"
        ]
       },
       {
@@ -1044,6 +1757,57 @@
         "merluza congelada",
         "filetes de pescado congelado",
         "salmón congelado"
+       ],
+       "vague": true,
+       "options": [
+        "merluza_congelada",
+        "bacalao_congelado",
+        "salmon_congelado",
+        "rape_congelado",
+        "panga_congelado"
+       ]
+      },
+      {
+       "key": "panga_congelado",
+       "name": "Panga congelado",
+       "base_unit": "kg",
+       "forms": [
+        "filetes de panga",
+        "panga congelado"
+       ]
+      },
+      {
+       "key": "rape_congelado",
+       "name": "Rape congelado",
+       "base_unit": "kg",
+       "forms": [
+        "cola de rape",
+        "rape congelado"
+       ]
+      },
+      {
+       "key": "salmon_congelado",
+       "name": "Salmón congelado",
+       "base_unit": "kg",
+       "forms": [
+        "lomos de salmón congelados"
+       ]
+      },
+      {
+       "key": "bacalao_congelado",
+       "name": "Bacalao congelado",
+       "base_unit": "kg",
+       "forms": [
+        "bacalao congelado",
+        "lomos de bacalao congelados"
+       ]
+      },
+      {
+       "key": "merluza_congelada",
+       "name": "Merluza congelada",
+       "base_unit": "kg",
+       "forms": [
+        "filetes de merluza congelados"
        ]
       },
       {
@@ -1055,6 +1819,40 @@
         "varitas de merluza",
         "palitos de pescado",
         "calamares a la romana"
+       ],
+       "vague": true,
+       "options": [
+        "rebozado_cefalopodos",
+        "rebozado_surimi",
+        "rebozado_langostino"
+       ]
+      },
+      {
+       "key": "rebozado_langostino",
+       "name": "Langostino rebozado",
+       "base_unit": "kg",
+       "forms": [
+        "langostinos rebozados",
+        "torpedos de langostino"
+       ]
+      },
+      {
+       "key": "rebozado_surimi",
+       "name": "Surimi rebozado",
+       "base_unit": "kg",
+       "forms": [
+        "aritos de surimi",
+        "muslitos de surimi"
+       ]
+      },
+      {
+       "key": "rebozado_cefalopodos",
+       "name": "Calamar y pota rebozados",
+       "base_unit": "kg",
+       "forms": [
+        "anillas a la romana",
+        "chipirones enharinados",
+        "rabas"
        ]
       },
       {
@@ -1074,6 +1872,48 @@
        "forms": [
         "anillas de calamar",
         "pulpo congelado"
+       ],
+       "vague": true,
+       "options": [
+        "pota_congelada",
+        "sepia_congelada",
+        "pulpo_congelado",
+        "tinta_sepia"
+       ]
+      },
+      {
+       "key": "tinta_sepia",
+       "name": "Tinta de sepia",
+       "base_unit": "kg",
+       "forms": [
+        "tinta de calamar",
+        "tinta de sepia"
+       ]
+      },
+      {
+       "key": "pota_congelada",
+       "name": "Pota y potón congelados",
+       "base_unit": "kg",
+       "forms": [
+        "anillas de pota",
+        "pota congelada",
+        "potón congelado"
+       ]
+      },
+      {
+       "key": "pulpo_congelado",
+       "name": "Pulpo congelado",
+       "base_unit": "kg",
+       "forms": [
+        "pulpo crudo congelado"
+       ]
+      },
+      {
+       "key": "sepia_congelada",
+       "name": "Sepia congelada",
+       "base_unit": "kg",
+       "forms": [
+        "sepia congelada"
        ]
       },
       {
@@ -1084,6 +1924,58 @@
         "gambas congeladas",
         "langostinos congelados",
         "mejillones congelados"
+       ],
+       "vague": true,
+       "options": [
+        "bivalvos_congelados",
+        "langostino_congelado",
+        "gambon_congelado",
+        "bogavante_congelado",
+        "preparado_paella_congelado"
+       ]
+      },
+      {
+       "key": "preparado_paella_congelado",
+       "name": "Preparado de paella y sopa de marisco congelado",
+       "base_unit": "kg",
+       "forms": [
+        "marisco para paella",
+        "preparado de paella"
+       ]
+      },
+      {
+       "key": "bogavante_congelado",
+       "name": "Bogavante congelado",
+       "base_unit": "kg",
+       "forms": [
+        "bogavante congelado"
+       ]
+      },
+      {
+       "key": "bivalvos_congelados",
+       "name": "Almeja, mejillón y vieira congelados",
+       "base_unit": "kg",
+       "forms": [
+        "almeja congelada",
+        "mejillón congelado",
+        "vieira congelada"
+       ]
+      },
+      {
+       "key": "gambon_congelado",
+       "name": "Gambón congelado",
+       "base_unit": "kg",
+       "forms": [
+        "colas de gambón",
+        "gambón congelado"
+       ]
+      },
+      {
+       "key": "langostino_congelado",
+       "name": "Langostino congelado",
+       "base_unit": "kg",
+       "forms": [
+        "langostino congelado"
        ]
       }
      ]
@@ -1104,12 +1996,46 @@
        ]
       },
       {
+       "key": "sucedaneo_caviar",
+       "name": "Sucedáneo de caviar",
+       "base_unit": "kg",
+       "forms": [
+        "caviar",
+        "sucedáneo de caviar"
+       ]
+      },
+      {
+       "key": "boquerones",
+       "name": "Boquerones",
+       "base_unit": "kg",
+       "forms": [
+        "boquerones",
+        "boquerones en vinagre"
+       ]
+      },
+      {
        "key": "ahumados",
        "name": "Ahumados",
        "base_unit": "kg",
        "forms": [
         "salmón ahumado",
         "ahumados"
+       ]
+      },
+      {
+       "key": "sardina_ahumada",
+       "name": "Sardina ahumada",
+       "base_unit": "kg",
+       "forms": [
+        "sardina ahumada"
+       ]
+      },
+      {
+       "key": "bacalao_ahumado",
+       "name": "Bacalao ahumado",
+       "base_unit": "kg",
+       "forms": [
+        "bacalao ahumado"
        ]
       }
      ]
@@ -1148,6 +2074,14 @@
        ]
       },
       {
+       "key": "jamon_pavo",
+       "name": "Jamón de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "jamón de pavo"
+       ]
+      },
+      {
        "key": "pollo_fiambre",
        "name": "Pechuga y fiambre de pollo",
        "base_unit": "kg",
@@ -1156,6 +2090,23 @@
         "pollo en lonchas",
         "tiras de pollo",
         "pechuga de pollo en lonchas"
+       ]
+      },
+      {
+       "key": "tiras_pechuga_pollo",
+       "name": "Tiras de pechuga de pollo",
+       "base_unit": "kg",
+       "forms": [
+        "tiras de pechuga de pollo"
+       ]
+      },
+      {
+       "key": "muslito_pollo_fiambre",
+       "name": "Muslito de pollo asado",
+       "base_unit": "kg",
+       "forms": [
+        "mini muslo de pollo",
+        "muslito de pollo"
        ]
       },
       {
@@ -1188,6 +2139,24 @@
        ]
       },
       {
+       "key": "torrezno",
+       "name": "Torreznos",
+       "base_unit": "kg",
+       "forms": [
+        "torreznos"
+       ]
+      },
+      {
+       "key": "panceta_curada",
+       "name": "Panceta curada",
+       "base_unit": "kg",
+       "forms": [
+        "guanciale",
+        "panceta curada",
+        "panceta salada"
+       ]
+      },
+      {
        "key": "salchichas",
        "name": "Salchichas",
        "base_unit": "kg",
@@ -1195,6 +2164,23 @@
         "salchichas",
         "frankfurt",
         "salchichas frankfurt"
+       ]
+      },
+      {
+       "key": "salchichas_parrilleras",
+       "name": "Salchichas bratwurst y parrilleras",
+       "base_unit": "kg",
+       "forms": [
+        "salchichas bratwurst",
+        "salchichas parrilleras"
+       ]
+      },
+      {
+       "key": "salchichas_cocktail",
+       "name": "Salchichas cocktail",
+       "base_unit": "kg",
+       "forms": [
+        "salchichas cocktail"
        ]
       },
       {
@@ -1208,6 +2194,14 @@
        ]
       },
       {
+       "key": "cabeza_cerdo_fiambre",
+       "name": "Cabeza de cerdo en lonchas",
+       "base_unit": "kg",
+       "forms": [
+        "cabeza de cerdo en lonchas"
+       ]
+      },
+      {
        "key": "mortadela",
        "name": "Mortadela",
        "base_unit": "kg",
@@ -1215,6 +2209,22 @@
         "mortadela",
         "mortadela con aceitunas",
         "mortadela italiana"
+       ]
+      },
+      {
+       "key": "galantina",
+       "name": "Galantina",
+       "base_unit": "kg",
+       "forms": [
+        "galantina"
+       ]
+      },
+      {
+       "key": "mortadela_pavo",
+       "name": "Mortadela de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "mortadela de pavo"
        ]
       },
       {
@@ -1228,6 +2238,23 @@
        ]
       },
       {
+       "key": "salchichon_pavo",
+       "name": "Salchichón de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "salchichón de pavo"
+       ]
+      },
+      {
+       "key": "salchichon_iberico",
+       "name": "Salchichón ibérico",
+       "base_unit": "kg",
+       "forms": [
+        "salchichón de bellota",
+        "salchichón ibérico"
+       ]
+      },
+      {
        "key": "fuet",
        "name": "Fuet y longaniza curada",
        "base_unit": "kg",
@@ -1238,6 +2265,22 @@
        ]
       },
       {
+       "key": "fuet_espetec",
+       "name": "Fuet y espetec",
+       "base_unit": "kg",
+       "forms": [
+        "fuet y espetec"
+       ]
+      },
+      {
+       "key": "longaniza_pavo",
+       "name": "Longaniza de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "longaniza de pavo"
+       ]
+      },
+      {
        "key": "salami",
        "name": "Salami y pepperoni",
        "base_unit": "kg",
@@ -1245,6 +2288,12 @@
         "salami",
         "pepperoni"
        ]
+      },
+      {
+       "key": "pepperoni",
+       "name": "Pepperoni",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "chorizo",
@@ -1259,6 +2308,23 @@
        ]
       },
       {
+       "key": "chorizo_iberico",
+       "name": "Chorizo ibérico",
+       "base_unit": "kg",
+       "forms": [
+        "chorizo de bellota",
+        "chorizo ibérico"
+       ]
+      },
+      {
+       "key": "chorizo_pavo",
+       "name": "Chorizo de pavo",
+       "base_unit": "kg",
+       "forms": [
+        "chorizo de pavo"
+       ]
+      },
+      {
        "key": "lomo_embuchado",
        "name": "Lomo embuchado y otros curados",
        "base_unit": "kg",
@@ -1267,6 +2333,12 @@
         "cecina",
         "lomo curado"
        ]
+      },
+      {
+       "key": "cecina",
+       "name": "Cecina",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "tabla_ibericos",
@@ -1288,6 +2360,47 @@
         "jamón curado",
         "paleta",
         "jamón ibérico"
+       ],
+       "vague": true,
+       "options": [
+        "jamon_iberico_cebo",
+        "taquitos_jamon",
+        "jamon_bellota",
+        "paleta_curada"
+       ]
+      },
+      {
+       "key": "taquitos_jamon",
+       "name": "Taquitos de jamón",
+       "base_unit": "kg",
+       "forms": [
+        "tacos de jamón",
+        "taquitos de jamón"
+       ]
+      },
+      {
+       "key": "paleta_curada",
+       "name": "Paleta curada",
+       "base_unit": "kg",
+       "forms": [
+        "paleta curada",
+        "paleta ibérica"
+       ]
+      },
+      {
+       "key": "jamon_bellota",
+       "name": "Jamón ibérico de bellota",
+       "base_unit": "kg",
+       "forms": [
+        "jamón de bellota"
+       ]
+      },
+      {
+       "key": "jamon_iberico_cebo",
+       "name": "Jamón ibérico de cebo",
+       "base_unit": "kg",
+       "forms": [
+        "jamón ibérico de cebo"
        ]
       },
       {
@@ -1297,6 +2410,25 @@
        "forms": [
         "paté",
         "foie"
+       ]
+      },
+      {
+       "key": "foie_mousse_pato",
+       "name": "Foie y mousse de pato",
+       "base_unit": "kg",
+       "forms": [
+        "foie gras",
+        "mousse de pato"
+       ]
+      },
+      {
+       "key": "pate_pescado",
+       "name": "Paté de pescado",
+       "base_unit": "kg",
+       "forms": [
+        "pastel de pescado",
+        "paté de atún",
+        "paté de salmón"
        ]
       },
       {
@@ -1334,7 +2466,46 @@
         "queso semicurado",
         "queso manchego",
         "cuña de queso"
+       ],
+       "vague": true,
+       "options": [
+        "queso_viejo_anejo",
+        "queso_semicurado",
+        "grana_padano",
+        "queso_gallego"
        ]
+      },
+      {
+       "key": "queso_gallego",
+       "name": "Queso gallego (tetilla, arzúa)",
+       "base_unit": "kg",
+       "forms": [
+        "queso arzúa",
+        "queso tetilla"
+       ]
+      },
+      {
+       "key": "grana_padano",
+       "name": "Grana padano",
+       "base_unit": "kg",
+       "forms": [
+        "grana padano"
+       ]
+      },
+      {
+       "key": "queso_viejo_anejo",
+       "name": "Queso viejo y añejo",
+       "base_unit": "kg",
+       "forms": [
+        "queso añejo",
+        "queso viejo"
+       ]
+      },
+      {
+       "key": "queso_semicurado",
+       "name": "Queso semicurado",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "queso_tierno",
@@ -1355,6 +2526,15 @@
        ]
       },
       {
+       "key": "lonchas_fundido",
+       "name": "Queso fundido en lonchas",
+       "base_unit": "kg",
+       "forms": [
+        "lonchas sándwich",
+        "queso fundido en lonchas"
+       ]
+      },
+      {
        "key": "queso_rallado",
        "name": "Queso rallado",
        "base_unit": "kg",
@@ -1365,12 +2545,37 @@
        ]
       },
       {
+       "key": "queso_en_polvo",
+       "name": "Queso en polvo",
+       "base_unit": "kg",
+       "forms": [
+        "queso en polvo"
+       ]
+      },
+      {
        "key": "queso_porciones",
        "name": "Queso en porciones",
        "base_unit": "kg",
        "forms": [
         "quesitos",
         "queso en porciones"
+       ]
+      },
+      {
+       "key": "queso_palitos",
+       "name": "Queso fundido con palitos",
+       "base_unit": "kg",
+       "forms": [
+        "queso con palitos"
+       ]
+      },
+      {
+       "key": "babybel",
+       "name": "Queso mini tipo Babybel",
+       "base_unit": "kg",
+       "forms": [
+        "quesitos mini",
+        "queso babybel"
        ]
       },
       {
@@ -1396,6 +2601,46 @@
        ]
       },
       {
+       "key": "queso_cottage",
+       "name": "Queso cottage",
+       "base_unit": "kg",
+       "forms": [
+        "queso cottage"
+       ]
+      },
+      {
+       "key": "ricotta_requeson",
+       "name": "Ricotta y requesón",
+       "base_unit": "kg",
+       "forms": [
+        "ricotta"
+       ]
+      },
+      {
+       "key": "mascarpone",
+       "name": "Mascarpone",
+       "base_unit": "kg",
+       "forms": [
+        "mascarpone"
+       ]
+      },
+      {
+       "key": "burrata",
+       "name": "Burrata",
+       "base_unit": "kg",
+       "forms": [
+        "burrata"
+       ]
+      },
+      {
+       "key": "mozzarella_fresca",
+       "name": "Mozzarella fresca",
+       "base_unit": "kg",
+       "forms": [
+        "mozzarella fresca"
+       ]
+      },
+      {
        "key": "queso_especialidades",
        "name": "Quesos especiales",
        "base_unit": "kg",
@@ -1407,6 +2652,47 @@
         "parmesano",
         "gouda",
         "emmental"
+       ],
+       "vague": true,
+       "options": [
+        "queso_azul",
+        "queso_brie_camembert",
+        "rulo_cabra",
+        "queso_feta"
+       ]
+      },
+      {
+       "key": "queso_feta",
+       "name": "Queso feta",
+       "base_unit": "kg",
+       "forms": [
+        "queso feta"
+       ]
+      },
+      {
+       "key": "rulo_cabra",
+       "name": "Queso de cabra",
+       "base_unit": "kg",
+       "forms": [
+        "rulo de cabra"
+       ]
+      },
+      {
+       "key": "queso_brie_camembert",
+       "name": "Brie y camembert",
+       "base_unit": "kg",
+       "forms": [
+        "queso brie",
+        "queso camembert"
+       ]
+      },
+      {
+       "key": "queso_azul",
+       "name": "Queso azul",
+       "base_unit": "kg",
+       "forms": [
+        "gorgonzola",
+        "roquefort"
        ]
       }
      ]
@@ -1437,6 +2723,29 @@
        ]
       },
       {
+       "key": "leche_polvo",
+       "name": "Leche en polvo",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
+       "key": "leche_cabra",
+       "name": "Leche de cabra",
+       "base_unit": "l",
+       "forms": [
+        "leche de cabra"
+       ]
+      },
+      {
+       "key": "bebida_lactea",
+       "name": "Bebida lactea funcional",
+       "base_unit": "l",
+       "forms": [
+        "bebida lactea con fibra",
+        "bebida lactea omega 3"
+       ]
+      },
+      {
        "key": "bebida_vegetal",
        "name": "Bebida vegetal",
        "base_unit": "l",
@@ -1448,6 +2757,33 @@
         "bebida de soja",
         "leche de soja",
         "bebida de almendra"
+       ],
+       "vague": true,
+       "options": [
+        "bebida_avena",
+        "bebida_soja",
+        "bebida_almendras"
+       ]
+      },
+      {
+       "key": "bebida_soja",
+       "name": "Bebida de soja",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
+       "key": "bebida_avena",
+       "name": "Bebida de avena",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
+       "key": "bebida_almendras",
+       "name": "Bebida de almendras",
+       "base_unit": "l",
+       "forms": [
+        "bebida de almendras",
+        "leche de almendras"
        ]
       },
       {
@@ -1478,6 +2814,14 @@
         "leche condensada",
         "leche evaporada"
        ]
+      },
+      {
+       "key": "leche_evaporada",
+       "name": "Leche evaporada y crema de leche para café",
+       "base_unit": "kg",
+       "forms": [
+        "crema de leche para café"
+       ]
       }
      ]
     },
@@ -1495,6 +2839,23 @@
         "huevo",
         "docena de huevos",
         "huevos camperos"
+       ]
+      },
+      {
+       "key": "huevos_cocidos",
+       "name": "Huevos cocidos",
+       "base_unit": "ud",
+       "forms": [
+        "huevos cocidos"
+       ]
+      },
+      {
+       "key": "claras_huevo",
+       "name": "Claras de huevo liquidas",
+       "base_unit": "ud",
+       "forms": [
+        "claras de huevo",
+        "claras liquidas"
        ]
       },
       {
@@ -1522,6 +2883,15 @@
        ]
       },
       {
+       "key": "mantequilla_light",
+       "name": "Mantequilla light",
+       "base_unit": "kg",
+       "forms": [
+        "mantequilla ligera",
+        "mantequilla light"
+       ]
+      },
+      {
        "key": "margarina",
        "name": "Margarina",
        "base_unit": "kg",
@@ -1540,6 +2910,12 @@
         "nata para montar",
         "nata montada"
        ]
+      },
+      {
+       "key": "nata_montar",
+       "name": "Nata para montar",
+       "base_unit": "l",
+       "forms": []
       }
      ]
     },
@@ -1569,6 +2945,14 @@
        ]
       },
       {
+       "key": "yogur_cabra",
+       "name": "Yogur de cabra",
+       "base_unit": "kg",
+       "forms": [
+        "yogur de cabra"
+       ]
+      },
+      {
        "key": "yogur_sabores",
        "name": "Yogur de sabores",
        "base_unit": "kg",
@@ -1577,6 +2961,15 @@
         "yogur de fresa",
         "yogur de limón",
         "yogur con frutas"
+       ]
+      },
+      {
+       "key": "yogur_bolitas",
+       "name": "Yogur con bolitas y cereales (YogoMix)",
+       "base_unit": "kg",
+       "forms": [
+        "yogomix",
+        "yogur con bolitas de chocolate"
        ]
       },
       {
@@ -1605,8 +2998,40 @@
         "yogur líquido",
         "yogur para beber",
         "l-casei",
-        "actimel",
         "danacol"
+       ],
+       "vague": true,
+       "options": [
+        "bebida_lactobacilos",
+        "bebida_lactea_proteinas",
+        "bebida_colesterol"
+       ]
+      },
+      {
+       "key": "bebida_lactea_proteinas",
+       "name": "Bebida láctea con proteínas",
+       "base_unit": "kg",
+       "forms": [
+        "bebida láctea con proteínas",
+        "yogur líquido proteico"
+       ]
+      },
+      {
+       "key": "bebida_colesterol",
+       "name": "Bebida láctea para el colesterol",
+       "base_unit": "kg",
+       "forms": [
+        "bebida láctea para el colesterol",
+        "cuidacol"
+       ]
+      },
+      {
+       "key": "bebida_lactobacilos",
+       "name": "Bebida láctea con lactobacilos (Actimel, L-casei)",
+       "base_unit": "kg",
+       "forms": [
+        "actimel",
+        "bebida láctea con lactobacilos"
        ]
       },
       {
@@ -1693,7 +3118,58 @@
         "mousse",
         "tiramisú",
         "profiteroles"
+       ],
+       "vague": true,
+       "options": [
+        "postre_tarta",
+        "postre_cremoso",
+        "postre_proteico",
+        "cuajada",
+        "mousse_chocolate"
        ]
+      },
+      {
+       "key": "postre_proteico",
+       "name": "Postre proteico",
+       "base_unit": "kg",
+       "forms": [
+        "mousse proteinas",
+        "pudding proteinas"
+       ]
+      },
+      {
+       "key": "postre_tarta",
+       "name": "Tartas y postres individuales",
+       "base_unit": "kg",
+       "forms": [
+        "cheesecake",
+        "coulant",
+        "postre de chocolate"
+       ]
+      },
+      {
+       "key": "postre_cremoso",
+       "name": "Crema catalana y panna cotta",
+       "base_unit": "kg",
+       "forms": [
+        "crema catalana",
+        "panna cotta",
+        "tocino de cielo"
+       ]
+      },
+      {
+       "key": "mousse_chocolate",
+       "name": "Mousse de chocolate",
+       "base_unit": "kg",
+       "forms": [
+        "mousse de chocolate"
+       ]
+      },
+      {
+       "key": "cuajada",
+       "name": "Cuajada",
+       "base_unit": "kg",
+       "forms": []
       }
      ]
     }
@@ -1720,6 +3196,23 @@
         "baguette",
         "pan de barra",
         "chapata"
+       ]
+      },
+      {
+       "key": "pan_chapata",
+       "name": "Pan chapata",
+       "base_unit": "ud",
+       "forms": [
+        "barra chapata",
+        "pan chapata"
+       ]
+      },
+      {
+       "key": "baguette",
+       "name": "Baguette",
+       "base_unit": "ud",
+       "forms": [
+        "barra baguette"
        ]
       },
       {
@@ -1754,6 +3247,16 @@
        ]
       },
       {
+       "key": "pan_molde_cereales",
+       "name": "Pan de molde de cereales y semillas",
+       "base_unit": "kg",
+       "forms": [
+        "pan de molde con semillas",
+        "pan de molde de centeno",
+        "pan de molde de cereales"
+       ]
+      },
+      {
        "key": "pan_especial",
        "name": "Panes especiales",
        "base_unit": "kg",
@@ -1763,6 +3266,23 @@
         "pan naan",
         "pan de centeno",
         "hogaza"
+       ]
+      },
+      {
+       "key": "pan_pita",
+       "name": "Pan de pita",
+       "base_unit": "kg",
+       "forms": [
+        "pan pita"
+       ]
+      },
+      {
+       "key": "pan_bagel",
+       "name": "Pan bagel",
+       "base_unit": "kg",
+       "forms": [
+        "bagel",
+        "pan bagel"
        ]
       },
       {
@@ -1776,6 +3296,38 @@
         "tortillas de trigo",
         "wraps",
         "fajitas"
+       ],
+       "vague": true,
+       "options": [
+        "tortillas_trigo_wrap",
+        "pan_hot_dog",
+        "tortillas_maiz"
+       ]
+      },
+      {
+       "key": "pan_hot_dog",
+       "name": "Pan de hot dog",
+       "base_unit": "ud",
+       "forms": [
+        "pan de perritos",
+        "pan hot dog"
+       ]
+      },
+      {
+       "key": "tortillas_maiz",
+       "name": "Tortillas de maíz",
+       "base_unit": "ud",
+       "forms": [
+        "tortillas de maíz"
+       ]
+      },
+      {
+       "key": "tortillas_trigo_wrap",
+       "name": "Tortillas de trigo y wraps",
+       "base_unit": "ud",
+       "forms": [
+        "piadina",
+        "tortillas para wrap"
        ]
       },
       {
@@ -1786,6 +3338,32 @@
         "pan tostado",
         "biscotes",
         "tostadas"
+       ]
+      },
+      {
+       "key": "pan_crujiente",
+       "name": "Pan crujiente nórdico",
+       "base_unit": "kg",
+       "forms": [
+        "crispbread",
+        "pan crujiente",
+        "wasa"
+       ]
+      },
+      {
+       "key": "biscotes_tostadas",
+       "name": "Mini biscotes y tostadas finas",
+       "base_unit": "kg",
+       "forms": [
+        "mini tostadas"
+       ]
+      },
+      {
+       "key": "panecillo_tostado",
+       "name": "Panecillos tostados",
+       "base_unit": "kg",
+       "forms": [
+        "panecillos tostados"
        ]
       },
       {
@@ -1815,6 +3393,37 @@
         "rosquilletas",
         "colines",
         "picatostes"
+       ],
+       "vague": true,
+       "options": [
+        "grissini_palitos",
+        "picatostes",
+        "reganas"
+       ]
+      },
+      {
+       "key": "reganas",
+       "name": "Regañás y rosquilletas",
+       "base_unit": "kg",
+       "forms": [
+        "regañás y rosquilletas"
+       ]
+      },
+      {
+       "key": "picatostes",
+       "name": "Picatostes",
+       "base_unit": "kg",
+       "forms": [
+        "costrones"
+       ]
+      },
+      {
+       "key": "grissini_palitos",
+       "name": "Grissini y palitos de pan",
+       "base_unit": "kg",
+       "forms": [
+        "grissini",
+        "palitos de pan"
        ]
       }
      ]
@@ -1838,6 +3447,36 @@
         "palmera",
         "ensaimada",
         "bollería de horno"
+       ],
+       "vague": true,
+       "options": [
+        "croissant_horno",
+        "berlinas",
+        "napolitana_horno"
+       ]
+      },
+      {
+       "key": "napolitana_horno",
+       "name": "Napolitana de horno",
+       "base_unit": "ud",
+       "forms": [
+        "napolitana de horno"
+       ]
+      },
+      {
+       "key": "berlinas",
+       "name": "Berlinas",
+       "base_unit": "ud",
+       "forms": [
+        "berlina"
+       ]
+      },
+      {
+       "key": "croissant_horno",
+       "name": "Croissant de horno",
+       "base_unit": "ud",
+       "forms": [
+        "mini croissants"
        ]
       },
       {
@@ -1848,6 +3487,24 @@
         "empanada",
         "empanadilla",
         "hojaldre salado"
+       ]
+      },
+      {
+       "key": "minis_saladas",
+       "name": "Minis saladas y artesanitos",
+       "base_unit": "ud",
+       "forms": [
+        "artesanitos",
+        "mini saladas",
+        "napolitana mixta"
+       ]
+      },
+      {
+       "key": "empanadillas",
+       "name": "Empanadillas",
+       "base_unit": "ud",
+       "forms": [
+        "empanadillas"
        ]
       },
       {
@@ -1864,6 +3521,74 @@
        ]
       },
       {
+       "key": "pasta_almendra",
+       "name": "Pasta de almendra y rosegones",
+       "base_unit": "kg",
+       "forms": [
+        "pasta de almendra",
+        "rosegones"
+       ]
+      },
+      {
+       "key": "tortas_aceite",
+       "name": "Tortas de aceite",
+       "base_unit": "kg",
+       "forms": [
+        "tortas de aceite"
+       ]
+      },
+      {
+       "key": "gofres",
+       "name": "Gofres",
+       "base_unit": "kg",
+       "forms": [
+        "gofres"
+       ]
+      },
+      {
+       "key": "hojaldres_dulces",
+       "name": "Hojaldres dulces y palmeritas",
+       "base_unit": "kg",
+       "forms": [
+        "hojaldre dulce",
+        "palmeritas"
+       ]
+      },
+      {
+       "key": "croissant_napolitana_envasado",
+       "name": "Croissant y napolitana envasados",
+       "base_unit": "kg",
+       "forms": [
+        "croissant envasado",
+        "napolitana envasada"
+       ]
+      },
+      {
+       "key": "panettone_pandoro",
+       "name": "Panettone y pandoro",
+       "base_unit": "kg",
+       "forms": [
+        "pandoro",
+        "panettone"
+       ]
+      },
+      {
+       "key": "magdalenas",
+       "name": "Magdalenas",
+       "base_unit": "kg",
+       "forms": [
+        "mini magdalenas"
+       ]
+      },
+      {
+       "key": "bizcocho_envasado",
+       "name": "Bizcocho envasado",
+       "base_unit": "kg",
+       "forms": [
+        "bizcocho de yogur"
+       ]
+      },
+      {
        "key": "dulces_navidad",
        "name": "Turrones, polvorones y mazapanes",
        "base_unit": "kg",
@@ -1872,6 +3597,71 @@
         "polvorones",
         "mazapanes",
         "mantecados"
+       ],
+       "vague": true,
+       "options": [
+        "turron_chocolate",
+        "mantecados_polvorones",
+        "turron_blando",
+        "dulces_andaluces_hojaldre",
+        "mazapan",
+        "turron_duro"
+       ]
+      },
+      {
+       "key": "dulces_andaluces_hojaldre",
+       "name": "Hojaldrados y alfajores navideños",
+       "base_unit": "kg",
+       "forms": [
+        "alfajor",
+        "cortadillo de cabello de ángel",
+        "hojaldrada"
+       ]
+      },
+      {
+       "key": "mazapan",
+       "name": "Mazapán y dulces de almendra",
+       "base_unit": "kg",
+       "forms": [
+        "figuritas de mazapán",
+        "huesos de santo",
+        "mazapán"
+       ]
+      },
+      {
+       "key": "mantecados_polvorones",
+       "name": "Mantecados y polvorones",
+       "base_unit": "kg",
+       "forms": [
+        "mantecado",
+        "polvorón"
+       ]
+      },
+      {
+       "key": "turron_duro",
+       "name": "Turrón duro de almendras",
+       "base_unit": "kg",
+       "forms": [
+        "turrón de alicante",
+        "turrón duro"
+       ]
+      },
+      {
+       "key": "turron_blando",
+       "name": "Turrón blando y cremoso",
+       "base_unit": "kg",
+       "forms": [
+        "turrón blando",
+        "turrón de jijona",
+        "turrón de pistacho"
+       ]
+      },
+      {
+       "key": "turron_chocolate",
+       "name": "Turrón de chocolate",
+       "base_unit": "kg",
+       "forms": [
+        "turrón de chocolate"
        ]
       },
       {
@@ -1901,6 +3691,64 @@
         "harina",
         "harina de trigo",
         "maicena"
+       ],
+       "vague": true,
+       "options": [
+        "harina_maiz",
+        "harina_arroz",
+        "harina_garbanzo",
+        "harina_fuerza",
+        "harina_espelta",
+        "semola_trigo"
+       ]
+      },
+      {
+       "key": "semola_trigo",
+       "name": "Sémola de trigo",
+       "base_unit": "kg",
+       "forms": [
+        "sémola",
+        "sémola de trigo"
+       ]
+      },
+      {
+       "key": "harina_espelta",
+       "name": "Harina de espelta",
+       "base_unit": "kg",
+       "forms": [
+        "harina de espelta"
+       ]
+      },
+      {
+       "key": "harina_fuerza",
+       "name": "Harina de fuerza",
+       "base_unit": "kg",
+       "forms": [
+        "harina de fuerza"
+       ]
+      },
+      {
+       "key": "harina_garbanzo",
+       "name": "Harina de garbanzo",
+       "base_unit": "kg",
+       "forms": [
+        "harina de garbanzo"
+       ]
+      },
+      {
+       "key": "harina_arroz",
+       "name": "Harina de arroz",
+       "base_unit": "kg",
+       "forms": [
+        "harina de arroz"
+       ]
+      },
+      {
+       "key": "harina_maiz",
+       "name": "Harina de maíz",
+       "base_unit": "kg",
+       "forms": [
+        "harina de maíz"
        ]
       },
       {
@@ -1911,6 +3759,50 @@
         "levadura",
         "preparado para bizcocho",
         "fideos de chocolate"
+       ],
+       "vague": true,
+       "options": [
+        "preparado_flan_natillas",
+        "preparado_reposteria",
+        "impulsor_gasificante",
+        "vainilla_reposteria"
+       ]
+      },
+      {
+       "key": "preparado_reposteria",
+       "name": "Preparado para repostería y crepes",
+       "base_unit": "kg",
+       "forms": [
+        "preparado para crepes",
+        "preparado para repostería"
+       ]
+      },
+      {
+       "key": "preparado_flan_natillas",
+       "name": "Preparado en polvo para flan, natillas y cuajada",
+       "base_unit": "kg",
+       "forms": [
+        "preparado de cuajada",
+        "preparado para flan",
+        "preparado para natillas"
+       ]
+      },
+      {
+       "key": "vainilla_reposteria",
+       "name": "Aroma y azúcar vainillado",
+       "base_unit": "kg",
+       "forms": [
+        "aroma de vainilla",
+        "azúcar vainillado"
+       ]
+      },
+      {
+       "key": "impulsor_gasificante",
+       "name": "Impulsor gasificante",
+       "base_unit": "kg",
+       "forms": [
+        "gasificante",
+        "impulsor"
        ]
       },
       {
@@ -1935,6 +3827,12 @@
        ]
       },
       {
+       "key": "caramelo_liquido",
+       "name": "Caramelo líquido",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
        "key": "masas",
        "name": "Masas de hojaldre y pizza",
        "base_unit": "kg",
@@ -1942,6 +3840,37 @@
         "masa de hojaldre",
         "masa quebrada",
         "obleas de empanadilla"
+       ],
+       "vague": true,
+       "options": [
+        "masa_empanada",
+        "masa_filo",
+        "masa_quebrada"
+       ]
+      },
+      {
+       "key": "masa_quebrada",
+       "name": "Masa quebrada",
+       "base_unit": "kg",
+       "forms": [
+        "masa brisa"
+       ]
+      },
+      {
+       "key": "masa_filo",
+       "name": "Masa filo",
+       "base_unit": "kg",
+       "forms": [
+        "masa filo"
+       ]
+      },
+      {
+       "key": "masa_empanada",
+       "name": "Masa para empanadas y empanadillas",
+       "base_unit": "kg",
+       "forms": [
+        "masa para empanadas",
+        "masa para empanadillas"
        ]
       },
       {
@@ -1980,6 +3909,37 @@
         "aove",
         "aceite de oliva virgen extra",
         "aceite de oliva suave"
+       ],
+       "vague": true,
+       "options": [
+        "aceite_oliva_virgen_extra",
+        "aceite_oliva_virgen",
+        "alino_aceite_perejil_ajo"
+       ]
+      },
+      {
+       "key": "alino_aceite_perejil_ajo",
+       "name": "Aliño de aceite con perejil y ajo",
+       "base_unit": "l",
+       "forms": [
+        "aceite con ajo y perejil",
+        "aliño de aceite con perejil y ajo"
+       ]
+      },
+      {
+       "key": "aceite_oliva_virgen",
+       "name": "Aceite de oliva virgen",
+       "base_unit": "l",
+       "forms": [
+        "aceite de oliva virgen"
+       ]
+      },
+      {
+       "key": "aceite_oliva_virgen_extra",
+       "name": "Aceite de oliva virgen extra",
+       "base_unit": "l",
+       "forms": [
+        "aceite virgen extra"
        ]
       },
       {
@@ -1994,6 +3954,12 @@
        ]
       },
       {
+       "key": "aceite_girasol",
+       "name": "Aceite de girasol",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
        "key": "vinagre",
        "name": "Vinagre y aderezos",
        "base_unit": "l",
@@ -2001,6 +3967,48 @@
         "vinagre",
         "vinagre de módena",
         "crema de balsámico"
+       ],
+       "vague": true,
+       "options": [
+        "crema_balsamica",
+        "vinagre_balsamico",
+        "vinagre_manzana",
+        "limon_exprimido"
+       ]
+      },
+      {
+       "key": "limon_exprimido",
+       "name": "Limon exprimido",
+       "base_unit": "l",
+       "forms": [
+        "limon exprimido",
+        "zumo de limon"
+       ]
+      },
+      {
+       "key": "vinagre_manzana",
+       "name": "Vinagre de manzana",
+       "base_unit": "l",
+       "forms": [
+        "vinagre de manzana"
+       ]
+      },
+      {
+       "key": "vinagre_balsamico",
+       "name": "Vinagre balsamico",
+       "base_unit": "l",
+       "forms": [
+        "vinagre balsamico"
+       ]
+      },
+      {
+       "key": "crema_balsamica",
+       "name": "Crema y reduccion balsamica",
+       "base_unit": "l",
+       "forms": [
+        "crema balsamica",
+        "crema de vinagre balsamico",
+        "reduccion balsamica"
        ]
       },
       {
@@ -2013,6 +4021,14 @@
         "sal gorda",
         "sal fina",
         "bicarbonato"
+       ]
+      },
+      {
+       "key": "bicarbonato",
+       "name": "Bicarbonato",
+       "base_unit": "kg",
+       "forms": [
+        "bicarbonato de sodio"
        ]
       },
       {
@@ -2050,6 +4066,14 @@
        ]
       },
       {
+       "key": "colorante_alimentario",
+       "name": "Colorante alimentario",
+       "base_unit": "kg",
+       "forms": [
+        "colorante alimentario"
+       ]
+      },
+      {
        "key": "pimienta",
        "name": "Pimienta",
        "base_unit": "kg",
@@ -2067,6 +4091,16 @@
         "sazonador",
         "sazonador para carne",
         "ajo en polvo"
+       ]
+      },
+      {
+       "key": "topping_crujiente",
+       "name": "Cebolla frita y toppings crujientes",
+       "base_unit": "kg",
+       "forms": [
+        "cebolla frita",
+        "cebolla frita crujiente",
+        "topping crujiente"
        ]
       },
       {
@@ -2218,6 +4252,14 @@
        ]
       },
       {
+       "key": "salsa_pesto",
+       "name": "Salsa pesto",
+       "base_unit": "kg",
+       "forms": [
+        "salsa pesto"
+       ]
+      },
+      {
        "key": "bechamel",
        "name": "Bechamel",
        "base_unit": "kg",
@@ -2234,6 +4276,23 @@
         "salsa de soja",
         "salsa agridulce",
         "salsa teriyaki"
+       ]
+      },
+      {
+       "key": "tahini",
+       "name": "Tahini (pasta de sesamo)",
+       "base_unit": "kg",
+       "forms": [
+        "pasta de sesamo",
+        "tahini"
+       ]
+      },
+      {
+       "key": "salsa_soja",
+       "name": "Salsa de soja",
+       "base_unit": "kg",
+       "forms": [
+        "soja"
        ]
       }
      ]
@@ -2252,6 +4311,16 @@
         "arroz",
         "arroz redondo",
         "arroz integral"
+       ]
+      },
+      {
+       "key": "arroz_cocido",
+       "name": "Arroz cocido",
+       "base_unit": "kg",
+       "forms": [
+        "arroz cocido",
+        "arroz de microondas",
+        "arroz precocinado"
        ]
       },
       {
@@ -2299,6 +4368,15 @@
        ]
       },
       {
+       "key": "garbanzos_cocidos",
+       "name": "Garbanzos cocidos",
+       "base_unit": "kg",
+       "forms": [
+        "garbanzo cocido",
+        "garbanzos en bote"
+       ]
+      },
+      {
        "key": "alubias",
        "name": "Alubias",
        "base_unit": "kg",
@@ -2317,6 +4395,24 @@
         "lentejas",
         "lentejas cocidas",
         "guisantes secos"
+       ]
+      },
+      {
+       "key": "soja_texturizada",
+       "name": "Soja texturizada",
+       "base_unit": "kg",
+       "forms": [
+        "proteína de soja",
+        "soja texturizada"
+       ]
+      },
+      {
+       "key": "lentejas_cocidas",
+       "name": "Lentejas cocidas",
+       "base_unit": "kg",
+       "forms": [
+        "lenteja cocida",
+        "lentejas en bote"
        ]
       },
       {
@@ -2369,6 +4465,16 @@
        ]
       },
       {
+       "key": "macarrones",
+       "name": "Macarrones",
+       "base_unit": "kg",
+       "forms": [
+        "macarrón",
+        "macarrón fino",
+        "macarrón grueso"
+       ]
+      },
+      {
        "key": "pasta_larga",
        "name": "Espaguetis y tallarines",
        "base_unit": "kg",
@@ -2379,6 +4485,12 @@
         "tallarines",
         "espagueti"
        ]
+      },
+      {
+       "key": "espaguetis",
+       "name": "Espaguetis",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "pasta_sopa",
@@ -2412,6 +4524,16 @@
         "raviolis",
         "pasta fresca",
         "pasta rellena"
+       ]
+      },
+      {
+       "key": "tagliatelle_fresca",
+       "name": "Tagliatelle frescos",
+       "base_unit": "kg",
+       "forms": [
+        "tagliatelle",
+        "tagliatelle al huevo",
+        "tagliatelle frescos"
        ]
       },
       {
@@ -2487,6 +4609,15 @@
        ]
       },
       {
+       "key": "melva_conserva",
+       "name": "Melva en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "filetes de melva",
+        "melva en conserva"
+       ]
+      },
+      {
        "key": "conserva_pescado_otros",
        "name": "Otras conservas de pescado",
        "base_unit": "kg",
@@ -2508,6 +4639,15 @@
        ]
       },
       {
+       "key": "berberechos_conserva",
+       "name": "Berberechos en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "berberechos al natural",
+        "berberechos en lata"
+       ]
+      },
+      {
        "key": "conserva_verdura",
        "name": "Conservas de verdura",
        "base_unit": "kg",
@@ -2518,6 +4658,80 @@
         "champiñones en lata",
         "judías verdes en conserva",
         "alcachofas"
+       ],
+       "vague": true,
+       "options": [
+        "pimientos_conserva",
+        "esparragos_conserva",
+        "champinon_conserva",
+        "alcachofa_conserva",
+        "guisantes_conserva",
+        "judias_verdes_conserva",
+        "maiz_conserva"
+       ]
+      },
+      {
+       "key": "pimientos_conserva",
+       "name": "Pimientos asados y del piquillo en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "pimientos asados",
+        "pimientos en tiras"
+       ]
+      },
+      {
+       "key": "maiz_conserva",
+       "name": "Maíz dulce en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "maíz en lata"
+       ]
+      },
+      {
+       "key": "judias_verdes_conserva",
+       "name": "Judías verdes en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "judías verdes planas",
+        "judías verdes redondas"
+       ]
+      },
+      {
+       "key": "guisantes_conserva",
+       "name": "Guisantes en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "guisantes en conserva",
+        "guisantes extra"
+       ]
+      },
+      {
+       "key": "esparragos_conserva",
+       "name": "Espárragos en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "espárragos blancos",
+        "espárragos en conserva",
+        "yemas de espárragos"
+       ]
+      },
+      {
+       "key": "alcachofa_conserva",
+       "name": "Corazones de alcachofa en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "alcachofas en conserva",
+        "corazones de alcachofa"
+       ]
+      },
+      {
+       "key": "champinon_conserva",
+       "name": "Champiñones en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "champiñones en conserva",
+        "champiñón entero",
+        "champiñón laminado"
        ]
       },
       {
@@ -2531,6 +4745,24 @@
        ]
       },
       {
+       "key": "pina_conserva",
+       "name": "Piña en conserva",
+       "base_unit": "kg",
+       "forms": [
+        "piña en conserva",
+        "piña en rodajas",
+        "piña en su jugo"
+       ]
+      },
+      {
+       "key": "melocoton_almibar",
+       "name": "Melocotón en almíbar",
+       "base_unit": "kg",
+       "forms": [
+        "melocotón en conserva"
+       ]
+      },
+      {
        "key": "tomate_conserva",
        "name": "Tomate triturado y en conserva",
        "base_unit": "kg",
@@ -2539,6 +4771,41 @@
         "tomate natural",
         "tomate pelado",
         "concentrado de tomate"
+       ]
+      },
+      {
+       "key": "pisto_fritada",
+       "name": "Pisto y fritada de verduras",
+       "base_unit": "kg",
+       "forms": [
+        "fritada",
+        "fritada de pisto",
+        "pisto"
+       ]
+      },
+      {
+       "key": "tomate_untar",
+       "name": "Tomate para untar",
+       "base_unit": "kg",
+       "forms": [
+        "tomate para untar"
+       ]
+      },
+      {
+       "key": "tomate_seco",
+       "name": "Tomate seco",
+       "base_unit": "kg",
+       "forms": [
+        "tomate seco"
+       ]
+      },
+      {
+       "key": "tomate_concentrado",
+       "name": "Tomate concentrado",
+       "base_unit": "kg",
+       "forms": [
+        "doble concentrado de tomate",
+        "tomate concentrado"
        ]
       }
      ]
@@ -2560,6 +4827,39 @@
         "caldo de cocido",
         "pastillas de caldo",
         "avecrem"
+       ],
+       "vague": true,
+       "options": [
+        "caldo_pollo",
+        "caldo_pescado",
+        "caldo_carne"
+       ]
+      },
+      {
+       "key": "caldo_pescado",
+       "name": "Caldo de pescado",
+       "base_unit": "l",
+       "forms": [
+        "caldo de pescado",
+        "fumet",
+        "pastillas de caldo de pescado"
+       ]
+      },
+      {
+       "key": "caldo_carne",
+       "name": "Caldo de carne",
+       "base_unit": "l",
+       "forms": [
+        "caldo de carne",
+        "pastillas de caldo de carne"
+       ]
+      },
+      {
+       "key": "caldo_pollo",
+       "name": "Caldo de pollo",
+       "base_unit": "l",
+       "forms": [
+        "pastillas de caldo de pollo"
        ]
       },
       {
@@ -2590,6 +4890,14 @@
         "gazpacho",
         "salmorejo"
        ]
+      },
+      {
+       "key": "salmorejo",
+       "name": "Salmorejo",
+       "base_unit": "l",
+       "forms": [
+        "salmorejo cordobés"
+       ]
       }
      ]
     },
@@ -2614,6 +4922,31 @@
        ]
       },
       {
+       "key": "aceitunas_rellenas",
+       "name": "Aceitunas rellenas",
+       "base_unit": "kg",
+       "forms": [
+        "aceitunas rellenas de jalapeño",
+        "aceitunas rellenas de pimiento"
+       ]
+      },
+      {
+       "key": "aceitunas_rellenas_anchoa",
+       "name": "Aceitunas rellenas de anchoa",
+       "base_unit": "kg",
+       "forms": [
+        "aceitunas rellenas de anchoa"
+       ]
+      },
+      {
+       "key": "aceitunas_negras",
+       "name": "Aceitunas negras",
+       "base_unit": "kg",
+       "forms": [
+        "aceitunas negras sin hueso"
+       ]
+      },
+      {
        "key": "encurtidos",
        "name": "Pepinillos y encurtidos",
        "base_unit": "kg",
@@ -2622,6 +4955,24 @@
         "banderillas",
         "encurtidos",
         "cebollitas"
+       ]
+      },
+      {
+       "key": "banderillas",
+       "name": "Banderillas",
+       "base_unit": "kg",
+       "forms": [
+        "banderillas gildas",
+        "banderillas picantes"
+       ]
+      },
+      {
+       "key": "pepinillos_encurtidos",
+       "name": "Pepinillos",
+       "base_unit": "kg",
+       "forms": [
+        "pepinillos agridulces",
+        "pepinillos en vinagre"
        ]
       },
       {
@@ -2637,6 +4988,161 @@
         "anacardos",
         "pipas",
         "cóctel de frutos secos"
+       ],
+       "vague": true,
+       "options": [
+        "mezcla_frutos_secos",
+        "pipas_girasol",
+        "almendras",
+        "cacahuetes",
+        "anacardos",
+        "nueces",
+        "pistachos",
+        "almendra_laminada_molida"
+       ]
+      },
+      {
+       "key": "semillas_sesamo",
+       "name": "Semillas de sésamo",
+       "base_unit": "kg",
+       "forms": [
+        "semillas de sésamo",
+        "sésamo"
+       ]
+      },
+      {
+       "key": "semillas_lino",
+       "name": "Semillas de lino",
+       "base_unit": "kg",
+       "forms": [
+        "lino dorado",
+        "semillas de lino"
+       ]
+      },
+      {
+       "key": "semillas_chia",
+       "name": "Semillas de chía",
+       "base_unit": "kg",
+       "forms": [
+        "chía",
+        "semillas de chía"
+       ]
+      },
+      {
+       "key": "pistachos",
+       "name": "Pistachos",
+       "base_unit": "kg",
+       "forms": [
+        "pistacho"
+       ]
+      },
+      {
+       "key": "pipas_calabaza",
+       "name": "Pipas de calabaza",
+       "base_unit": "kg",
+       "forms": [
+        "pipas de calabaza"
+       ]
+      },
+      {
+       "key": "pipas_girasol",
+       "name": "Pipas de girasol",
+       "base_unit": "kg",
+       "forms": [
+        "pipas de girasol",
+        "pipas gigantes"
+       ]
+      },
+      {
+       "key": "nuez_macadamia",
+       "name": "Nuez de macadamia",
+       "base_unit": "kg",
+       "forms": [
+        "macadamia",
+        "nuez de macadamia"
+       ]
+      },
+      {
+       "key": "nuez_brasil",
+       "name": "Nuez de Brasil",
+       "base_unit": "kg",
+       "forms": [
+        "nueces de brasil",
+        "nuez de brasil"
+       ]
+      },
+      {
+       "key": "nuez_pecana",
+       "name": "Nuez pecana",
+       "base_unit": "kg",
+       "forms": [
+        "nueces pecanas",
+        "nuez pecana"
+       ]
+      },
+      {
+       "key": "nueces",
+       "name": "Nueces",
+       "base_unit": "kg",
+       "forms": [
+        "nueces peladas",
+        "nuez natural"
+       ]
+      },
+      {
+       "key": "mezcla_frutos_secos",
+       "name": "Mezclas de frutos secos",
+       "base_unit": "kg",
+       "forms": [
+        "cocktail de frutos secos",
+        "combinado de frutos secos",
+        "mezcla de frutos secos"
+       ]
+      },
+      {
+       "key": "castanas",
+       "name": "Castañas",
+       "base_unit": "kg",
+       "forms": [
+        "castañas",
+        "castañas cocidas"
+       ]
+      },
+      {
+       "key": "cacahuetes",
+       "name": "Cacahuetes",
+       "base_unit": "kg",
+       "forms": [
+        "cacahuetes fritos",
+        "cacahuetes tostados"
+       ]
+      },
+      {
+       "key": "anacardos",
+       "name": "Anacardos",
+       "base_unit": "kg",
+       "forms": [
+        "anacardo"
+       ]
+      },
+      {
+       "key": "almendra_laminada_molida",
+       "name": "Almendra laminada y molida",
+       "base_unit": "kg",
+       "forms": [
+        "almendra laminada",
+        "almendra molida",
+        "almendras laminadas"
+       ]
+      },
+      {
+       "key": "almendras",
+       "name": "Almendras",
+       "base_unit": "kg",
+       "forms": [
+        "almendra natural",
+        "almendras fritas",
+        "almendras tostadas"
        ]
       },
       {
@@ -2661,6 +5167,26 @@
        ]
       },
       {
+       "key": "patatas_paja_sticks",
+       "name": "Patatas paja y sticks",
+       "base_unit": "kg",
+       "forms": [
+        "patatas fritas paja",
+        "patatas paja",
+        "sticks de patata"
+       ]
+      },
+      {
+       "key": "aperitivo_patata_moldeada",
+       "name": "Aperitivo de patata moldeada",
+       "base_unit": "kg",
+       "forms": [
+        "aperitivo de patata",
+        "patatas apiladas",
+        "pringles"
+       ]
+      },
+      {
        "key": "snacks",
        "name": "Snacks",
        "base_unit": "kg",
@@ -2670,6 +5196,42 @@
         "nachos",
         "palomitas",
         "cortezas"
+       ]
+      },
+      {
+       "key": "maiz_frito_snack",
+       "name": "Maiz frito crujiente (kikos)",
+       "base_unit": "kg",
+       "forms": [
+        "kikos",
+        "maiz frito",
+        "maiz gigante"
+       ]
+      },
+      {
+       "key": "cortezas_cerdo",
+       "name": "Cortezas y torreznos",
+       "base_unit": "kg",
+       "forms": [
+        "cortezas de cerdo",
+        "torreznillos"
+       ]
+      },
+      {
+       "key": "nachos",
+       "name": "Nachos",
+       "base_unit": "kg",
+       "forms": [
+        "nachos con queso"
+       ]
+      },
+      {
+       "key": "palomitas",
+       "name": "Palomitas de maiz",
+       "base_unit": "kg",
+       "forms": [
+        "palomitas de maiz",
+        "palomitas microondas"
        ]
       }
      ]
@@ -2691,6 +5253,24 @@
        ]
       },
       {
+       "key": "azucar_moreno",
+       "name": "Azúcar moreno",
+       "base_unit": "kg",
+       "forms": [
+        "azúcar de caña",
+        "panela"
+       ]
+      },
+      {
+       "key": "azucar_glas",
+       "name": "Azúcar glas",
+       "base_unit": "kg",
+       "forms": [
+        "azúcar glas",
+        "azúcar lustre"
+       ]
+      },
+      {
        "key": "edulcorante",
        "name": "Edulcorante",
        "base_unit": "ud",
@@ -2698,6 +5278,15 @@
         "edulcorante",
         "sacarina",
         "stevia"
+       ]
+      },
+      {
+       "key": "sirope_agave",
+       "name": "Sirope de agave",
+       "base_unit": "ud",
+       "forms": [
+        "agave",
+        "sirope de agave"
        ]
       },
       {
@@ -2713,6 +5302,32 @@
        ]
       },
       {
+       "key": "chocolate_fundir",
+       "name": "Chocolate para fundir y repostería",
+       "base_unit": "kg",
+       "forms": [
+        "chocolate de repostería",
+        "chocolate fundir",
+        "gotas de chocolate"
+       ]
+      },
+      {
+       "key": "chocolate_blanco",
+       "name": "Chocolate blanco",
+       "base_unit": "kg",
+       "forms": [
+        "tableta de chocolate blanco"
+       ]
+      },
+      {
+       "key": "chocolate_con_leche",
+       "name": "Chocolate con leche",
+       "base_unit": "kg",
+       "forms": [
+        "tableta de chocolate con leche"
+       ]
+      },
+      {
        "key": "chocolatinas",
        "name": "Chocolatinas",
        "base_unit": "kg",
@@ -2720,6 +5335,34 @@
         "chocolatinas",
         "kitkat",
         "huevo kinder"
+       ]
+      },
+      {
+       "key": "chocolate_figuras_navidad",
+       "name": "Figuras y piruletas de chocolate de Navidad",
+       "base_unit": "kg",
+       "forms": [
+        "figuras de chocolate navidad",
+        "piruleta de chocolate"
+       ]
+      },
+      {
+       "key": "huevo_sorpresa",
+       "name": "Huevos sorpresa de chocolate",
+       "base_unit": "kg",
+       "forms": [
+        "huevo de chocolate",
+        "huevo sorpresa"
+       ]
+      },
+      {
+       "key": "frutos_secos_chocolate",
+       "name": "Frutos secos bañados en chocolate",
+       "base_unit": "kg",
+       "forms": [
+        "cacahuetes bañados en chocolate",
+        "frutos secos con chocolate",
+        "pistachos bañados en chocolate"
        ]
       },
       {
@@ -2732,6 +5375,15 @@
        ]
       },
       {
+       "key": "bombones_surtidos",
+       "name": "Surtidos de bombones",
+       "base_unit": "kg",
+       "forms": [
+        "bombones surtidos",
+        "surtido de bombones"
+       ]
+      },
+      {
        "key": "crema_untar",
        "name": "Crema de cacao para untar",
        "base_unit": "kg",
@@ -2740,6 +5392,33 @@
         "nutella",
         "crema de cacao",
         "crema de untar"
+       ]
+      },
+      {
+       "key": "dulce_leche",
+       "name": "Dulce de leche",
+       "base_unit": "kg",
+       "forms": [
+        "dulce de leche"
+       ]
+      },
+      {
+       "key": "crema_galleta",
+       "name": "Crema de galleta",
+       "base_unit": "kg",
+       "forms": [
+        "crema biscoff",
+        "crema de galleta",
+        "crema de galleta caramelizada"
+       ]
+      },
+      {
+       "key": "crema_cacahuete",
+       "name": "Crema de cacahuete",
+       "base_unit": "kg",
+       "forms": [
+        "crema de cacahuete",
+        "mantequilla de cacahuete"
        ]
       },
       {
@@ -2777,6 +5456,23 @@
         "mermelada",
         "confitura",
         "membrillo"
+       ]
+      },
+      {
+       "key": "cebolla_caramelizada",
+       "name": "Cebolla caramelizada",
+       "base_unit": "kg",
+       "forms": [
+        "cebolla caramelizada",
+        "mermelada de cebolla"
+       ]
+      },
+      {
+       "key": "dulce_membrillo",
+       "name": "Dulce de membrillo",
+       "base_unit": "kg",
+       "forms": [
+        "dulce de membrillo"
        ]
       },
       {
@@ -2818,12 +5514,39 @@
        ]
       },
       {
+       "key": "copos_avena",
+       "name": "Copos de avena",
+       "base_unit": "kg",
+       "forms": [
+        "avena molida",
+        "copos de avena integral"
+       ]
+      },
+      {
+       "key": "muesli",
+       "name": "Muesli",
+       "base_unit": "kg",
+       "forms": [
+        "muesli con frutas",
+        "muesli crujiente"
+       ]
+      },
+      {
        "key": "barritas",
        "name": "Barritas de cereales",
        "base_unit": "kg",
        "forms": [
         "barritas de cereales",
         "barritas"
+       ]
+      },
+      {
+       "key": "barritas_proteina",
+       "name": "Barritas de proteínas",
+       "base_unit": "kg",
+       "forms": [
+        "barrita proteica",
+        "barritas de proteínas"
        ]
       },
       {
@@ -2835,6 +5558,12 @@
         "tortitas de maíz",
         "tortitas"
        ]
+      },
+      {
+       "key": "tortitas_maiz",
+       "name": "Tortitas de maiz",
+       "base_unit": "kg",
+       "forms": []
       }
      ]
     },
@@ -2858,6 +5587,20 @@
        ]
       },
       {
+       "key": "galletas_tostadas",
+       "name": "Galletas tostadas",
+       "base_unit": "kg",
+       "forms": []
+      },
+      {
+       "key": "galletas_maria",
+       "name": "Galletas María",
+       "base_unit": "kg",
+       "forms": [
+        "galleta maría"
+       ]
+      },
+      {
        "key": "galletas_integrales",
        "name": "Galletas integrales y digestive",
        "base_unit": "kg",
@@ -2865,6 +5608,15 @@
         "galletas integrales",
         "galletas digestive",
         "digestive"
+       ]
+      },
+      {
+       "key": "galletas_avena",
+       "name": "Galletas de avena",
+       "base_unit": "kg",
+       "forms": [
+        "galletas avena",
+        "galletas de avena"
        ]
       },
       {
@@ -2877,6 +5629,35 @@
         "galletas con chocolate",
         "oreo",
         "príncipe"
+       ]
+      },
+      {
+       "key": "galletas_rellenas_crema",
+       "name": "Galletas rellenas de crema",
+       "base_unit": "kg",
+       "forms": [
+        "galletas oreo",
+        "galletas rellenas de crema"
+       ]
+      },
+      {
+       "key": "galletas_cookies",
+       "name": "Galletas cookies",
+       "base_unit": "kg",
+       "forms": [
+        "cookies",
+        "galletas cookies",
+        "mini cookies"
+       ]
+      },
+      {
+       "key": "barquillos_rellenos",
+       "name": "Barquillos rellenos",
+       "base_unit": "kg",
+       "forms": [
+        "barquillos con crema",
+        "barquillos de chocolate",
+        "barquillos rellenos"
        ]
       },
       {
@@ -2948,6 +5729,16 @@
        ]
       },
       {
+       "key": "capsulas_dolce_gusto_leche",
+       "name": "Cápsulas Dolce Gusto con leche",
+       "base_unit": "ud",
+       "forms": [
+        "cápsulas dolce gusto cappuccino",
+        "cápsulas dolce gusto con leche",
+        "cápsulas dolce gusto cortado"
+       ]
+      },
+      {
        "key": "capsulas_tassimo",
        "name": "Cápsulas compatibles Tassimo",
        "base_unit": "ud",
@@ -2974,6 +5765,16 @@
        ]
       },
       {
+       "key": "capuchino_soluble",
+       "name": "Capuchino soluble",
+       "base_unit": "kg",
+       "forms": [
+        "café capuchino en sobres",
+        "cappuccino soluble",
+        "capuchino soluble"
+       ]
+      },
+      {
        "key": "bebida_cafe",
        "name": "Bebidas de café frías y otras",
        "base_unit": "l",
@@ -2981,6 +5782,15 @@
         "café frío",
         "capuccino de lata",
         "achicoria"
+       ]
+      },
+      {
+       "key": "cereales_solubles",
+       "name": "Cereales solubles y achicoria",
+       "base_unit": "l",
+       "forms": [
+        "cereales solubles",
+        "sucedáneo de café"
        ]
       },
       {
@@ -2992,6 +5802,16 @@
         "colacao",
         "nesquik",
         "cola cao"
+       ]
+      },
+      {
+       "key": "cacao_puro",
+       "name": "Cacao puro en polvo",
+       "base_unit": "kg",
+       "forms": [
+        "cacao en polvo sin azúcar",
+        "cacao puro",
+        "cacao puro en polvo"
        ]
       },
       {
@@ -3008,10 +5828,19 @@
        "name": "Té",
        "base_unit": "ud",
        "forms": [
+        "te chai",
         "té",
-        "té verde",
         "té negro",
-        "té rojo"
+        "té rojo",
+        "té verde"
+       ]
+      },
+      {
+       "key": "te_verde",
+       "name": "Te verde",
+       "base_unit": "ud",
+       "forms": [
+        "te matcha"
        ]
       },
       {
@@ -3066,6 +5895,14 @@
         "agua con gas",
         "gaseosa",
         "soda"
+       ]
+      },
+      {
+       "key": "gaseosa",
+       "name": "Gaseosa",
+       "base_unit": "l",
+       "forms": [
+        "gaseosa grande"
        ]
       }
      ]
@@ -3132,6 +5969,14 @@
        ]
       },
       {
+       "key": "bitter",
+       "name": "Bitter sin alcohol",
+       "base_unit": "l",
+       "forms": [
+        "bitter kas"
+       ]
+      },
+      {
        "key": "refresco_te",
        "name": "Refresco de té",
        "base_unit": "l",
@@ -3140,6 +5985,16 @@
         "té frío",
         "refresco de té",
         "fuze tea"
+       ]
+      },
+      {
+       "key": "te_soluble",
+       "name": "Té soluble",
+       "base_unit": "l",
+       "forms": [
+        "té en polvo",
+        "té instantáneo",
+        "té soluble"
        ]
       },
       {
@@ -3182,6 +6037,15 @@
        "default_quantity": 1,
        "forms": [
         "zumo de naranja"
+       ]
+      },
+      {
+       "key": "zumo_naranja_exprimido",
+       "name": "Zumo de naranja recién exprimido",
+       "base_unit": "l",
+       "forms": [
+        "zumo de naranja recién exprimido",
+        "zumo exprimido"
        ]
       },
       {
@@ -3241,6 +6105,12 @@
        ]
       },
       {
+       "key": "zumo_tomate",
+       "name": "Zumo de tomate",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
        "key": "zumo_multifrutas",
        "name": "Bebidas y zumos multifrutas",
        "base_unit": "l",
@@ -3281,6 +6151,22 @@
        ]
       },
       {
+       "key": "cerveza_trigo",
+       "name": "Cerveza de trigo",
+       "base_unit": "l",
+       "forms": [
+        "cerveza de trigo"
+       ]
+      },
+      {
+       "key": "cerveza_negra",
+       "name": "Cerveza negra",
+       "base_unit": "l",
+       "forms": [
+        "cerveza negra"
+       ]
+      },
+      {
        "key": "cerveza_sin",
        "name": "Cerveza sin alcohol",
        "base_unit": "l",
@@ -3288,6 +6174,15 @@
         "cerveza sin alcohol",
         "cerveza 0,0",
         "cerveza tostada sin"
+       ]
+      },
+      {
+       "key": "malta",
+       "name": "Malta",
+       "base_unit": "l",
+       "forms": [
+        "malta",
+        "maltín"
        ]
       },
       {
@@ -3323,6 +6218,33 @@
        ]
       },
       {
+       "key": "vino_tinto_roble",
+       "name": "Vino tinto roble",
+       "base_unit": "l",
+       "forms": [
+        "tinto roble",
+        "vino tinto roble"
+       ]
+      },
+      {
+       "key": "vino_tinto_reserva",
+       "name": "Vino tinto reserva",
+       "base_unit": "l",
+       "forms": [
+        "tinto reserva",
+        "vino tinto reserva"
+       ]
+      },
+      {
+       "key": "vino_tinto_crianza",
+       "name": "Vino tinto crianza",
+       "base_unit": "l",
+       "forms": [
+        "tinto crianza",
+        "vino tinto crianza"
+       ]
+      },
+      {
        "key": "vino_blanco",
        "name": "Vino blanco",
        "base_unit": "l",
@@ -3332,6 +6254,33 @@
         "rueda",
         "verdejo",
         "albariño"
+       ]
+      },
+      {
+       "key": "vino_blanco_semidulce",
+       "name": "Vino blanco semidulce",
+       "base_unit": "l",
+       "forms": [
+        "vino blanco semidulce",
+        "vino blanco suave"
+       ]
+      },
+      {
+       "key": "vino_generoso",
+       "name": "Vino fino y generoso",
+       "base_unit": "l",
+       "forms": [
+        "fino de montilla",
+        "vino fino"
+       ]
+      },
+      {
+       "key": "vino_cocinar",
+       "name": "Vino para cocinar",
+       "base_unit": "l",
+       "forms": [
+        "vino de cocina",
+        "vino para cocinar"
        ]
       },
       {
@@ -3356,6 +6305,22 @@
        ]
       },
       {
+       "key": "mosto_tinto",
+       "name": "Mosto tinto",
+       "base_unit": "l",
+       "forms": [
+        "mosto tinto"
+       ]
+      },
+      {
+       "key": "mosto_blanco",
+       "name": "Mosto blanco",
+       "base_unit": "l",
+       "forms": [
+        "mosto blanco"
+       ]
+      },
+      {
        "key": "espumoso",
        "name": "Cava, lambrusco y espumosos",
        "base_unit": "l",
@@ -3365,6 +6330,23 @@
         "champán",
         "lambrusco",
         "espumoso"
+       ]
+      },
+      {
+       "key": "frizzante_lambrusco",
+       "name": "Frizzante y lambrusco",
+       "base_unit": "l",
+       "forms": [
+        "frizzante"
+       ]
+      },
+      {
+       "key": "cava_semiseco",
+       "name": "Cava semiseco",
+       "base_unit": "l",
+       "forms": [
+        "cava semi seco",
+        "cava semiseco"
        ]
       },
       {
@@ -3392,6 +6374,12 @@
         "tinto de verano",
         "sangría"
        ]
+      },
+      {
+       "key": "sangria",
+       "name": "Sangría",
+       "base_unit": "l",
+       "forms": []
       }
      ]
     },
@@ -3423,12 +6411,29 @@
        ]
       },
       {
+       "key": "ron_blanco",
+       "name": "Ron blanco",
+       "base_unit": "l",
+       "forms": [
+        "ron blanco"
+       ]
+      },
+      {
        "key": "whisky",
        "name": "Whisky",
        "base_unit": "l",
        "forms": [
         "whisky",
         "güisqui"
+       ]
+      },
+      {
+       "key": "whisky_escoces",
+       "name": "Whisky escocés",
+       "base_unit": "l",
+       "forms": [
+        "escocés",
+        "whisky escocés"
        ]
       },
       {
@@ -3456,6 +6461,14 @@
         "vermut",
         "vermouth",
         "martini"
+       ]
+      },
+      {
+       "key": "vermut_blanco",
+       "name": "Vermut blanco",
+       "base_unit": "l",
+       "forms": [
+        "vermut blanco"
        ]
       },
       {
@@ -3487,6 +6500,20 @@
         "orujo",
         "pacharán",
         "aguardiente"
+       ]
+      },
+      {
+       "key": "pacharan",
+       "name": "Pacharán",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
+       "key": "anis",
+       "name": "Anís",
+       "base_unit": "l",
+       "forms": [
+        "licor de anís"
        ]
       },
       {
@@ -3561,6 +6588,90 @@
         "judías verdes congeladas",
         "espinacas congeladas",
         "menestra"
+       ],
+       "vague": true,
+       "options": [
+        "salteado_verduras_congelado",
+        "espinacas_congeladas",
+        "guisantes_congelados",
+        "judias_verdes_congeladas",
+        "alcachofa_congelada",
+        "coliflor_congelada",
+        "brocoli_congelado",
+        "coles_bruselas_congeladas"
+       ]
+      },
+      {
+       "key": "salteado_verduras_congelado",
+       "name": "Salteados y mezclas de verdura congelados",
+       "base_unit": "kg",
+       "forms": [
+        "menestra congelada",
+        "mezcla de verduras congelada",
+        "parrillada de verduras",
+        "salteado de setas",
+        "salteado de verduras",
+        "wok de verduras"
+       ]
+      },
+      {
+       "key": "coles_bruselas_congeladas",
+       "name": "Coles de Bruselas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "coles de bruselas",
+        "coles de bruselas congeladas"
+       ]
+      },
+      {
+       "key": "coliflor_congelada",
+       "name": "Coliflor congelada",
+       "base_unit": "kg",
+       "forms": [
+        "coliflor congelada",
+        "migas de coliflor"
+       ]
+      },
+      {
+       "key": "brocoli_congelado",
+       "name": "Brócoli congelado",
+       "base_unit": "kg",
+       "forms": [
+        "brócoli congelado",
+        "brócoli ultracongelado"
+       ]
+      },
+      {
+       "key": "alcachofa_congelada",
+       "name": "Alcachofas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "alcachofa congelada",
+        "alcachofas congeladas"
+       ]
+      },
+      {
+       "key": "judias_verdes_congeladas",
+       "name": "Judías verdes congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "judía verde congelada"
+       ]
+      },
+      {
+       "key": "guisantes_congelados",
+       "name": "Guisantes congelados",
+       "base_unit": "kg",
+       "forms": [
+        "guisantes ultracongelados"
+       ]
+      },
+      {
+       "key": "espinacas_congeladas",
+       "name": "Espinacas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "espinaca congelada"
        ]
       },
       {
@@ -3572,6 +6683,14 @@
         "pimientos rellenos",
         "relleno de fajitas",
         "salteado con carne"
+       ]
+      },
+      {
+       "key": "pimientos_rellenos_congelados",
+       "name": "Pimientos rellenos congelados",
+       "base_unit": "kg",
+       "forms": [
+        "pimientos del piquillo rellenos"
        ]
       },
       {
@@ -3613,6 +6732,15 @@
        ]
       },
       {
+       "key": "lasana_canelones_carne_congelados",
+       "name": "Lasaña y canelones de carne congelados",
+       "base_unit": "kg",
+       "forms": [
+        "canelones congelados",
+        "lasaña de carne congelada"
+       ]
+      },
+      {
        "key": "gyozas",
        "name": "Gyozas y empanadillas orientales",
        "base_unit": "kg",
@@ -3629,8 +6757,79 @@
        "base_unit": "kg",
        "forms": [
         "carne congelada",
+        "hamburguesas congeladas",
+        "medallones de solomillo congelados",
         "pollo congelado",
-        "hamburguesas congeladas"
+        "solomillo marinado congelado"
+       ],
+       "vague": true,
+       "options": [
+        "alas_pollo_congeladas",
+        "muslos_pollo_congelados",
+        "carrillada_congelada",
+        "cordero_lechal_congelado",
+        "pollo_preparado_congelado",
+        "pechuga_pollo_congelada",
+        "bolitas_pollo"
+       ]
+      },
+      {
+       "key": "pollo_preparado_congelado",
+       "name": "Pollo preparado congelado (kebab, salteado)",
+       "base_unit": "kg",
+       "forms": [
+        "relleno de kebab",
+        "salteado de pollo congelado"
+       ]
+      },
+      {
+       "key": "cordero_lechal_congelado",
+       "name": "Cordero lechal congelado",
+       "base_unit": "kg",
+       "forms": [
+        "cordero lechal congelado",
+        "pierna de lechal"
+       ]
+      },
+      {
+       "key": "carrillada_congelada",
+       "name": "Carrillada congelada",
+       "base_unit": "kg",
+       "forms": [
+        "carrillada congelada"
+       ]
+      },
+      {
+       "key": "bolitas_pollo",
+       "name": "Bolitas de pollo empanadas congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "bolitas de pollo"
+       ]
+      },
+      {
+       "key": "muslos_pollo_congelados",
+       "name": "Cuartos traseros y jamoncitos congelados",
+       "base_unit": "kg",
+       "forms": [
+        "cuartos traseros de pollo congelados",
+        "jamoncitos de pollo congelados"
+       ]
+      },
+      {
+       "key": "pechuga_pollo_congelada",
+       "name": "Pechuga de pollo congelada",
+       "base_unit": "kg",
+       "forms": [
+        "pechuga de pollo congelada"
+       ]
+      },
+      {
+       "key": "alas_pollo_congeladas",
+       "name": "Alas de pollo congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "alas de pollo congeladas"
        ]
       },
       {
@@ -3642,6 +6841,59 @@
         "nuggets congelados",
         "aros de cebolla",
         "rebozados"
+       ],
+       "vague": true,
+       "options": [
+        "queso_rebozado",
+        "nuggets_pollo",
+        "croquetas_jamon",
+        "croquetas_cocido",
+        "croquetas_merluza"
+       ]
+      },
+      {
+       "key": "queso_rebozado",
+       "name": "Bocaditos y fingers de queso rebozados",
+       "base_unit": "kg",
+       "forms": [
+        "bocaditos de queso",
+        "croquetas de camembert",
+        "fingers de queso",
+        "tequeños"
+       ]
+      },
+      {
+       "key": "nuggets_pollo",
+       "name": "Nuggets y delicias de pollo congelados",
+       "base_unit": "kg",
+       "forms": [
+        "delicias de pollo",
+        "pollo rebozado"
+       ]
+      },
+      {
+       "key": "croquetas_merluza",
+       "name": "Croquetas de merluza congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "croquetas de merluza"
+       ]
+      },
+      {
+       "key": "croquetas_cocido",
+       "name": "Croquetas de cocido congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "croquetas de cocido"
+       ]
+      },
+      {
+       "key": "croquetas_jamon",
+       "name": "Croquetas de jamón congeladas",
+       "base_unit": "kg",
+       "forms": [
+        "croquetas caprichos de jamón",
+        "croquetas de jamón"
        ]
       },
       {
@@ -3661,6 +6913,24 @@
        "forms": [
         "tarta helada",
         "tarta congelada"
+       ]
+      },
+      {
+       "key": "tarta_infantil_congelada",
+       "name": "Tarta infantil congelada",
+       "base_unit": "kg",
+       "forms": [
+        "tarta de cumpleaños infantil",
+        "tarta infantil",
+        "tarta paw patrol"
+       ]
+      },
+      {
+       "key": "tarta_helada",
+       "name": "Tarta helada",
+       "base_unit": "kg",
+       "forms": [
+        "tarta de helado"
        ]
       },
       {
@@ -3724,6 +6994,40 @@
         "polo",
         "magnum",
         "barra de helado"
+       ],
+       "vague": true,
+       "options": [
+        "helado_bombon",
+        "helado_sandwich",
+        "helado_cucurucho"
+       ]
+      },
+      {
+       "key": "helado_sandwich",
+       "name": "Helado sándwich",
+       "base_unit": "ud",
+       "forms": [
+        "helado sándwich",
+        "sándwiches de helado"
+       ]
+      },
+      {
+       "key": "helado_cucurucho",
+       "name": "Helado de cucurucho",
+       "base_unit": "ud",
+       "forms": [
+        "cucurucho de helado",
+        "cucuruchos helados",
+        "helado de cucurucho"
+       ]
+      },
+      {
+       "key": "helado_bombon",
+       "name": "Bombones helados",
+       "base_unit": "ud",
+       "forms": [
+        "bombones de helado",
+        "mini bombones helados"
        ]
       },
       {
@@ -3774,6 +7078,14 @@
        ]
       },
       {
+       "key": "masa_pizza_fresca",
+       "name": "Masa fresca de pizza",
+       "base_unit": "ud",
+       "forms": [
+        "masa de pizza fresca"
+       ]
+      },
+      {
        "key": "quiche_baguette",
        "name": "Quiche, roscas y baguettes rellenas",
        "base_unit": "ud",
@@ -3781,6 +7093,16 @@
         "quiche",
         "baguette rellena",
         "rosca"
+       ]
+      },
+      {
+       "key": "baguette_ajo",
+       "name": "Baguette de ajo y finas hierbas",
+       "base_unit": "ud",
+       "forms": [
+        "baguette ajo y finas hierbas",
+        "baguette de ajo",
+        "pan de ajo"
        ]
       }
      ]
@@ -3814,6 +7136,48 @@
         "fabada",
         "lentejas preparadas",
         "potaje"
+       ],
+       "vague": true,
+       "options": [
+        "fabada_preparada",
+        "lentejas_preparadas",
+        "garbanzos_preparados",
+        "callos_preparados"
+       ]
+      },
+      {
+       "key": "callos_preparados",
+       "name": "Callos preparados",
+       "base_unit": "kg",
+       "forms": [
+        "callos",
+        "callos a la madrileña"
+       ]
+      },
+      {
+       "key": "garbanzos_preparados",
+       "name": "Garbanzos preparados",
+       "base_unit": "kg",
+       "forms": [
+        "garbanzos guisados",
+        "garbanzos preparados"
+       ]
+      },
+      {
+       "key": "lentejas_preparadas",
+       "name": "Lentejas preparadas",
+       "base_unit": "kg",
+       "forms": [
+        "lentejas estofadas",
+        "lentejas guisadas"
+       ]
+      },
+      {
+       "key": "fabada_preparada",
+       "name": "Fabada preparada",
+       "base_unit": "kg",
+       "forms": [
+        "fabada asturiana"
        ]
       },
       {
@@ -3827,6 +7191,25 @@
        ]
       },
       {
+       "key": "lasana_preparada",
+       "name": "Lasaña preparada",
+       "base_unit": "kg",
+       "forms": [
+        "lasaña boloñesa",
+        "lasaña de pollo"
+       ]
+      },
+      {
+       "key": "arroz_preparado",
+       "name": "Arroz preparado",
+       "base_unit": "kg",
+       "forms": [
+        "arroz de pescado preparado",
+        "arroz de verduras preparado",
+        "arroz preparado"
+       ]
+      },
+      {
        "key": "plato_carne",
        "name": "Platos de carne preparados",
        "base_unit": "kg",
@@ -3834,6 +7217,46 @@
         "albóndigas en salsa",
         "pollo asado",
         "carrilleras"
+       ],
+       "vague": true,
+       "options": [
+        "albondigas_preparadas",
+        "pollo_asado_preparado",
+        "costillas_cerdo_preparadas",
+        "codillo_cerdo_asado"
+       ]
+      },
+      {
+       "key": "codillo_cerdo_asado",
+       "name": "Codillo de cerdo asado",
+       "base_unit": "kg",
+       "forms": [
+        "codillo asado"
+       ]
+      },
+      {
+       "key": "costillas_cerdo_preparadas",
+       "name": "Costillas de cerdo preparadas",
+       "base_unit": "kg",
+       "forms": [
+        "costillas a la barbacoa",
+        "costillas de cerdo asadas"
+       ]
+      },
+      {
+       "key": "pollo_asado_preparado",
+       "name": "Pollo asado preparado",
+       "base_unit": "kg",
+       "forms": [
+        "pollo asado troceado"
+       ]
+      },
+      {
+       "key": "albondigas_preparadas",
+       "name": "Albóndigas preparadas",
+       "base_unit": "kg",
+       "forms": [
+        "albóndigas preparadas"
        ]
       },
       {
@@ -3875,6 +7298,15 @@
        ]
       },
       {
+       "key": "poke",
+       "name": "Poke",
+       "base_unit": "ud",
+       "forms": [
+        "bol poke",
+        "poke de salmón"
+       ]
+      },
+      {
        "key": "ensaladilla",
        "name": "Ensaladilla y ensaladas preparadas",
        "base_unit": "kg",
@@ -3882,6 +7314,37 @@
         "ensaladilla",
         "ensaladilla rusa",
         "ensalada de pasta"
+       ],
+       "vague": true,
+       "options": [
+        "ensalada_pasta_preparada",
+        "ensalada_marisco_preparada",
+        "tabule"
+       ]
+      },
+      {
+       "key": "tabule",
+       "name": "Tabulé",
+       "base_unit": "kg",
+       "forms": [
+        "tabulé"
+       ]
+      },
+      {
+       "key": "ensalada_marisco_preparada",
+       "name": "Ensalada y ensaladilla de marisco",
+       "base_unit": "kg",
+       "forms": [
+        "ensalada de marisco",
+        "ensaladilla de marisco"
+       ]
+      },
+      {
+       "key": "ensalada_pasta_preparada",
+       "name": "Ensalada de pasta preparada",
+       "base_unit": "kg",
+       "forms": [
+        "ensalada de pasta preparada"
        ]
       },
       {
@@ -3902,6 +7365,20 @@
         "guacamole",
         "tzatziki"
        ]
+      },
+      {
+       "key": "hummus",
+       "name": "Hummus",
+       "base_unit": "kg",
+       "forms": [
+        "hummus de garbanzos"
+       ]
+      },
+      {
+       "key": "guacamole",
+       "name": "Guacamole",
+       "base_unit": "kg",
+       "forms": []
       },
       {
        "key": "tofu",
@@ -3956,6 +7433,25 @@
        ]
       },
       {
+       "key": "papilla_salada",
+       "name": "Papilla de verduras con carne",
+       "base_unit": "kg",
+       "forms": [
+        "papilla de verduras con pollo",
+        "papilla salada",
+        "tarrito de verduras con carne"
+       ]
+      },
+      {
+       "key": "papilla_fruta",
+       "name": "Papilla de fruta",
+       "base_unit": "kg",
+       "forms": [
+        "papilla de frutas",
+        "papilla de pera y manzana"
+       ]
+      },
+      {
        "key": "leche_bebe",
        "name": "Leche infantil",
        "base_unit": "kg",
@@ -3963,6 +7459,14 @@
         "leche de continuación",
         "leche en polvo",
         "leche para bebé"
+       ]
+      },
+      {
+       "key": "leche_continuacion",
+       "name": "Leche de continuación (2)",
+       "base_unit": "kg",
+       "forms": [
+        "leche infantil 2"
        ]
       },
       {
@@ -3990,6 +7494,53 @@
         "dodot",
         "braguitas pañal",
         "pañales talla 4"
+       ]
+      },
+      {
+       "key": "panales_talla_6",
+       "name": "Pañales talla 6",
+       "base_unit": "ud",
+       "forms": [
+        "pañales talla 6"
+       ]
+      },
+      {
+       "key": "panales_talla_5",
+       "name": "Pañales talla 5",
+       "base_unit": "ud",
+       "forms": [
+        "pañales talla 5"
+       ]
+      },
+      {
+       "key": "panales_talla_4",
+       "name": "Pañales talla 4",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "panales_talla_3",
+       "name": "Pañales talla 3",
+       "base_unit": "ud",
+       "forms": [
+        "pañales talla 3"
+       ]
+      },
+      {
+       "key": "panales_talla_2",
+       "name": "Pañales talla 2",
+       "base_unit": "ud",
+       "forms": [
+        "pañales talla 2"
+       ]
+      },
+      {
+       "key": "panales_talla_1",
+       "name": "Pañales talla 1",
+       "base_unit": "ud",
+       "forms": [
+        "pañales recién nacido",
+        "pañales talla 1"
        ]
       },
       {
@@ -4021,6 +7572,49 @@
         "colonia de bebé",
         "aceite de bebé",
         "peine de bebé"
+       ],
+       "vague": true,
+       "options": [
+        "colonia_bebe",
+        "champu_gel_bebe",
+        "crema_bebe",
+        "pomada_panal"
+       ]
+      },
+      {
+       "key": "pomada_panal",
+       "name": "Pomada del pañal",
+       "base_unit": "ud",
+       "forms": [
+        "pomada del pañal"
+       ]
+      },
+      {
+       "key": "crema_bebe",
+       "name": "Loción y bálsamo infantil",
+       "base_unit": "ud",
+       "forms": [
+        "crema hidratante bebé",
+        "loción corporal bebé"
+       ]
+      },
+      {
+       "key": "champu_gel_bebe",
+       "name": "Champú y gel infantil",
+       "base_unit": "ud",
+       "forms": [
+        "champú bebé",
+        "gel champú infantil",
+        "gel de baño bebé"
+       ]
+      },
+      {
+       "key": "colonia_bebe",
+       "name": "Colonia infantil",
+       "base_unit": "ud",
+       "forms": [
+        "agua de colonia infantil",
+        "colonia bebé"
        ]
       },
       {
@@ -4066,6 +7660,28 @@
        ]
       },
       {
+       "key": "champu_anticaida",
+       "name": "Champu anticaida",
+       "base_unit": "l",
+       "forms": [
+        "champu anticaida"
+       ]
+      },
+      {
+       "key": "champu_seco",
+       "name": "Champu en seco",
+       "base_unit": "l",
+       "forms": [
+        "champu seco"
+       ]
+      },
+      {
+       "key": "champu_anticaspa",
+       "name": "Champu anticaspa",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
        "key": "accesorios_viaje",
        "name": "Accesorios y envases de viaje",
        "base_unit": "l",
@@ -4093,6 +7709,40 @@
         "acondicionador",
         "mascarilla de pelo",
         "sérum de pelo"
+       ],
+       "vague": true,
+       "options": [
+        "mascarilla_capilar",
+        "tratamiento_sin_aclarado",
+        "serum_capilar"
+       ]
+      },
+      {
+       "key": "tratamiento_sin_aclarado",
+       "name": "Tratamiento capilar sin aclarado",
+       "base_unit": "l",
+       "forms": [
+        "ampollas capilares",
+        "mascarilla sin aclarado",
+        "tratamiento capilar sin aclarado"
+       ]
+      },
+      {
+       "key": "serum_capilar",
+       "name": "Serum capilar",
+       "base_unit": "l",
+       "forms": [
+        "serum capilar",
+        "serum para el cabello"
+       ]
+      },
+      {
+       "key": "mascarilla_capilar",
+       "name": "Mascarilla capilar",
+       "base_unit": "l",
+       "forms": [
+        "mascarilla capilar",
+        "mascarilla para el pelo"
        ]
       },
       {
@@ -4125,6 +7775,67 @@
         "espuma de pelo",
         "gomina",
         "cera de pelo"
+       ],
+       "vague": true,
+       "options": [
+        "gel_pelo",
+        "espuma_pelo",
+        "cera_pelo",
+        "spray_peinado",
+        "protector_termico",
+        "polvos_voluminizador"
+       ]
+      },
+      {
+       "key": "polvos_voluminizador",
+       "name": "Polvos voluminizadores",
+       "base_unit": "ud",
+       "forms": [
+        "polvos voluminizadores"
+       ]
+      },
+      {
+       "key": "protector_termico",
+       "name": "Protector termico del cabello",
+       "base_unit": "ud",
+       "forms": [
+        "protector termico"
+       ]
+      },
+      {
+       "key": "spray_peinado",
+       "name": "Spray y agua de peinado",
+       "base_unit": "ud",
+       "forms": [
+        "agua de peinado",
+        "spray de peinado"
+       ]
+      },
+      {
+       "key": "cera_pelo",
+       "name": "Cera para el pelo",
+       "base_unit": "ud",
+       "forms": [
+        "cera cabello",
+        "cera para el pelo"
+       ]
+      },
+      {
+       "key": "gel_pelo",
+       "name": "Gel fijador de pelo",
+       "base_unit": "ud",
+       "forms": [
+        "gel de pelo",
+        "gel fijador"
+       ]
+      },
+      {
+       "key": "espuma_pelo",
+       "name": "Espuma y mousse para el pelo",
+       "base_unit": "ud",
+       "forms": [
+        "espuma para el pelo",
+        "mousse fijador"
        ]
       }
      ]
@@ -4145,6 +7856,15 @@
        ]
       },
       {
+       "key": "gel_champu",
+       "name": "Gel-champu 2 en 1",
+       "base_unit": "l",
+       "forms": [
+        "champu y gel 2 en 1",
+        "gel champu"
+       ]
+      },
+      {
        "key": "gel_intimo",
        "name": "Gel de higiene íntima",
        "base_unit": "l",
@@ -4162,6 +7882,24 @@
         "jabón de manos",
         "jabón",
         "jabón líquido"
+       ]
+      },
+      {
+       "key": "jabon_pastilla",
+       "name": "Jabon de manos en pastilla",
+       "base_unit": "l",
+       "forms": [
+        "jabon en pastilla",
+        "pastilla de jabon"
+       ]
+      },
+      {
+       "key": "gel_hidroalcoholico",
+       "name": "Gel hidroalcoholico",
+       "base_unit": "l",
+       "forms": [
+        "gel de manos",
+        "gel hidroalcoholico"
        ]
       },
       {
@@ -4194,6 +7932,49 @@
        ]
       },
       {
+       "key": "desodorante_mineral",
+       "name": "Desodorante piedra de alumbre",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante mineral",
+        "piedra de alumbre"
+       ]
+      },
+      {
+       "key": "desodorante_pies",
+       "name": "Desodorante para pies",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante para pies"
+       ]
+      },
+      {
+       "key": "desodorante_crema",
+       "name": "Desodorante en crema",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante en crema"
+       ]
+      },
+      {
+       "key": "desodorante_stick",
+       "name": "Desodorante en barra",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante en barra",
+        "desodorante stick"
+       ]
+      },
+      {
+       "key": "desodorante_roll_on",
+       "name": "Desodorante roll-on",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante roll-on",
+        "roll on"
+       ]
+      },
+      {
        "key": "crema_corporal",
        "name": "Crema y aceite corporal",
        "base_unit": "ud",
@@ -4203,6 +7984,68 @@
         "body milk",
         "aceite corporal",
         "crema de pies"
+       ],
+       "vague": true,
+       "options": [
+        "aceite_corporal",
+        "crema_pies",
+        "exfoliante_corporal",
+        "gel_aloe_corporal",
+        "crema_reafirmante",
+        "vaselina_antirozaduras"
+       ]
+      },
+      {
+       "key": "vaselina_antirozaduras",
+       "name": "Vaselina y stick antirozaduras",
+       "base_unit": "ud",
+       "forms": [
+        "stick antirozaduras",
+        "vaselina"
+       ]
+      },
+      {
+       "key": "crema_reafirmante",
+       "name": "Crema anticelulitica y reafirmante",
+       "base_unit": "ud",
+       "forms": [
+        "crema anticelulitica",
+        "crema reafirmante corporal"
+       ]
+      },
+      {
+       "key": "gel_aloe_corporal",
+       "name": "Gel corporal de aloe vera",
+       "base_unit": "ud",
+       "forms": [
+        "aloe vera gel",
+        "gel de aloe vera"
+       ]
+      },
+      {
+       "key": "exfoliante_corporal",
+       "name": "Exfoliante corporal",
+       "base_unit": "ud",
+       "forms": [
+        "exfoliante corporal"
+       ]
+      },
+      {
+       "key": "crema_pies",
+       "name": "Crema y gel para pies",
+       "base_unit": "ud",
+       "forms": [
+        "crema para pies",
+        "gel para pies"
+       ]
+      },
+      {
+       "key": "aceite_corporal",
+       "name": "Aceite corporal",
+       "base_unit": "ud",
+       "forms": [
+        "aceite de almendras corporal",
+        "aceite de ricino"
        ]
       },
       {
@@ -4221,6 +8064,18 @@
         "toallitas desmaquillantes",
         "toallitas íntimas"
        ]
+      },
+      {
+       "key": "toallitas_intimas",
+       "name": "Toallitas intimas",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "toallitas_desmaquillantes",
+       "name": "Toallitas desmaquillantes",
+       "base_unit": "ud",
+       "forms": []
       },
       {
        "key": "protector_solar",
@@ -4250,6 +8105,41 @@
        ]
       },
       {
+       "key": "dentifrico_encias",
+       "name": "Dentifrico para encias",
+       "base_unit": "ud",
+       "forms": [
+        "dentifrico encias"
+       ]
+      },
+      {
+       "key": "dentifrico_sensible",
+       "name": "Dentifrico para dientes sensibles",
+       "base_unit": "ud",
+       "forms": [
+        "dentifrico sensible",
+        "pasta de dientes sensitive"
+       ]
+      },
+      {
+       "key": "dentifrico_blanqueador",
+       "name": "Dentifrico blanqueador",
+       "base_unit": "ud",
+       "forms": [
+        "dentifrico blanqueador",
+        "pasta de dientes blanqueadora"
+       ]
+      },
+      {
+       "key": "dentifrico_infantil",
+       "name": "Dentifrico infantil",
+       "base_unit": "ud",
+       "forms": [
+        "dentifrico infantil",
+        "pasta de dientes infantil"
+       ]
+      },
+      {
        "key": "kit_dental",
        "name": "Kits de higiene y blanqueamiento dental",
        "base_unit": "ud",
@@ -4269,6 +8159,24 @@
        ]
       },
       {
+       "key": "recambios_cepillo_electrico",
+       "name": "Recambios de cepillo electrico",
+       "base_unit": "ud",
+       "forms": [
+        "cabezales cepillo electrico",
+        "recambios cepillo electrico"
+       ]
+      },
+      {
+       "key": "cepillo_electrico",
+       "name": "Cepillo de dientes electrico",
+       "base_unit": "ud",
+       "forms": [
+        "cepillo de dientes electrico",
+        "cepillo electrico"
+       ]
+      },
+      {
        "key": "colutorio",
        "name": "Colutorio e hilo dental",
        "base_unit": "ud",
@@ -4276,6 +8184,31 @@
         "colutorio",
         "enjuague bucal",
         "hilo dental"
+       ]
+      },
+      {
+       "key": "spray_bucal",
+       "name": "Spray bucal",
+       "base_unit": "ud",
+       "forms": [
+        "spray bucal"
+       ]
+      },
+      {
+       "key": "hilo_dental",
+       "name": "Hilo y cinta dental",
+       "base_unit": "ud",
+       "forms": [
+        "cinta dental"
+       ]
+      },
+      {
+       "key": "interdentales",
+       "name": "Cepillos y arcos interdentales",
+       "base_unit": "ud",
+       "forms": [
+        "arcos interdentales",
+        "cepillos interdentales"
        ]
       },
       {
@@ -4287,6 +8220,14 @@
         "limpiador de prótesis",
         "prótesis dental",
         "tabletas limpiadoras prótesis"
+       ]
+      },
+      {
+       "key": "limpiador_protesis",
+       "name": "Tabletas limpiadoras de protesis",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de protesis dental"
        ]
       }
      ]
@@ -4305,6 +8246,57 @@
         "agua micelar",
         "limpiador facial",
         "tónico facial"
+       ],
+       "vague": true,
+       "options": [
+        "agua_micelar",
+        "mascarilla_facial_limpieza",
+        "discos_desmaquillantes",
+        "tonico_facial",
+        "tiras_parches_poros"
+       ]
+      },
+      {
+       "key": "tiras_parches_poros",
+       "name": "Tiras y parches faciales",
+       "base_unit": "ud",
+       "forms": [
+        "parches faciales",
+        "tiras limpia poros"
+       ]
+      },
+      {
+       "key": "mascarilla_facial_limpieza",
+       "name": "Mascarilla facial purificante",
+       "base_unit": "ud",
+       "forms": [
+        "mascarilla de carbon",
+        "mascarilla detox",
+        "mascarilla facial"
+       ]
+      },
+      {
+       "key": "tonico_facial",
+       "name": "Tonico facial",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "agua_micelar",
+       "name": "Agua micelar y desmaquillante",
+       "base_unit": "ud",
+       "forms": [
+        "aceite desmaquillante",
+        "desmaquillante de ojos"
+       ]
+      },
+      {
+       "key": "discos_desmaquillantes",
+       "name": "Discos desmaquillantes",
+       "base_unit": "ud",
+       "forms": [
+        "discos de algodon",
+        "discos desmaquillantes"
        ]
       },
       {
@@ -4317,6 +8309,35 @@
         "contorno de ojos",
         "sérum facial",
         "crema para hombre"
+       ],
+       "vague": true,
+       "options": [
+        "serum_facial",
+        "contorno_ojos",
+        "crema_facial_hombre"
+       ]
+      },
+      {
+       "key": "crema_facial_hombre",
+       "name": "Crema facial para hombre",
+       "base_unit": "ud",
+       "forms": [
+        "crema facial hombre",
+        "crema facial men"
+       ]
+      },
+      {
+       "key": "serum_facial",
+       "name": "Serum facial",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "contorno_ojos",
+       "name": "Contorno de ojos",
+       "base_unit": "ud",
+       "forms": [
+        "parches para ojos"
        ]
       }
      ]
@@ -4338,6 +8359,57 @@
        ]
       },
       {
+       "key": "cuchillas_cejas",
+       "name": "Cuchillas para cejas",
+       "base_unit": "ud",
+       "forms": [
+        "cuchillas de perfilar",
+        "cuchillas para cejas"
+       ]
+      },
+      {
+       "key": "recambios_depilacion",
+       "name": "Recambios de maquinilla de depilacion",
+       "base_unit": "ud",
+       "forms": [
+        "recambios de maquinilla de depilacion"
+       ]
+      },
+      {
+       "key": "recambios_afeitar",
+       "name": "Recambios de maquinilla de afeitar",
+       "base_unit": "ud",
+       "forms": [
+        "cuchillas de recambio",
+        "recambios de maquinilla de afeitar"
+       ]
+      },
+      {
+       "key": "maquinilla_depilacion_recargable",
+       "name": "Maquinilla de depilacion recargable",
+       "base_unit": "ud",
+       "forms": [
+        "maquinilla de depilacion recargable"
+       ]
+      },
+      {
+       "key": "maquinilla_depilacion_desechable",
+       "name": "Maquinilla de depilacion desechable",
+       "base_unit": "ud",
+       "forms": [
+        "maquinilla de depilacion desechable"
+       ]
+      },
+      {
+       "key": "maquinilla_afeitar_recargable",
+       "name": "Maquinilla de afeitar recargable",
+       "base_unit": "ud",
+       "forms": [
+        "maquinilla de afeitar recargable",
+        "maquinilla recargable"
+       ]
+      },
+      {
        "key": "espuma_afeitar",
        "name": "Espuma y cuidado para el afeitado",
        "base_unit": "ud",
@@ -4345,6 +8417,21 @@
         "espuma de afeitar",
         "gel de afeitar",
         "after shave"
+       ]
+      },
+      {
+       "key": "gel_afeitar",
+       "name": "Gel de afeitar",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "after_shave",
+       "name": "After shave",
+       "base_unit": "ud",
+       "forms": [
+        "balsamo after shave",
+        "locion after shave"
        ]
       },
       {
@@ -4356,6 +8443,20 @@
         "bandas de cera",
         "crema depilatoria"
        ]
+      },
+      {
+       "key": "decolorante_vello",
+       "name": "Crema decolorante de vello",
+       "base_unit": "ud",
+       "forms": [
+        "crema decolorante"
+       ]
+      },
+      {
+       "key": "crema_depilatoria",
+       "name": "Crema depilatoria",
+       "base_unit": "ud",
+       "forms": []
       },
       {
        "key": "pinzas_depilar",
@@ -4385,6 +8486,14 @@
        ]
       },
       {
+       "key": "protegeslip",
+       "name": "Protegeslips",
+       "base_unit": "ud",
+       "forms": [
+        "protegeslip"
+       ]
+      },
+      {
        "key": "tampones",
        "name": "Tampones",
        "base_unit": "ud",
@@ -4399,6 +8508,39 @@
        "forms": [
         "pañales de adulto",
         "incontinencia"
+       ],
+       "vague": true,
+       "options": [
+        "compresa_incontinencia",
+        "panal_braguita",
+        "protector_cama"
+       ]
+      },
+      {
+       "key": "protector_cama",
+       "name": "Protector de cama",
+       "base_unit": "ud",
+       "forms": [
+        "empapador",
+        "protector de cama"
+       ]
+      },
+      {
+       "key": "panal_braguita",
+       "name": "Panal adulto braguita",
+       "base_unit": "ud",
+       "forms": [
+        "panal braguita",
+        "pants adulto"
+       ]
+      },
+      {
+       "key": "compresa_incontinencia",
+       "name": "Compresas de incontinencia",
+       "base_unit": "ud",
+       "forms": [
+        "compresas de incontinencia",
+        "protegeslip de incontinencia"
        ]
       }
      ]
@@ -4416,6 +8558,79 @@
         "colonia",
         "perfume",
         "agua de colonia"
+       ],
+       "vague": true,
+       "options": [
+        "eau_parfum_mujer",
+        "eau_parfum_hombre",
+        "eau_toilette_hombre",
+        "eau_toilette_mujer",
+        "fragancia_mist",
+        "mini_eau_parfum",
+        "eau_toilette_infantil"
+       ]
+      },
+      {
+       "key": "mini_eau_parfum",
+       "name": "Mini eau de parfum",
+       "base_unit": "ud",
+       "forms": [
+        "mini eau de parfum",
+        "perfume en miniatura"
+       ]
+      },
+      {
+       "key": "fragancia_mist",
+       "name": "Fragancia mist",
+       "base_unit": "ud",
+       "forms": [
+        "body mist",
+        "fragancia mist"
+       ]
+      },
+      {
+       "key": "eau_toilette_infantil",
+       "name": "Eau de toilette infantil",
+       "base_unit": "ud",
+       "forms": [
+        "colonia infantil",
+        "eau de toilette infantil"
+       ]
+      },
+      {
+       "key": "eau_toilette_mujer",
+       "name": "Eau de toilette mujer",
+       "base_unit": "ud",
+       "forms": [
+        "colonia de mujer",
+        "eau de toilette mujer"
+       ]
+      },
+      {
+       "key": "eau_toilette_hombre",
+       "name": "Eau de toilette hombre",
+       "base_unit": "ud",
+       "forms": [
+        "colonia de hombre",
+        "eau de toilette hombre"
+       ]
+      },
+      {
+       "key": "eau_parfum_mujer",
+       "name": "Eau de parfum mujer",
+       "base_unit": "ud",
+       "forms": [
+        "eau de parfum mujer",
+        "perfume de mujer"
+       ]
+      },
+      {
+       "key": "eau_parfum_hombre",
+       "name": "Eau de parfum hombre",
+       "base_unit": "ud",
+       "forms": [
+        "eau de parfum hombre",
+        "perfume de hombre"
        ]
       },
       {
@@ -4425,6 +8640,56 @@
        "forms": [
         "lote de colonia",
         "estuche de perfume"
+       ],
+       "vague": true,
+       "options": [
+        "lote_perfume_hombre",
+        "lote_infantil",
+        "lote_perfume_mujer",
+        "lote_corporal_mujer",
+        "lote_corporal_hombre"
+       ]
+      },
+      {
+       "key": "lote_corporal_mujer",
+       "name": "Lote corporal mujer",
+       "base_unit": "ud",
+       "forms": [
+        "lote corporal mujer"
+       ]
+      },
+      {
+       "key": "lote_corporal_hombre",
+       "name": "Lote corporal hombre",
+       "base_unit": "ud",
+       "forms": [
+        "lote corporal hombre"
+       ]
+      },
+      {
+       "key": "lote_infantil",
+       "name": "Lote infantil",
+       "base_unit": "ud",
+       "forms": [
+        "lote infantil"
+       ]
+      },
+      {
+       "key": "lote_perfume_mujer",
+       "name": "Lote de perfume para mujer",
+       "base_unit": "ud",
+       "forms": [
+        "lote de perfume mujer",
+        "lote mujer"
+       ]
+      },
+      {
+       "key": "lote_perfume_hombre",
+       "name": "Lote de perfume para hombre",
+       "base_unit": "ud",
+       "forms": [
+        "lote de perfume hombre",
+        "lote hombre"
        ]
       }
      ]
@@ -4491,6 +8756,24 @@
        ]
       },
       {
+       "key": "sacapuntas_cosmetico",
+       "name": "Sacapuntas cosmetico",
+       "base_unit": "ud",
+       "forms": [
+        "sacapuntas cosmetico",
+        "sacapuntas de lapiz de ojos"
+       ]
+      },
+      {
+       "key": "pinceles_maquillaje",
+       "name": "Pinceles de maquillaje",
+       "base_unit": "ud",
+       "forms": [
+        "kit de pinceles",
+        "pinceles de maquillaje"
+       ]
+      },
+      {
        "key": "unas",
        "name": "Laca y cuidado de uñas",
        "base_unit": "ud",
@@ -4532,6 +8815,14 @@
        ]
       },
       {
+       "key": "multivitaminico",
+       "name": "Multivitaminico",
+       "base_unit": "ud",
+       "forms": [
+        "vitaminas y minerales"
+       ]
+      },
+      {
        "key": "magnesio",
        "name": "Magnesio",
        "base_unit": "ud",
@@ -4545,12 +8836,126 @@
        "name": "Otros complementos y fitoterapia",
        "base_unit": "ud",
        "forms": [
-        "complementos",
-        "melatonina",
         "colágeno",
-        "valeriana",
+        "complementos",
+        "comprimidos para dormir",
+        "infusión medicinal",
         "jalea real",
-        "infusión medicinal"
+        "melatonina",
+        "valeriana"
+       ],
+       "vague": true,
+       "options": [
+        "colageno",
+        "cabello_unas",
+        "control_peso",
+        "propolis_jalea",
+        "suplemento_deportivo",
+        "laxante",
+        "gases_digestivo",
+        "probiotico"
+       ]
+      },
+      {
+       "key": "perlas_solares",
+       "name": "Perlas solares",
+       "base_unit": "ud",
+       "forms": [
+        "perlas solares"
+       ]
+      },
+      {
+       "key": "aceite_arbol_te",
+       "name": "Aceite de arbol del te",
+       "base_unit": "ud",
+       "forms": [
+        "aceite de arbol del te"
+       ]
+      },
+      {
+       "key": "suplemento_deportivo",
+       "name": "Creatina y gel energetico",
+       "base_unit": "ud",
+       "forms": [
+        "creatina",
+        "gel energetico"
+       ]
+      },
+      {
+       "key": "memoria",
+       "name": "Complemento para la memoria",
+       "base_unit": "ud",
+       "forms": [
+        "complemento para la memoria",
+        "memory forte"
+       ]
+      },
+      {
+       "key": "articulaciones",
+       "name": "Complemento para articulaciones",
+       "base_unit": "ud",
+       "forms": [
+        "articular forte",
+        "capsulas articulares"
+       ]
+      },
+      {
+       "key": "propolis_jalea",
+       "name": "Propolis y jalea real",
+       "base_unit": "ud",
+       "forms": [
+        "propolis"
+       ]
+      },
+      {
+       "key": "probiotico",
+       "name": "Probioticos",
+       "base_unit": "ud",
+       "forms": [
+        "capsulas probiotico",
+        "probioticos"
+       ]
+      },
+      {
+       "key": "gases_digestivo",
+       "name": "Complemento para gases",
+       "base_unit": "ud",
+       "forms": [
+        "capsulas para gases"
+       ]
+      },
+      {
+       "key": "laxante",
+       "name": "Laxante natural",
+       "base_unit": "ud",
+       "forms": [
+        "laxante"
+       ]
+      },
+      {
+       "key": "control_peso",
+       "name": "Quemagrasas y alcachofa",
+       "base_unit": "ud",
+       "forms": [
+        "capsulas de alcachofa",
+        "quemagrasas"
+       ]
+      },
+      {
+       "key": "cabello_unas",
+       "name": "Complemento para cabello y unas",
+       "base_unit": "ud",
+       "forms": [
+        "cola de caballo",
+        "comprimidos cabello y unas"
+       ]
+      },
+      {
+       "key": "colageno",
+       "name": "Colageno",
+       "base_unit": "ud",
+       "forms": [
+        "capsulas de colageno"
        ]
       },
       {
@@ -4558,12 +8963,140 @@
        "name": "Botiquín",
        "base_unit": "ud",
        "forms": [
-        "tiritas",
-        "gasas",
-        "alcohol de curar",
         "agua oxigenada",
+        "alcohol de curar",
+        "apositos",
+        "gasas",
         "suero fisiológico",
-        "termómetro"
+        "termómetro",
+        "tiras adhesivas",
+        "tiritas"
+       ],
+       "vague": true,
+       "options": [
+        "masaje_muscular",
+        "esparadrapo",
+        "antiseptico_heridas",
+        "vendas_gasas",
+        "agua_oxigenada",
+        "alcohol_sanitario",
+        "algodon_hidrofilo",
+        "mascarilla_quirurgica"
+       ]
+      },
+      {
+       "key": "tapones_oidos",
+       "name": "Tapones para los oidos",
+       "base_unit": "ud",
+       "forms": [
+        "protectores de oidos",
+        "tapones para los oidos"
+       ]
+      },
+      {
+       "key": "repelente_mosquitos",
+       "name": "Repelente de mosquitos",
+       "base_unit": "ud",
+       "forms": [
+        "repelente de mosquitos",
+        "spray antimosquitos"
+       ]
+      },
+      {
+       "key": "suero_fisiologico",
+       "name": "Suero fisiologico",
+       "base_unit": "ud",
+       "forms": [
+        "solucion fisiologica"
+       ]
+      },
+      {
+       "key": "liquido_lentillas",
+       "name": "Solucion para lentes de contacto",
+       "base_unit": "ud",
+       "forms": [
+        "liquido de lentillas",
+        "solucion para lentes de contacto"
+       ]
+      },
+      {
+       "key": "lagrimas_artificiales",
+       "name": "Lagrimas artificiales",
+       "base_unit": "ud",
+       "forms": [
+        "gotas para los ojos",
+        "lagrimas artificiales"
+       ]
+      },
+      {
+       "key": "mascarilla_quirurgica",
+       "name": "Mascarillas quirurgicas",
+       "base_unit": "ud",
+       "forms": [
+        "mascarillas quirurgicas"
+       ]
+      },
+      {
+       "key": "algodon_hidrofilo",
+       "name": "Algodon hidrofilo",
+       "base_unit": "ud",
+       "forms": [
+        "algodon",
+        "algodon hidrofilo"
+       ]
+      },
+      {
+       "key": "vendas_gasas",
+       "name": "Vendas y gasas",
+       "base_unit": "ud",
+       "forms": [
+        "gasas esterilizadas",
+        "venda elastica",
+        "vendas"
+       ]
+      },
+      {
+       "key": "esparadrapo",
+       "name": "Esparadrapo y bandas adhesivas",
+       "base_unit": "ud",
+       "forms": [
+        "bandas adhesivas",
+        "esparadrapo"
+       ]
+      },
+      {
+       "key": "masaje_muscular",
+       "name": "Balsamo y alcohol de romero para masaje",
+       "base_unit": "ud",
+       "forms": [
+        "alcohol de romero",
+        "balsamo oriental",
+        "stick de arnica"
+       ]
+      },
+      {
+       "key": "alcohol_sanitario",
+       "name": "Alcohol sanitario",
+       "base_unit": "ud",
+       "forms": [
+        "alcohol 96",
+        "alcohol sanitario"
+       ]
+      },
+      {
+       "key": "agua_oxigenada",
+       "name": "Agua oxigenada",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "antiseptico_heridas",
+       "name": "Antiseptico para heridas",
+       "base_unit": "ud",
+       "forms": [
+        "antiseptico clorhexidina",
+        "povidona yodada",
+        "spray antiseptico"
        ]
       },
       {
@@ -4618,6 +9151,15 @@
        ]
       },
       {
+       "key": "capsulas_detergente_ropa",
+       "name": "Cápsulas de detergente de ropa",
+       "base_unit": "ud",
+       "forms": [
+        "detergente en cápsulas",
+        "pods"
+       ]
+      },
+      {
        "key": "suavizante",
        "name": "Suavizante",
        "base_unit": "l",
@@ -4644,6 +9186,25 @@
         "antical",
         "calgon",
         "toallitas atrapacolor"
+       ]
+      },
+      {
+       "key": "limpia_lavadora",
+       "name": "Limpia lavadoras y antical",
+       "base_unit": "ud",
+       "forms": [
+        "antical lavadora",
+        "limpia lavadoras"
+       ]
+      },
+      {
+       "key": "activador_blanqueante",
+       "name": "Activador blanqueante oxi",
+       "base_unit": "ud",
+       "forms": [
+        "activador oxi",
+        "blanqueante ropa",
+        "percarbonato"
        ]
       },
       {
@@ -4685,12 +9246,35 @@
        ]
       },
       {
+       "key": "sosa_caustica",
+       "name": "Sosa cáustica",
+       "base_unit": "l",
+       "forms": [
+        "sosa cáustica"
+       ]
+      },
+      {
+       "key": "salfuman",
+       "name": "Salfumán",
+       "base_unit": "l",
+       "forms": []
+      },
+      {
        "key": "friegasuelos",
        "name": "Friegasuelos",
        "base_unit": "l",
        "forms": [
         "friegasuelos",
         "fregasuelos"
+       ]
+      },
+      {
+       "key": "abrillantador_suelos",
+       "name": "Abrillantador y cera para suelos",
+       "base_unit": "l",
+       "forms": [
+        "abrillantador de suelos",
+        "cera para suelos"
        ]
       },
       {
@@ -4701,6 +9285,23 @@
         "limpiahogar",
         "limpiador multiusos",
         "multiusos"
+       ]
+      },
+      {
+       "key": "vinagre_limpieza",
+       "name": "Vinagre de limpieza",
+       "base_unit": "l",
+       "forms": [
+        "vinagre de limpieza"
+       ]
+      },
+      {
+       "key": "alcohol_limpieza",
+       "name": "Alcohol de limpieza",
+       "base_unit": "l",
+       "forms": [
+        "alcohol 70",
+        "alcohol de limpieza"
        ]
       },
       {
@@ -4722,6 +9323,50 @@
         "pato wc",
         "bloque wc",
         "desatascador"
+       ],
+       "vague": true,
+       "options": [
+        "colgador_wc",
+        "limpiador_wc",
+        "desatascador_tuberias",
+        "escobilla_wc"
+       ]
+      },
+      {
+       "key": "escobilla_wc",
+       "name": "Escobilla de WC",
+       "base_unit": "ud",
+       "forms": [
+        "escobilla de baño",
+        "escobilla wc"
+       ]
+      },
+      {
+       "key": "desatascador_tuberias",
+       "name": "Desatascador y limpiatuberías",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador fosas sépticas",
+        "limpiatuberías"
+       ]
+      },
+      {
+       "key": "limpiador_wc",
+       "name": "Limpiador de WC",
+       "base_unit": "ud",
+       "forms": [
+        "gel wc",
+        "limpiador wc"
+       ]
+      },
+      {
+       "key": "colgador_wc",
+       "name": "Colgador y pastillas para WC",
+       "base_unit": "ud",
+       "forms": [
+        "colgador wc",
+        "discos wc",
+        "pastillas cisterna"
        ]
       },
       {
@@ -4735,11 +9380,47 @@
        ]
       },
       {
+       "key": "limpia_hornos",
+       "name": "Limpiador de hornos y chimeneas",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de chimeneas",
+        "limpiador de hornos"
+       ]
+      },
+      {
+       "key": "limpia_vitroceramica",
+       "name": "Limpiador de vitrocerámica e inducción",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de inducción",
+        "limpiador de vitrocerámica"
+       ]
+      },
+      {
        "key": "limpiacristales",
        "name": "Limpiacristales",
        "base_unit": "l",
        "forms": [
         "limpiacristales"
+       ]
+      },
+      {
+       "key": "limpiagafas",
+       "name": "Limpiagafas",
+       "base_unit": "l",
+       "forms": [
+        "limpiador de gafas",
+        "limpiagafas"
+       ]
+      },
+      {
+       "key": "lavaparabrisas",
+       "name": "Lavaparabrisas",
+       "base_unit": "l",
+       "forms": [
+        "lavaparabrisas",
+        "líquido limpiaparabrisas"
        ]
       },
       {
@@ -4749,6 +9430,24 @@
        "forms": [
         "limpiamuebles",
         "pronto"
+       ]
+      },
+      {
+       "key": "limpiametales",
+       "name": "Algodón mágico para metales",
+       "base_unit": "ud",
+       "forms": [
+        "algodón mágico",
+        "limpiametales"
+       ]
+      },
+      {
+       "key": "limpia_tapicerias",
+       "name": "Limpiatapicerías y alfombras",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador de alfombras",
+        "limpiatapicerías"
        ]
       },
       {
@@ -4771,6 +9470,48 @@
         "detergente lavavajillas",
         "abrillantador",
         "sal de lavavajillas"
+       ],
+       "vague": true,
+       "options": [
+        "limpiamaquinas_lavavajillas",
+        "abrillantador_lavavajillas",
+        "lavavajillas_gel_maquina",
+        "sal_lavavajillas"
+       ]
+      },
+      {
+       "key": "lavavajillas_gel_maquina",
+       "name": "Detergente de lavavajillas en gel",
+       "base_unit": "ud",
+       "forms": [
+        "detergente lavavajillas gel",
+        "lavavajillas en gel"
+       ]
+      },
+      {
+       "key": "limpiamaquinas_lavavajillas",
+       "name": "Limpiamáquinas y ambientador de lavavajillas",
+       "base_unit": "ud",
+       "forms": [
+        "limpia lavavajillas",
+        "limpiamáquinas lavavajillas"
+       ]
+      },
+      {
+       "key": "sal_lavavajillas",
+       "name": "Sal para lavavajillas",
+       "base_unit": "ud",
+       "forms": [
+        "sal lavavajillas",
+        "sal para lavavajillas"
+       ]
+      },
+      {
+       "key": "abrillantador_lavavajillas",
+       "name": "Abrillantador de lavavajillas",
+       "base_unit": "ud",
+       "forms": [
+        "abrillantador lavavajillas"
        ]
       }
      ]
@@ -4788,6 +9529,48 @@
         "estropajo",
         "bayeta",
         "bayetas"
+       ],
+       "vague": true,
+       "options": [
+        "bayetas",
+        "estropajo_inox",
+        "borrador_magico",
+        "cepillo_limpieza"
+       ]
+      },
+      {
+       "key": "cepillo_limpieza",
+       "name": "Cepillo de lavar",
+       "base_unit": "ud",
+       "forms": [
+        "cepillo de limpieza",
+        "cepillo para lavar"
+       ]
+      },
+      {
+       "key": "borrador_magico",
+       "name": "Borrador mágico",
+       "base_unit": "ud",
+       "forms": [
+        "borrador mágico"
+       ]
+      },
+      {
+       "key": "estropajo_inox",
+       "name": "Estropajo de acero inoxidable",
+       "base_unit": "ud",
+       "forms": [
+        "estropajo de acero",
+        "estropajo inox"
+       ]
+      },
+      {
+       "key": "bayetas",
+       "name": "Bayetas y paños",
+       "base_unit": "ud",
+       "forms": [
+        "gamuza",
+        "paño de cocina"
        ]
       },
       {
@@ -4810,6 +9593,14 @@
        ]
       },
       {
+       "key": "guantes_nitrilo",
+       "name": "Guantes de nitrilo",
+       "base_unit": "ud",
+       "forms": [
+        "guantes de nitrilo"
+       ]
+      },
+      {
        "key": "fregona_escoba",
        "name": "Fregonas, escobas y cubos",
        "base_unit": "ud",
@@ -4819,7 +9610,67 @@
         "mopa",
         "recambio de fregona",
         "cubo"
+       ],
+       "vague": true,
+       "options": [
+        "cubo_fregona",
+        "plumero",
+        "escoba",
+        "palo_fregona",
+        "mopa",
+        "recogedor"
        ]
+      },
+      {
+       "key": "mopa",
+       "name": "Mopa atrapapolvo",
+       "base_unit": "ud",
+       "forms": [
+        "mopa atrapapolvo",
+        "recambio de mopa"
+       ]
+      },
+      {
+       "key": "plumero",
+       "name": "Plumero",
+       "base_unit": "ud",
+       "forms": [
+        "plumero"
+       ]
+      },
+      {
+       "key": "palo_fregona",
+       "name": "Palo de fregona o escoba",
+       "base_unit": "ud",
+       "forms": [
+        "palo de escoba",
+        "palo de fregona",
+        "palo extensible"
+       ]
+      },
+      {
+       "key": "cubo_fregona",
+       "name": "Cubo y escurridor de fregona",
+       "base_unit": "ud",
+       "forms": [
+        "cubo con ruedas",
+        "cubo de fregona",
+        "escurridor de cubo"
+       ]
+      },
+      {
+       "key": "recogedor",
+       "name": "Recogedor",
+       "base_unit": "ud",
+       "forms": [
+        "recogedor"
+       ]
+      },
+      {
+       "key": "escoba",
+       "name": "Escoba",
+       "base_unit": "ud",
+       "forms": []
       },
       {
        "key": "quitapelusas",
@@ -4857,6 +9708,15 @@
         "betún",
         "limpiador de zapatos"
        ]
+      },
+      {
+       "key": "desodorante_calzado",
+       "name": "Desodorante de calzado",
+       "base_unit": "ud",
+       "forms": [
+        "desodorante de calzado",
+        "desodorante zapatos"
+       ]
       }
      ]
     },
@@ -4873,6 +9733,15 @@
         "papel higiénico",
         "papel wc",
         "papel de váter"
+       ]
+      },
+      {
+       "key": "papel_higienico_humedo",
+       "name": "Papel higiénico húmedo",
+       "base_unit": "ud",
+       "forms": [
+        "papel higiénico húmedo",
+        "toallitas wc"
        ]
       },
       {
@@ -4928,6 +9797,103 @@
         "absorbeolores",
         "antihumedad",
         "varitas aromáticas"
+       ],
+       "vague": true,
+       "options": [
+        "vela_perfumada",
+        "recambio_ambientador_electrico",
+        "recambio_ambientador_automatico",
+        "ambientador_varitas",
+        "ambientador_coche",
+        "ambientador_difusor",
+        "ambientador_perlas",
+        "ambientador_armarios"
+       ]
+      },
+      {
+       "key": "antihumedad",
+       "name": "Antihumedad",
+       "base_unit": "ud",
+       "forms": [
+        "absorbe humedad"
+       ]
+      },
+      {
+       "key": "absorbeolores",
+       "name": "Absorbeolores",
+       "base_unit": "ud",
+       "forms": [
+        "absorbe olores"
+       ]
+      },
+      {
+       "key": "ambientador_armarios",
+       "name": "Ambientador para armarios y cajones",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador armarios",
+        "ambientador cajones"
+       ]
+      },
+      {
+       "key": "recambio_ambientador_automatico",
+       "name": "Recambio de ambientador automático o spray",
+       "base_unit": "ud",
+       "forms": [
+        "recambio ambientador automático",
+        "recambio ambientador spray"
+       ]
+      },
+      {
+       "key": "recambio_ambientador_electrico",
+       "name": "Recambio de ambientador eléctrico",
+       "base_unit": "ud",
+       "forms": [
+        "recambio ambientador eléctrico"
+       ]
+      },
+      {
+       "key": "ambientador_difusor",
+       "name": "Difusor de ambientador",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador eléctrico",
+        "difusor de ambientador"
+       ]
+      },
+      {
+       "key": "vela_perfumada",
+       "name": "Vela perfumada",
+       "base_unit": "ud",
+       "forms": [
+        "vela aromática",
+        "vela perfumada"
+       ]
+      },
+      {
+       "key": "ambientador_perlas",
+       "name": "Ambientador de perlas",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador perlas",
+        "perlas perfumadas"
+       ]
+      },
+      {
+       "key": "ambientador_coche",
+       "name": "Ambientador de coche",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador coche"
+       ]
+      },
+      {
+       "key": "ambientador_varitas",
+       "name": "Ambientador de varitas",
+       "base_unit": "ud",
+       "forms": [
+        "ambientador mikado",
+        "ambientador varitas"
        ]
       },
       {
@@ -4939,6 +9905,50 @@
         "matamosquitos",
         "antimosquitos",
         "raid"
+       ],
+       "vague": true,
+       "options": [
+        "antipolillas",
+        "trampas_insectos",
+        "antimosquitos_electrico",
+        "raticida"
+       ]
+      },
+      {
+       "key": "trampas_insectos",
+       "name": "Trampas para insectos",
+       "base_unit": "ud",
+       "forms": [
+        "trampa de polillas",
+        "trampa para cucarachas",
+        "trampa para hormigas"
+       ]
+      },
+      {
+       "key": "antimosquitos_electrico",
+       "name": "Antimosquitos eléctrico",
+       "base_unit": "ud",
+       "forms": [
+        "antimosquitos eléctrico",
+        "difusor antimosquitos"
+       ]
+      },
+      {
+       "key": "raticida",
+       "name": "Raticida",
+       "base_unit": "ud",
+       "forms": [
+        "raticida",
+        "veneno para ratas"
+       ]
+      },
+      {
+       "key": "antipolillas",
+       "name": "Antipolillas",
+       "base_unit": "ud",
+       "forms": [
+        "antipolillas",
+        "polillas"
        ]
       }
      ]
@@ -4959,6 +9969,34 @@
         "papel de horno",
         "bolsas de congelación",
         "bolsas zip"
+       ],
+       "vague": true,
+       "options": [
+        "bolsas_congelacion",
+        "film_transparente",
+        "papel_vegetal"
+       ]
+      },
+      {
+       "key": "bolsas_congelacion",
+       "name": "Bolsas de congelación",
+       "base_unit": "ud",
+       "forms": []
+      },
+      {
+       "key": "papel_vegetal",
+       "name": "Papel vegetal",
+       "base_unit": "ud",
+       "forms": [
+        "papel vegetal"
+       ]
+      },
+      {
+       "key": "film_transparente",
+       "name": "Film transparente",
+       "base_unit": "ud",
+       "forms": [
+        "film de cocina"
        ]
       },
       {
@@ -4973,12 +10011,46 @@
        ]
       },
       {
+       "key": "bolsa_isotermica",
+       "name": "Bolsa isotérmica",
+       "base_unit": "ud",
+       "forms": [
+        "bolsa térmica"
+       ]
+      },
+      {
        "key": "bolsas_basura",
        "name": "Bolsas de basura",
        "base_unit": "ud",
        "forms": [
         "bolsas de basura",
         "bolsas basura"
+       ]
+      },
+      {
+       "key": "bolsas_reciclaje_envases",
+       "name": "Bolsas de basura para envases",
+       "base_unit": "ud",
+       "forms": [
+        "bolsas de reciclaje",
+        "bolsas para envases"
+       ]
+      },
+      {
+       "key": "bolsas_jardin",
+       "name": "Bolsas de jardín",
+       "base_unit": "ud",
+       "forms": [
+        "bolsas de jardín"
+       ]
+      },
+      {
+       "key": "bolsas_compost",
+       "name": "Bolsas de basura compostables",
+       "base_unit": "ud",
+       "forms": [
+        "bolsas compost",
+        "bolsas orgánicas"
        ]
       },
       {
@@ -4990,6 +10062,47 @@
         "vasos desechables",
         "cubiertos desechables",
         "mantel"
+       ],
+       "vague": true,
+       "options": [
+        "vasos_desechables",
+        "platos_desechables",
+        "cubiertos_desechables",
+        "manteles_papel"
+       ]
+      },
+      {
+       "key": "manteles_papel",
+       "name": "Manteles de papel",
+       "base_unit": "ud",
+       "forms": [
+        "mantel de papel",
+        "manteles desechables"
+       ]
+      },
+      {
+       "key": "cubiertos_desechables",
+       "name": "Cubiertos desechables",
+       "base_unit": "ud",
+       "forms": [
+        "cubiertos de plástico",
+        "tenedores desechables"
+       ]
+      },
+      {
+       "key": "platos_desechables",
+       "name": "Platos, boles y bandejas desechables",
+       "base_unit": "ud",
+       "forms": [
+        "platos desechables"
+       ]
+      },
+      {
+       "key": "vasos_desechables",
+       "name": "Vasos desechables",
+       "base_unit": "ud",
+       "forms": [
+        "vasos de plástico"
        ]
       },
       {
@@ -5000,6 +10113,16 @@
         "táper",
         "tupper",
         "molde de horno"
+       ]
+      },
+      {
+       "key": "moldes_desechables",
+       "name": "Moldes de aluminio y papel desechables",
+       "base_unit": "ud",
+       "forms": [
+        "molde de aluminio",
+        "molde desechable",
+        "molde papel freidora"
        ]
       },
       {
@@ -5014,6 +10137,25 @@
        ]
       },
       {
+       "key": "velas_velote",
+       "name": "Velotes",
+       "base_unit": "ud",
+       "forms": [
+        "vela grande",
+        "velote"
+       ]
+      },
+      {
+       "key": "encendedores",
+       "name": "Encendedores y fósforos",
+       "base_unit": "ud",
+       "forms": [
+        "cerillas",
+        "encendedor",
+        "fósforos"
+       ]
+      },
+      {
        "key": "pilas",
        "name": "Pilas",
        "base_unit": "ud",
@@ -5021,6 +10163,14 @@
         "pilas",
         "pila aa",
         "pilas aaa"
+       ]
+      },
+      {
+       "key": "pilas_aaa",
+       "name": "Pilas AAA",
+       "base_unit": "ud",
+       "forms": [
+        "pilas lr03"
        ]
       }
      ]
@@ -5051,12 +10201,48 @@
        ]
       },
       {
+       "key": "perro_seco_senior",
+       "name": "Pienso para perro sénior o esterilizado",
+       "base_unit": "kg",
+       "forms": [
+        "pienso perro esterilizado",
+        "pienso perro sénior"
+       ]
+      },
+      {
+       "key": "perro_seco_junior",
+       "name": "Pienso para cachorro",
+       "base_unit": "kg",
+       "forms": [
+        "pienso cachorro",
+        "pienso perro junior"
+       ]
+      },
+      {
        "key": "perro_humedo",
        "name": "Comida húmeda para perro",
        "base_unit": "kg",
        "forms": [
         "latas de perro",
         "comida húmeda de perro"
+       ]
+      },
+      {
+       "key": "perro_humedo_junior",
+       "name": "Comida húmeda para cachorro",
+       "base_unit": "kg",
+       "forms": [
+        "comida húmeda cachorro",
+        "paté perro junior"
+       ]
+      },
+      {
+       "key": "perro_humedo_trozos",
+       "name": "Trozos en salsa para perro",
+       "base_unit": "kg",
+       "forms": [
+        "bocaditos perro",
+        "trozos en salsa perro"
        ]
       },
       {
@@ -5070,6 +10256,16 @@
        ]
       },
       {
+       "key": "snack_dental_perro",
+       "name": "Snack dental para perro",
+       "base_unit": "kg",
+       "forms": [
+        "hueso dental perro",
+        "snack dental perro",
+        "stick dental perro"
+       ]
+      },
+      {
        "key": "perro_aseo",
        "name": "Aseo y cuidado del perro",
        "base_unit": "ud",
@@ -5077,6 +10273,15 @@
         "bolsas para excrementos",
         "champú para perro",
         "antiparasitario perro"
+       ]
+      },
+      {
+       "key": "champu_mascotas",
+       "name": "Champú para mascotas",
+       "base_unit": "ud",
+       "forms": [
+        "champú para mascotas",
+        "champú para perros"
        ]
       }
      ]
@@ -5100,6 +10305,32 @@
        ]
       },
       {
+       "key": "gato_seco_senior",
+       "name": "Pienso para gato sénior",
+       "base_unit": "kg",
+       "forms": [
+        "pienso gato sénior"
+       ]
+      },
+      {
+       "key": "gato_seco_esterilizado",
+       "name": "Pienso para gato esterilizado",
+       "base_unit": "kg",
+       "forms": [
+        "pienso gato esterilizado",
+        "pienso gato light"
+       ]
+      },
+      {
+       "key": "gato_seco_junior",
+       "name": "Pienso para gatito",
+       "base_unit": "kg",
+       "forms": [
+        "pienso gatito",
+        "pienso gato junior"
+       ]
+      },
+      {
        "key": "gato_humedo",
        "name": "Comida húmeda para gato",
        "base_unit": "kg",
@@ -5107,6 +10338,24 @@
         "latas de gato",
         "comida húmeda de gato",
         "sobres de gato"
+       ]
+      },
+      {
+       "key": "gato_humedo_junior",
+       "name": "Comida húmeda para gatito",
+       "base_unit": "kg",
+       "forms": [
+        "comida húmeda gatito",
+        "paté gato junior"
+       ]
+      },
+      {
+       "key": "gato_humedo_pate",
+       "name": "Paté y mousse para gato",
+       "base_unit": "kg",
+       "forms": [
+        "mousse para gato",
+        "paté para gato"
        ]
       },
       {
@@ -5126,6 +10375,24 @@
         "arena de gato",
         "arena para gatos"
        ]
+      },
+      {
+       "key": "malta_gato",
+       "name": "Malta para gato",
+       "base_unit": "ud",
+       "forms": [
+        "malta para gato",
+        "pasta de malta gato"
+       ]
+      },
+      {
+       "key": "arena_gato_silice",
+       "name": "Arena de sílice para gato",
+       "base_unit": "ud",
+       "forms": [
+        "arena de perlas",
+        "arena de sílice para gato"
+       ]
       }
      ]
     },
@@ -5142,6 +10409,24 @@
         "comida de pájaro",
         "alpiste",
         "comida para peces"
+       ]
+      },
+      {
+       "key": "alimento_periquitos",
+       "name": "Alimento para periquitos",
+       "base_unit": "kg",
+       "forms": [
+        "alimento periquitos",
+        "comida periquitos"
+       ]
+      },
+      {
+       "key": "alimento_canarios",
+       "name": "Alimento para canarios",
+       "base_unit": "kg",
+       "forms": [
+        "alimento canarios",
+        "comida canarios"
        ]
       },
       {
