@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-16
+
+* **Update** Decision 0020 after batch 4 of iteration 12: every leaf reviewed for homogeneity with all its products (Claude Sonnet, four batches; consolidated by Claude Opus and approved by the author), 446 to 1,016 leaves, 18 umbrella terms asked, concrete-only leaves for products with shades. Third sample labelled by Claude Haiku: accuracy 95.6 %, hard negatives 2.7 % (NFR-04 and NFR-14 met on the point estimate). Decision 0021: concrete-only products in the web.
+
 ## 2026-11-15
 
 * **Update** Decision 0020 after batch 3 of iteration 12: plain variants and line words in line resolution, every product reviewed twice (blind labels and arbitration), 75 new leaves and four equivalence variants, flavours detected beyond «sabor X», pasta as a vague group, kefir, disinfectant and other white fish leaves. Measured on a new sample labelled by Claude Haiku: accuracy 92.0 %, hard negatives 7.7 % (NFR-14 not met); the leaf homogeneity review and concrete-only shade leaves are next.

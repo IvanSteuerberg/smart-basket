@@ -237,9 +237,15 @@
 	\section*{Semana 11: 16 -- 22 de noviembre}
 	\textit{Resumen:} Semana en curso.
 
+	\subsection*{Lunes 16 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Cuarta tanda de la iteración 12, solo con modelos de Claude: Claude Sonnet revisa una por una las 435 categorías con todos sus productos y propone partir las que mezclan productos distintos (cortes de cerdo, frutos secos, turrones, aceites…); los productos con tonos (tintes y maquillaje) pasan a ser «solo producto concreto», implementado por Claude Sonnet y revisado dos veces por Claude Haiku. El autor aprueba las particiones; solo preguntan los términos generales (cerdo, carne picada, hamburguesa, frutos secos…), y el resto va a su producto habitual.}{De 446 a 1.016 categorías y 1.850 productos canónicos; 1.112 pruebas del backend superadas.}
+		\actividad{Análisis}{Tercera medición con una muestra nueva de 298 productos etiquetada por Claude Haiku y revisada entera: 95,6~\% de acierto y 2,7~\% de productos distintos tomados por equivalentes (objetivos, 90~\% y 3~\%). Las listas del autor salen bien; las categorías más finas cuestan algo de ahorro donde el comprador aceptaría una hermana (lechuga iceberg).}{Decisiones 0020 y 0021 actualizadas; objetivos de calidad cumplidos en el valor medio.}
+	\end{description}
+
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Cierre de la iteración 12: revisar todas las categorías con sus productos para partir las mezcladas, tratar como «solo producto concreto» los productos con tonos y volver a medir con una muestra nueva.
+		\item Cierre de la iteración 12 (pull request y OSF) y siguientes iteraciones: usabilidad de la web (historial del navegador), segunda cadena (Dia) y prueba de modelos de decisión frente a LLM para interpretar listas y clasificar productos.
 		\item Siguiente iteración: comprobar si un modelo de decisión (Gemini Decision 1 en la nube, Kev-4B en local) interpreta las líneas que las reglas no resuelven mejor, más rápido y más barato que el LLM generativo actual, con la prueba de modelos ampliada (acierto, calibración, latencia y coste) y una prueba de carga del sistema con 1.000 usuarios concurrentes. Señal de Tiempo con DeepSeek como segunda fuente y revisión de las decisiones 0001 y 0005.
 		\item Comprobar con una muestra mayor si el precio varía según la zona (decisión 0006).
 		\item Análisis de los libros asignados (encargo pendiente).

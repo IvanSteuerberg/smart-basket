@@ -25,6 +25,8 @@ After iteration 11 the web had no photos, no product catalog and four steps (lis
 5. **One screen for a typed list.** Write and press «Calcular»: vague lines show «¿Qué X?» with photo chips, unknown ones a search box, and a missing origin opens the folded origin row; there is no review step. The basket shows each product's photo, «Cambiar» for another product of the same canonical, the `flex_savings` notice with «Aplicar a toda la lista», store cards with logo, address and straight-line distance, and the map.
 6. **Minimal browser profile with the shape of 0019.** `preference` rows (`brand_pin` per category, `chain_include` per chain, and a global `any_brand` kind added for the switch) and `choice_event` (`pinned`) in IndexedDB, with a memory fallback, JSON export and import, uuidv7 ids and `navigator.storage.persist()` after the first basket. The origin and route options are remembered in the versioned local storage (schema 3). Only the constraints of the current lines travel with a request.
 
+7. **Concrete-only products.** A product of a leaf with shades (dyes, make-up) is always «Este producto»: no accept selector, no padlock, untouched by the any-brand switch, no «Cambiar» in the basket and no generic «Añadir»; a typed line for it asks the user to pick the product in the catalog.
+
 # Consequences
 
 * The flow from a typed list to a basket is two taps when the origin is remembered and nothing is vague.
