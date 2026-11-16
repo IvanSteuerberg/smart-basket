@@ -55,6 +55,8 @@ class CanonicalSummary(BaseModel):
     base_unit: str
     product_count: int
     chains: list[str]
+    #: Only concrete products are bought in this category (shades): no generic "any" line.
+    exact_only: bool
 
 
 class CanonicalsResponse(BaseModel):
@@ -75,7 +77,8 @@ select
     cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
     cp.chain_id, ch.code as chain_code, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
-    ec.id as category_id, ec.key as category_key, ec.name as category_name
+    ec.id as category_id, ec.key as category_key, ec.name as category_name,
+    ec.exact_only
 """
     + _ACTIVE_PRICED_PRODUCT_FROM
     + """
@@ -150,6 +153,7 @@ select
     canon.name,
     ec.key as category_key,
     ec.name as category_name,
+    ec.exact_only,
     cp.image_url,
     cs.from_price,
     cp.best_price,
@@ -273,6 +277,7 @@ def canonicals(
                 base_unit=row["best_unit"],
                 product_count=row["product_count"],
                 chains=list(row["chains"]),
+                exact_only=row["exact_only"],
             )
         )
     return CanonicalsResponse(
@@ -312,5 +317,6 @@ def canonical(canonical_id: int, session: SessionDep) -> CanonicalDetail:
         base_unit=best["base_unit"],
         product_count=len(rows),
         chains=sorted({row["chain_code"] for row in rows}),
+        exact_only=best["exact_only"],
         products=products,
     )

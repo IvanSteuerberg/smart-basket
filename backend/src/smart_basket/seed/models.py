@@ -50,6 +50,8 @@ class CategoryNode(BaseModel):
     vague: bool = False
     #: Category keys a vague node offers as the shopper's choice; only a vague node may set it.
     options: list[str] | None = None
+    #: Leaf whose products are never interchangeable (shades): only a concrete product is bought.
+    exact_only: bool = False
     children: list[CategoryNode] = Field(default_factory=list)
 
     @property
@@ -69,6 +71,7 @@ class CategoryRow(BaseModel):
     forms: list[str]
     is_vague: bool
     options: list[str]
+    exact_only: bool
 
 
 class TaxonomyFile(BaseModel):
@@ -106,6 +109,7 @@ class TaxonomyFile(BaseModel):
                     forms=forms,
                     is_vague=node.vague,
                     options=list(node.options or []),
+                    exact_only=node.exact_only,
                 )
             )
         return rows
@@ -127,6 +131,10 @@ class TaxonomyFile(BaseModel):
                     f"duplicate category name {node.name!r} under parent {parent_key!r}"
                 )
             names.add((parent_key, node.name))
+
+        for node, _, _ in self.walk():
+            if node.exact_only and not node.is_leaf:
+                raise ValueError(f"category {node.key!r} is exact_only but is not a leaf")
 
         for node, _, _ in self.walk():
             if node.options is None:

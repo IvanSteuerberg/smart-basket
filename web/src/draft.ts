@@ -2,6 +2,7 @@
 
 import type {
   Accept,
+  ChoiceRequiredDetail,
   InterpretOption,
   InterpretedItem,
   RecommendationItemRequest,
@@ -30,6 +31,8 @@ export interface DraftItem {
   imageUrl: string | null;
   /** Choices for a vague line ("¿Qué pollo?"); the line cannot be sent until one is chosen. */
   options: InterpretOption[];
+  /** The category only sells concrete products (shades): the line needs a product to be sent. */
+  exactOnly: boolean;
 }
 
 export function newId(): string {
@@ -53,6 +56,7 @@ export function draftFromInterpreted(item: InterpretedItem): DraftItem {
     ...GENERIC_DEFAULTS,
     imageUrl: item.image_url,
     options: item.options,
+    exactOnly: item.exact_only,
   };
 }
 
@@ -63,7 +67,11 @@ export const GENERIC_DEFAULTS = {
   locked: false,
   imageUrl: null,
   options: [],
-} as const satisfies Pick<DraftItem, "productId" | "accept" | "locked" | "imageUrl" | "options">;
+  exactOnly: false,
+} as const satisfies Pick<
+  DraftItem,
+  "productId" | "accept" | "locked" | "imageUrl" | "options" | "exactOnly"
+>;
 
 /** Lines saved before the concrete-product fields existed read as generic lines. */
 export function withLineDefaults(item: Omit<DraftItem, keyof typeof GENERIC_DEFAULTS> &
@@ -82,6 +90,7 @@ export function draftFromSearchResult(result: SearchResult): DraftItem {
     brand: "",
     privateLabelOk: true,
     ...GENERIC_DEFAULTS,
+    exactOnly: result.exact_only,
   };
 }
 
@@ -93,10 +102,31 @@ export function chooseOption(item: DraftItem, option: InterpretOption): DraftIte
     categoryName: option.name,
     imageUrl: option.image_url,
     options: [],
+    exactOnly: option.exact_only,
   };
 }
 
+/** A resolved category the user picked for an unknown line, as the fields of that line. */
+export function lineFromSearchResult(result: SearchResult): Partial<DraftItem> {
+  return {
+    categoryKey: result.key,
+    categoryName: result.name,
+    options: [],
+    exactOnly: result.exact_only,
+  };
+}
+
+/**
+ * The line the server refused with a 422 because the user must choose first: a vague one goes
+ * back to "unknown", one of shades waits for a concrete product.
+ */
+export function markChoiceRequired(item: DraftItem, code: ChoiceRequiredDetail["code"]): DraftItem {
+  if (code === "EXACT_ONLY") return { ...item, productId: null, exactOnly: true };
+  return { ...item, categoryKey: null, productId: null, options: [] };
+}
+
 export function isResolved(item: DraftItem): boolean {
+  if (item.exactOnly && item.productId === null) return false;
   return item.options.length === 0 && (item.productId !== null || item.categoryKey !== null);
 }
 
@@ -106,7 +136,7 @@ export function isResolved(item: DraftItem): boolean {
  */
 export function applyAnyBrand(items: DraftItem[]): DraftItem[] {
   return items.map((item) =>
-    item.productId !== null && !item.locked && item.accept === "exact"
+    item.productId !== null && !item.exactOnly && !item.locked && item.accept === "exact"
       ? { ...item, accept: "equivalent" }
       : item,
   );

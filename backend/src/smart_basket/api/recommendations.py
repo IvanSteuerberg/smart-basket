@@ -20,8 +20,8 @@ from smart_basket.recommender import NoCandidateStores, RecommendationQuery, rec
 from smart_basket.recommender.catalog import Item, UnknownProduct, variant_keys
 from smart_basket.recommender.service import (
     BasketCalculationError,
+    ChoiceRequired,
     RecommendationResponse,
-    VagueLine,
 )
 from smart_basket.routing import GeoPoint, RoutingEngine, RoutingError, TravelMode, ValhallaClient
 
@@ -124,11 +124,11 @@ def create_recommendation(
     )
     try:
         return recommend(session, query, routing, today, get_settings())
-    except VagueLine as exc:
+    except ChoiceRequired as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
-                "code": "VAGUE_LINE",
+                "code": exc.code,
                 "line_id": exc.line_id,
                 "category_key": exc.category_key,
                 "message": exc.message,

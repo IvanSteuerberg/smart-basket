@@ -4,7 +4,7 @@ import {
   getHealth,
   getSections,
   interpretText,
-  isVagueLine,
+  isChoiceRequired,
   requestRecommendation,
   type Accept,
   type CanonicalCard,
@@ -25,6 +25,7 @@ import {
   allResolved,
   applyAnyBrand,
   draftFromInterpreted,
+  markChoiceRequired,
   toRequestItem,
   type DraftItem,
 } from "./draft";
@@ -341,16 +342,12 @@ export default function App() {
       setRecommendation(result);
       setStep("basket");
     } catch (error) {
-      if (isVagueLine(error)) {
-        const lineId = error.detail.line_id;
+      if (isChoiceRequired(error)) {
+        const { line_id: lineId, code, message } = error.detail;
         setItems((current) =>
-          current.map((item, index) =>
-            index === lineId
-              ? { ...item, categoryKey: null, productId: null, options: [] }
-              : item,
-          ),
+          current.map((item, index) => (index === lineId ? markChoiceRequired(item, code) : item)),
         );
-        setCalcError(error.detail.message);
+        setCalcError(message);
         setStep("list");
       } else {
         setCalcError(describeError(error));
@@ -483,6 +480,7 @@ export default function App() {
           items={items}
           onRemoveItem={handleRemoveItem}
           onUpdateItem={handleUpdateItem}
+          onChooseInCatalog={handleSearch}
           text={text}
           onTextChange={setText}
           onCalculate={handleCalculate}

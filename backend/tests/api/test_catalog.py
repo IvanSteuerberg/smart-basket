@@ -120,6 +120,17 @@ def test_search_ranks_exact_and_prefix_matches_first(client):
     assert "barra_pan" in keys
 
 
+def test_search_marks_the_leaves_with_shades(client, session):
+    session.execute(text("update category set exact_only = true where key = 'pan_molde'"))
+    session.commit()
+
+    results = client.get("/api/search", params={"q": "pan de molde"}).json()["results"]
+
+    flags = {result["key"]: result["exact_only"] for result in results}
+    assert flags["pan_molde"] is True
+    assert flags["pan"] is False
+
+
 def test_search_needs_two_characters_once_stripped(client):
     for query in ("p", "", "   "):
         assert client.get("/api/search", params={"q": query}).status_code == 422

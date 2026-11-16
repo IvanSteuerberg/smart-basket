@@ -7773,6 +7773,7 @@
        "key": "tinte",
        "name": "Tinte de pelo",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "tinte",
         "tinte de pelo",
@@ -7783,6 +7784,7 @@
        "key": "mascarilla_color",
        "name": "Mascarilla de color",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "color mask",
         "mascarilla colorante",
@@ -8735,6 +8737,7 @@
        "key": "base_maquillaje",
        "name": "Base de maquillaje y corrector",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "base de maquillaje",
         "corrector",
@@ -8745,6 +8748,7 @@
        "key": "colorete_polvos",
        "name": "Colorete y polvos",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "colorete",
         "polvos",
@@ -8755,6 +8759,7 @@
        "key": "labios",
        "name": "Pintalabios y cuidado de labios",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "pintalabios",
         "barra de labios",
@@ -8767,6 +8772,7 @@
        "key": "ojos",
        "name": "Maquillaje de ojos",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "rímel",
         "máscara de pestañas",
@@ -8806,6 +8812,7 @@
        "key": "unas",
        "name": "Laca y cuidado de uñas",
        "base_unit": "ud",
+       "exact_only": true,
        "forms": [
         "laca de uñas",
         "esmalte de uñas",

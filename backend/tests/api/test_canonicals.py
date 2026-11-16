@@ -89,6 +89,7 @@ def test_canonicals_listing_category_filter_and_fields(client, session: Session,
     assert platano_item["base_unit"] == "kg"
     assert platano_item["product_count"] == 3
     assert platano_item["chains"] == ["mercadona"]
+    assert platano_item["exact_only"] is False
 
     manzana_item = by_name["Manzana Golden"]
     assert manzana_item["category_key"] == "manzana"
@@ -114,6 +115,7 @@ def test_canonicals_detail_returns_products_sorted_by_unit_price(client, catalog
     assert detail["base_unit"] == "kg"
     assert detail["product_count"] == 3
     assert detail["chains"] == ["mercadona"]
+    assert detail["exact_only"] is False
 
     # Products sorted by unit price ascending
     products = detail["products"]
@@ -143,6 +145,35 @@ def test_canonicals_detail_returns_products_sorted_by_unit_price(client, catalog
     assert p1["packaging"] == "bolsa"
     assert p1["price"] == "1.2"
     assert p1["unit_price"] == "1.2"
+
+
+def test_canonicals_of_an_exact_only_leaf_are_marked(client, session: Session, catalog: Catalog):
+    chain_id = _scalar(session, "select id from chain where code = 'mercadona'")
+    zone_id = _scalar(
+        session,
+        "select z.id from zone z join chain c on c.id = z.chain_id"
+        " where c.code = 'mercadona' and z.kind = 'warehouse' order by z.id limit 1",
+    )
+    tinte_cat = _chain_category(session, chain_id, "T-TINTE", "tinte")
+    tinte = _canonical(session, "tinte", "Tinte castaño")
+    _product(
+        session,
+        chain_id=chain_id,
+        chain_category_id=tinte_cat,
+        zone_id=zone_id,
+        sku="tinte-castano",
+        name="Tinte castaño",
+        price="4.00",
+        quantity="1",
+        unit="kg",
+        canonical_id=tinte,
+    )
+    session.commit()
+
+    items = client.get("/api/canonicals", params={"category": "tinte"}).json()["items"]
+    assert [(item["name"], item["exact_only"]) for item in items] == [("Tinte castaño", True)]
+    detail = client.get(f"/api/canonicals/{tinte}").json()
+    assert detail["exact_only"] is True
 
 
 def test_canonicals_detail_404_when_missing_or_no_priced_products(
