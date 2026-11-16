@@ -1,6 +1,7 @@
 import type { CanonicalCard as CanonicalCardData } from "../api";
 import { formatUnitPrice } from "../format";
 import { canonicalHash } from "../router";
+import { EXACT_ONLY_SEE_PRODUCTS } from "../texts";
 import { ProductImage } from "./ProductImage";
 
 export interface CanonicalCardProps {
@@ -28,13 +29,22 @@ export function CanonicalCard({ card, onAdd }: CanonicalCardProps) {
         <p className="text-xs text-stone-500">
           {card.product_count} {card.product_count === 1 ? "producto" : "productos"}
         </p>
-        <button
-          type="button"
-          onClick={() => onAdd(card)}
-          className="mt-2 w-full rounded-full bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
-        >
-          Añadir
-        </button>
+        {card.exact_only ? (
+          <a
+            href={canonicalHash(card.id)}
+            className="mt-2 block w-full rounded-full bg-brand px-3 py-2 text-center text-sm font-semibold text-white hover:bg-brand-dark"
+          >
+            {EXACT_ONLY_SEE_PRODUCTS}
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onAdd(card)}
+            className="mt-2 w-full rounded-full bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+          >
+            Añadir
+          </button>
+        )}
       </div>
     </article>
   );

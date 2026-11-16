@@ -3,6 +3,7 @@ import {
   ApiError,
   geocode,
   interpretText,
+  isChoiceRequired,
   requestRecommendation,
   searchProducts,
   type RecommendationRequest,
@@ -25,6 +26,27 @@ function jsonResponse(body: unknown, status = 200): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+describe("isChoiceRequired", () => {
+  it("recognizes the 422 of a generic line that needs a choice, vague or with shades", async () => {
+    const detail = {
+      code: "EXACT_ONLY",
+      line_id: 1,
+      category_key: "tinte",
+      message: "Elige el producto concreto.",
+    };
+    fetchMock.mockResolvedValue(jsonResponse({ detail }, 422));
+
+    const error = await requestRecommendation({} as RecommendationRequest).catch(
+      (cause: unknown) => cause,
+    );
+
+    expect(isChoiceRequired(error)).toBe(true);
+    expect(isChoiceRequired(new ApiError("otro", 422, { code: "VAGUE_LINE" }))).toBe(true);
+    expect(isChoiceRequired(new ApiError("otro", 422, { code: "OTHER" }))).toBe(false);
+    expect(isChoiceRequired(new Error("boom"))).toBe(false);
+  });
+});
 
 describe("searchProducts", () => {
   it("encodes the query and returns the results", async () => {

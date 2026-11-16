@@ -22,6 +22,8 @@ export interface CartLine {
   accept: Accept;
   /** Pinned with the padlock: the global "Me da igual la marca" switch leaves it exact. */
   locked: boolean;
+  /** Product of a category with shades: always "exact", the selector and the switch skip it. */
+  exact_only: boolean;
 }
 
 export type CartAction =
@@ -65,7 +67,7 @@ export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {
       );
     case "setAccept":
       return lines.map((line) =>
-        line.id === action.id ? { ...line, accept: action.accept } : line,
+        line.id === action.id && !line.exact_only ? { ...line, accept: action.accept } : line,
       );
     case "toggleLock":
       return lines.map((line) =>
@@ -76,7 +78,7 @@ export function cartReducer(lines: CartLine[], action: CartAction): CartLine[] {
     case "anyBrand":
       // Same rule as `applyAnyBrand` in draft.ts: pinned lines keep their choice.
       return lines.map((line) =>
-        line.product_id !== null && !line.locked && line.accept === "exact"
+        line.product_id !== null && !line.exact_only && !line.locked && line.accept === "exact"
           ? { ...line, accept: "equivalent" }
           : line,
       );
@@ -94,6 +96,8 @@ export function cartItemCount(lines: CartLine[]): number {
 
 /** A specific product: its own brand and packaging, its canonical for the basket. */
 export function specificLine(product: Product, anyBrand = false): CartLine {
+  // A product with shades is never swapped, wherever it was added from.
+  const exactOnly = product.canonical?.exact_only ?? false;
   return {
     id: newId(),
     product_id: product.id,
@@ -104,14 +108,15 @@ export function specificLine(product: Product, anyBrand = false): CartLine {
     category_key: product.canonical?.category_key ?? null,
     category_name: product.canonical?.name ?? null,
     quantity: MIN_QUANTITY,
-    accept: anyBrand ? "equivalent" : "exact",
+    accept: anyBrand && !exactOnly ? "equivalent" : "exact",
     locked: false,
+    exact_only: exactOnly,
   };
 }
 
-/** «Cualquier …»: any product of the canonical, keeping the photo it was added from. */
+/** «Cualquier …»: any product of the canonical; null when the canonical has shades. */
 export function genericLine(product: Product): CartLine | null {
-  if (product.canonical === null) return null;
+  if (product.canonical === null || product.canonical.exact_only) return null;
   return {
     id: newId(),
     product_id: null,
@@ -124,6 +129,7 @@ export function genericLine(product: Product): CartLine | null {
     quantity: MIN_QUANTITY,
     accept: "equivalent",
     locked: false,
+    exact_only: false,
   };
 }
 
@@ -141,6 +147,7 @@ export function canonicalLine(card: CanonicalCard): CartLine {
     quantity: MIN_QUANTITY,
     accept: "equivalent",
     locked: false,
+    exact_only: false,
   };
 }
 
@@ -161,6 +168,7 @@ export function draftItemFromCartLine(line: CartLine): DraftItem | null {
     accept: line.accept,
     locked: line.locked,
     imageUrl: line.image_url,
+    exactOnly: line.exact_only,
   };
 }
 

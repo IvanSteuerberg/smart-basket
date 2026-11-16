@@ -267,7 +267,12 @@ export function CartDrawer({
                         {[line.brand, line.packaging].filter(Boolean).join(" · ")}
                       </p>
                     )}
-                    {!isGenericLine(line) && (
+                    {!isGenericLine(line) && line.exact_only && (
+                      <p className="mt-2 text-xs font-semibold text-stone-600">
+                        {CART_ACCEPT_EXACT}
+                      </p>
+                    )}
+                    {!isGenericLine(line) && !line.exact_only && (
                       <div className="mt-2 flex items-center gap-2">
                         <select
                           aria-label={CART_ACCEPT_LABEL}

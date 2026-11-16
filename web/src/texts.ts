@@ -15,6 +15,11 @@ export const CART_UNCALCULABLE =
 export const ADD_SPECIFIC = "Añadir este producto";
 export const ADD_GENERIC_PREFIX = "Añadir cualquier";
 
+export const EXACT_ONLY_PICK = "Elegir en el catálogo";
+export const EXACT_ONLY_SEE_PRODUCTS = "Ver productos";
+export const exactOnlyLine = (text: string) =>
+  `«${text}» depende del tono o del color: elige el producto concreto.`;
+
 export const CATALOG_BY_PRODUCT = "Por producto";
 export const CATALOG_BY_CHAIN = "Por supermercado";
 

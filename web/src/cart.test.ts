@@ -32,6 +32,7 @@ function product(overrides: Partial<Product> = {}): Product {
       name: "Leche entera",
       category_key: "leche-entera",
       category_name: "Leche entera",
+      exact_only: false,
     },
     ...overrides,
   };
@@ -102,6 +103,7 @@ describe("accept mode and padlock", () => {
       base_unit: "l",
       product_count: 4,
       chains: ["mercadona", "dia"],
+      exact_only: false,
     };
 
     const added = canonicalLine(card);
@@ -120,6 +122,40 @@ describe("accept mode and padlock", () => {
 
     expect(next[0].accept).toBe("equivalent");
     expect(next[1].accept).toBe("exact");
+  });
+
+  it("keeps a line of a category with shades exact whatever the selector or the switch say", () => {
+    const tinte = line({ id: "t", exact_only: true });
+    const loose = line({ id: "b", product_id: 2 });
+
+    const afterSelector = cartReducer([tinte], { type: "setAccept", id: "t", accept: "equivalent" });
+    expect(afterSelector[0].accept).toBe("exact");
+
+    const afterSwitch = cartReducer([tinte, loose], { type: "anyBrand" });
+    expect(afterSwitch[0].accept).toBe("exact");
+    expect(afterSwitch[1].accept).toBe("equivalent");
+  });
+
+  it("adds a product of a category with shades as exact, even with the switch on", () => {
+    const shades = product({ canonical: { ...product().canonical!, exact_only: true } });
+    const added = specificLine(shades, true);
+
+    expect(added.exact_only).toBe(true);
+    expect(added.accept).toBe("exact");
+    expect(specificLine(product()).exact_only).toBe(false);
+  });
+
+  it("offers no generic line for a product with shades", () => {
+    const shades = product({ canonical: { ...product().canonical!, exact_only: true } });
+
+    expect(genericLine(shades)).toBeNull();
+  });
+
+  it("sends a concrete line of a category with shades as exactOnly", () => {
+    const [draft] = draftItemsFromCart([line({ exact_only: true })]);
+
+    expect(draft.exactOnly).toBe(true);
+    expect(draft.productId).toBe(1);
   });
 
   it("pins a line as this product and releases it without touching its choice", () => {

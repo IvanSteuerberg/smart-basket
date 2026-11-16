@@ -69,7 +69,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /** A line saved before the concrete-product fields existed allows them missing. */
 type StoredDraftItem = Omit<
   DraftItem,
-  "productId" | "accept" | "locked" | "imageUrl" | "options"
+  "productId" | "accept" | "locked" | "imageUrl" | "options" | "exactOnly"
 > &
   Partial<Omit<DraftItem, "options">> & {
     options?: DraftItem["options"];
@@ -91,6 +91,7 @@ function isDraftItem(value: unknown): value is StoredDraftItem {
       (typeof value.productId === "number" && Number.isInteger(value.productId))) &&
     (value.accept === undefined || value.accept === "exact" || value.accept === "equivalent") &&
     (value.locked === undefined || typeof value.locked === "boolean") &&
+    (value.exactOnly === undefined || typeof value.exactOnly === "boolean") &&
     (value.imageUrl === undefined || value.imageUrl === null || typeof value.imageUrl === "string") &&
     (value.options === undefined ||
       (Array.isArray(value.options) &&
@@ -121,8 +122,8 @@ function isSavedList(value: unknown): value is StoredSavedList {
 }
 
 /** A line saved before `accept`/`locked` existed has them missing; the guard allows that. */
-type StoredCartLine = Omit<CartLine, "accept" | "locked"> &
-  Partial<Pick<CartLine, "accept" | "locked">>;
+type StoredCartLine = Omit<CartLine, "accept" | "locked" | "exact_only"> &
+  Partial<Pick<CartLine, "accept" | "locked" | "exact_only">>;
 
 function isCartLine(value: unknown): value is StoredCartLine {
   if (!isRecord(value)) return false;
@@ -139,7 +140,8 @@ function isCartLine(value: unknown): value is StoredCartLine {
     Number.isFinite(value.quantity) &&
     value.quantity >= 1 &&
     (value.accept === undefined || value.accept === "exact" || value.accept === "equivalent") &&
-    (value.locked === undefined || typeof value.locked === "boolean")
+    (value.locked === undefined || typeof value.locked === "boolean") &&
+    (value.exact_only === undefined || typeof value.exact_only === "boolean")
   );
 }
 
@@ -175,6 +177,7 @@ function withCartDefaults(line: StoredCartLine): CartLine {
     ...line,
     accept: line.accept ?? (line.product_id === null ? "equivalent" : "exact"),
     locked: line.locked ?? false,
+    exact_only: line.exact_only ?? false,
   };
 }
 
