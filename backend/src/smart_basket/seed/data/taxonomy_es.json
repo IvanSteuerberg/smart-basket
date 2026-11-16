@@ -4165,8 +4165,7 @@
        "name": "Salsa de soja",
        "base_unit": "kg",
        "forms": [
-        "salsa de soja",
-        "soja"
+        "salsa de soja"
        ]
       }
      ]
@@ -4874,8 +4873,7 @@
        "name": "Semillas de sésamo",
        "base_unit": "kg",
        "forms": [
-        "semillas de sésamo",
-        "sésamo"
+        "semillas de sésamo"
        ]
       },
       {
@@ -6058,7 +6056,7 @@
        "name": "Malta",
        "base_unit": "l",
        "forms": [
-        "malta",
+        "bebida de malta",
         "maltín"
        ]
       },
