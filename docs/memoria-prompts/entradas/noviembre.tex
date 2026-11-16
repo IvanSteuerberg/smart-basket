@@ -120,3 +120,69 @@ No se añade una base de datos de grafos para las preferencias, ni en el MVP ni 
 \end{itemize}
 
 \vspace{0.5cm}
+
+
+\subsection{Señal de Tiempo 9: El Agente Recomendador y los Agentes del Sistema}
+\textbf{Fecha:} 16 de noviembre de 2026 \\
+\textbf{Asistente Virtual Utilizado:} Claude (Opus 5.5, Claude Code) / DeepSeek V4.1 Flash (OpenCode Go) \\
+\textbf{Objetivo:} Convertir el uso de agentes, hasta ahora superficial, en un agente recomendador de verdad. Hasta la iteración 12, el LLM solo interpreta en una llamada las líneas que las reglas no resuelven, y el flujo es un pipeline fijo sin bucle de percepción y acción. Se busca una definición defendible del agente, cómo hacerlo viable con modelos locales y qué otros agentes tienen sentido en el sistema.
+
+\textit{Nota: Claude respondió con el contexto del proyecto; DeepSeek recibió el prompt sin contexto previo y con búsqueda web. Un primer intento con un límite de 15 minutos se cortó tras unos 90 turnos sin llegar a responder, y el lanzador no puede retomar una sesión cortada; el segundo, sin ese límite, respondió en 14 minutos. La respuesta original, con el prompt completo, está en \url{docs/memoria-prompts/fuentes/2026-11-16-st9-deepseek.md}.}
+
+\begin{tcolorbox}[colback=promptcolor, title=Prompt Introducido, colframe=blue!50!black, breakable]
+	Actúa como arquitecto de software especializado en agentes de IA, modelos de lenguaje locales y sistemas de recomendación. Diseño el ``agente recomendador'' de una aplicación que recomienda en qué supermercados de León comprar una lista para minimizar coste + lambda * minutos, con un máximo de 3 tiendas. La asignatura exige un agente recomendador y valora más la IA local y el uso de agentes o enjambres de agentes; el autor quiere además un producto viable.
+
+	Lo que existe: PostgreSQL 18 con PostGIS y pgvector, FastAPI y React con Docker Compose en un portátil con GPU integrada Intel Arc, modelos locales en Ollama y Gemini Flash-Lite como reserva; unos 4.300 productos asignados a productos canónicos en unas 1.000 hojas, clasificados con varios modelos en papeles distintos pero en sesiones de desarrollo (95,6~\% de acierto); reglas que interpretan la lista, una llamada a un LLM local pequeño (Qwen 3.5 de 0,8B a 4B, de 3,3 a 16~s por llamada) para lo que no resuelven, un optimizador determinista y una explicación con plantilla. El primer plan debe salir en menos de 5~s (p95).
+
+	Propuesta a contrastar: un agente racional (el optimizador decide la cesta) con un bucle percepción-acción que actúa solo cuando observa algo (línea vaga, producto que no existe, empate, ``¿y si voy en coche?''); en cada paso elige una acción de un conjunto cerrado de acciones tipadas, dentro de un harness propio; varios agentes con el mismo harness coordinados a través de la base de datos (recomendador, catalogador de productos nuevos con pgvector y vigilante de precios); mínima intervención humana, con auditorías por muestreo y memoria de decisiones pasadas.
+
+	Preguntas: (1) si es defendible llamarlo agente y qué objetaría un tribunal; (2) acciones cerradas frente a llamada libre a herramientas con modelos de 4B o menos, número de pasos y cuándo escalar a la nube; (3) framework o harness propio; (4) si coordinarse por una base de datos compartida es un sistema multiagente de verdad; (5) umbrales, auditoría y hojas nuevas del catalogador; (6) evaluación del agente; (7) si existen los ``modelos de decisión'' (Gemini Decision 1, Kev-4B), comparación con modelos locales y Gemini Flash-Lite, y qué regla fijar antes de medir.
+
+	Da una recomendación concreta. Busca información actual (hoy es 16 de noviembre de 2026), cita las fuentes con URL e indica qué no has podido verificar. No ejecutes comandos ni modifiques archivos.
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de Claude, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Es un agente si el siguiente paso depende de lo que observa.} El núcleo racional (el optimizador maximiza una utilidad) decide la cesta, y el bucle decide qué hacer cuando el mundo no encaja en ese modelo. Un pipeline con una sola llamada al LLM no lo es.
+
+		\item \textbf{Los modelos de decisión existen y encajan con el conjunto cerrado de acciones:} Gemini Decision 1 (publicado el 11 de noviembre de 2026; puntúa opciones cerradas en una pasada, 0,10~\$ por millón de tokens de entrada y nada por la salida) y Kev-4B (abierto, Apache-2.0, un adaptador sobre Qwen3.5-4B). Si el código enumera las acciones posibles y el modelo solo puntúa cuál toca, el bucle apenas necesita generar texto.
+
+		\item \textbf{Harness propio y mínimo} (acciones como modelos Pydantic, estado, tope de pasos, traza en PostgreSQL y el comportamiento actual como modo degradado). Un framework esconde justo el bucle que hay que enseñar.
+
+		\item \textbf{Coordinarse por la base de datos es una arquitectura multiagente clásica (pizarra)}, justificada porque los agentes difieren en cuándo trabajan, qué los activa y qué pueden escribir.
+
+		\item \textbf{El catalogador ya tiene con qué calibrarse:} los 4.307 productos clasificados en la iteración 12 son su conjunto de prueba, y las decisiones re-aplicadas de la decisión 0020 son su memoria de decisiones.
+	\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=responsecolor, title=Insights de DeepSeek, colframe=gray!60!black, breakable]
+	\begin{itemize}
+		\item \textbf{Lo que hace defendible al agente es la ablación:} sustituir la política del modelo por una acción fija y medir cuánto cae el éxito en los casos excepcionales. Sin ese número, la palabra ``agente'' es una opinión. Toma la frontera entre flujo de trabajo y agente de Anthropic (quién elige el siguiente paso) y propone autonomía graduada por riesgo con los niveles de Feng et al.
+
+		\item \textbf{Separar elegir de entender:} un modelo de decisión elige entre las acciones con una probabilidad calibrada (unos 40~ms por decisión en una GPU dedicada; estima 100--300~ms en la Arc, sin medir) y un modelo pequeño se ocupa del lenguaje. Con eso caben de 4 a 8 pasos en 5~s, frente a ninguno con un generativo de 4B. Si la confianza es baja, el agente pregunta en lugar de actuar.
+
+		\item \textbf{Conjunto cerrado, no herramientas libres:} cita $\tau$-bench, donde incluso los mejores modelos fallan al repetir la misma tarea; por eso propone medir pass\textasciicircum{}k (acertar en todas las repeticiones) en lugar de acertar una vez, y un tope de 6 pasos.
+
+		\item \textbf{Harness propio con tablas de ejecuciones y pasos}, validación con reintento y acción por defecto, y efectos en dos fases (proponer, validar, aplicar). Descarta LangGraph, smolagents y la mensajería entre agentes.
+
+		\item \textbf{Reglas de la pizarra:} cada tabla la escribe un solo agente (el recomendador solo lee), con reservas de trabajo y versionado optimista. Cita los fallos de los sistemas multiagente (MAST) para anticipar la crítica.
+
+		\item \textbf{Catalogador con tres salidas} (aplicar, proponer hoja, revisar), con el umbral elegido por clasificación selectiva y calibrado sobre datos propios, y auditoría secuencial por muestreo. El juez LLM, solo para la calidad de la explicación, nunca para aprobar.
+
+		\item \textbf{Regla antes de medir:} el modelo local más barato cuya cota inferior de acierto esté a 3 puntos o menos del mejor, con un p95 por decisión de 800~ms como máximo; la nube, solo si ningún local llega.
+	\end{itemize}
+\end{tcolorbox}
+
+\textbf{Revisión de afirmaciones:} DeepSeek da para el 95,6~\% un intervalo de [93,3, 97,9] con la aproximación normal; la decisión 0020 ya publica [92,7, 97,4], calculado con un método más adecuado cerca del 100~\%. Dice no haber verificado que Ollama sirva modelos de decisión y propone un servidor de llama.cpp aparte, pero la documentación de Ollama describe ese uso (\url{https://docs.ollama.com/capabilities/decision.md}); falta probarlo en la Arc. No encontró el precio de Gemini Decision 1, que el blog de Google da como 0,10~\$ por millón de tokens de entrada (\url{https://blog.google/innovation-and-ai/technology/developers-tools/gemini-decisions-api/}). Sin contexto, no sabía que ya existen las decisiones re-aplicadas de la iteración 12, por lo que su espera a tener 500 decisiones no aplica. Exige aprobación humana de cada hoja nueva y que sus productos estén en dos cadenas, lo que no encaja con productos de una sola cadena ni con el criterio del autor de intervenir lo mínimo. No se han verificado sus límites del plan gratuito de Gemini Decision 1 ni el artículo arXiv:2611.14581 sobre la coincidencia de los jueces LLM. Su plan por semanas no se adopta.
+
+\textbf{Decisión de Ingeniería / Aplicación al Proyecto:} \\
+El autor aprueba la propuesta combinada (decisión 0022 de la base de conocimiento, que revisa la 0001 y la 0005):
+
+\begin{itemize}
+	\item \textbf{El agente recomendador es un agente racional con un bucle percepción-acción.} El optimizador decide la cesta; el bucle actúa solo cuando observa algo y el primer plan sigue saliendo del pipeline rápido. En cada paso se elige una acción de un conjunto cerrado de acciones tipadas, dentro de un harness propio común a todos los agentes, con traza, tope de pasos y modo degradado.
+	\item \textbf{Tres agentes coordinados a través de la base de datos:} recomendador (el que se construye ahora), catalogador de productos nuevos y vigilante de precios, cada uno con las tablas que puede escribir. La iteración 12 ya fue un proceso multiagente, pero en las sesiones de desarrollo; el catalogador lo lleva al producto.
+	\item \textbf{Autonomía graduada por riesgo y mínima intervención del autor:} los agentes aplican lo que tienen claro, la calidad se vigila por muestreo y una hoja nueva se crea sola si dos señales independientes coinciden y la agrupan al menos 3 productos, con un resumen para que el autor la deshaga si quiere.
+	\item \textbf{El modelo se elige midiendo, con la regla de DeepSeek fijada antes de medir.} El reparto entre un modelo de decisión que elige la acción y un modelo pequeño para el lenguaje es una hipótesis que se prueba con escenarios reales frente a un único modelo pequeño con salida restringida; Gemini queda como referencia y reserva. La evaluación incluye la ablación y pass\textasciicircum{}k.
+\end{itemize}
+
+\vspace{0.5cm}

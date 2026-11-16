@@ -24,5 +24,6 @@ The recommender agent is an LLM-based orchestrator. It interprets the shopping l
 
 * Recommendations are verifiable and reproducible; the LLM can be swapped without changing results.
 * Tools need clear, typed interfaces the agent can call.
+* **Revised by [0022](/decisions/0022-recommender-agent-and-system-agents.md) (2026-11-16):** the agent is a rational agent (the optimizer) with a perceive-act loop started on observations, choosing from a closed action set in a shared harness. The principle that figures come from deterministic code stands.
 
 [^st3]: Prompt log, Señal de Tiempo 3 (Claude and Gemini agree).

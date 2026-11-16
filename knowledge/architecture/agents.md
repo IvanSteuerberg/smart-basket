@@ -18,7 +18,7 @@ sources:
     resource: ../../docs/registro-actividad/registro-actividad.tex
     title: Class notes of 2026-09-14 (local AI and agents are valued)
 ---
-Draft agreed with the author in the session of 2026-11-16. It is to be confirmed by a Señal de Tiempo and recorded as a decision that revises [0001](/decisions/0001-agent-as-orchestrator.md). Until then, 0001 and [0005](/decisions/0005-local-first-ai-models.md) stand.
+Overview agreed with the author on 2026-11-16 and recorded in decision [0022](/decisions/0022-recommender-agent-and-system-agents.md) (Señal de Tiempo 9), which revises [0001](/decisions/0001-agent-as-orchestrator.md) and [0005](/decisions/0005-local-first-ai-models.md). Where this note and 0022 differ, 0022 rules.
 
 # Why this note
 

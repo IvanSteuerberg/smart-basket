@@ -51,6 +51,7 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0019 Shopper preferences](/decisions/0019-shopper-preferences.md) - One profile model in three layers, in the browser for the MVP and in PostgreSQL with accounts; preferences constrain the basket but never enter the objective; no graph store until thresholds are met.
 * [0020 Rule-based canonical matching and canonical baskets](/decisions/0020-rule-based-canonical-matching.md) - Products assigned to canonicals by rules with a review queue decided by the author, decisions re-applied by chain and SKU from outside the repository, and list lines resolved through canonicals with vague terms asked.
 * [0021 Supermarket-style web and low-friction list](/decisions/0021-supermarket-style-web.md) - Catalog with photos, generic and concrete products, Tailwind and logos, cart lines that say what they accept, a one-screen typed list and a minimal browser profile.
+* [0022 Recommender agent and system agents](/decisions/0022-recommender-agent-and-system-agents.md) - The recommender is a rational agent with a perceive-act loop started on observations and a closed action set in a shared harness; three agents coordinate through the database with graded autonomy; the model is chosen by a rule fixed before measuring.
 
 ## Evaluation
 
