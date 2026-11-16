@@ -124,6 +124,7 @@ describe("loadLists", () => {
           image_url: null,
           from_unit_price: "2.50",
           base_unit: "kg",
+          exact_only: false,
         },
       ],
     });

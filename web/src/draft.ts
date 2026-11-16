@@ -2,6 +2,7 @@
 
 import type {
   Accept,
+  ChoiceRequiredDetail,
   InterpretOption,
   InterpretedItem,
   RecommendationItemRequest,
@@ -89,6 +90,7 @@ export function draftFromSearchResult(result: SearchResult): DraftItem {
     brand: "",
     privateLabelOk: true,
     ...GENERIC_DEFAULTS,
+    exactOnly: result.exact_only,
   };
 }
 
@@ -100,7 +102,27 @@ export function chooseOption(item: DraftItem, option: InterpretOption): DraftIte
     categoryName: option.name,
     imageUrl: option.image_url,
     options: [],
+    exactOnly: option.exact_only,
   };
+}
+
+/** A resolved category the user picked for an unknown line, as the fields of that line. */
+export function lineFromSearchResult(result: SearchResult): Partial<DraftItem> {
+  return {
+    categoryKey: result.key,
+    categoryName: result.name,
+    options: [],
+    exactOnly: result.exact_only,
+  };
+}
+
+/**
+ * The line the server refused with a 422 because the user must choose first: a vague one goes
+ * back to "unknown", one of shades waits for a concrete product.
+ */
+export function markChoiceRequired(item: DraftItem, code: ChoiceRequiredDetail["code"]): DraftItem {
+  if (code === "EXACT_ONLY") return { ...item, productId: null, exactOnly: true };
+  return { ...item, categoryKey: null, productId: null, options: [] };
 }
 
 export function isResolved(item: DraftItem): boolean {

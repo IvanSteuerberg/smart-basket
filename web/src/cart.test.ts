@@ -32,6 +32,7 @@ function product(overrides: Partial<Product> = {}): Product {
       name: "Leche entera",
       category_key: "leche-entera",
       category_name: "Leche entera",
+      exact_only: false,
     },
     ...overrides,
   };
@@ -136,11 +137,18 @@ describe("accept mode and padlock", () => {
   });
 
   it("adds a product of a category with shades as exact, even with the switch on", () => {
-    const added = specificLine(product(), true, true);
+    const shades = product({ canonical: { ...product().canonical!, exact_only: true } });
+    const added = specificLine(shades, true);
 
     expect(added.exact_only).toBe(true);
     expect(added.accept).toBe("exact");
     expect(specificLine(product()).exact_only).toBe(false);
+  });
+
+  it("offers no generic line for a product with shades", () => {
+    const shades = product({ canonical: { ...product().canonical!, exact_only: true } });
+
+    expect(genericLine(shades)).toBeNull();
   });
 
   it("sends a concrete line of a category with shades as exactOnly", () => {

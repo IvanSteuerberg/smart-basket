@@ -76,7 +76,7 @@ export function ProductPage({ id, onAddSpecific, onAddGeneric }: ProductPageProp
               >
                 {ADD_SPECIFIC}
               </button>
-              {product.canonical && (
+              {product.canonical && !product.canonical.exact_only && (
                 <button
                   type="button"
                   onClick={() => onAddGeneric(product)}

@@ -66,26 +66,19 @@ class InconsistentResult(RuntimeError):
     """The optimizer returned a store that is not among the candidates: an internal error."""
 
 
-class VagueLine(Exception):
-    """A generic line names a vague category and needs the shopper's choice first."""
+class ChoiceRequired(Exception):
+    """A generic line names a category where the shopper must pick the product first.
 
-    def __init__(self, line_id: int, category_key: str, name: str) -> None:
+    `code` tells why: `VAGUE_LINE` (too vague to buy) or `EXACT_ONLY` (shades, where only a
+    concrete product can be bought).
+    """
+
+    def __init__(self, code: str, line_id: int, category_key: str, message: str) -> None:
+        self.code = code
         self.line_id = line_id
         self.category_key = category_key
-        self.message = f"Elige qué {name.lower()} quieres antes de calcular la cesta."
-        super().__init__(self.message)
-
-
-class ExactOnlyLine(Exception):
-    """A generic line names a leaf of shades, where only a concrete product can be bought."""
-
-    def __init__(self, line_id: int, category_key: str, name: str) -> None:
-        self.line_id = line_id
-        self.category_key = category_key
-        self.message = (
-            f"Elige el producto concreto: en «{name.lower()}» los tonos no se cambian uno por otro."
-        )
-        super().__init__(self.message)
+        self.message = message
+        super().__init__(message)
 
 
 class LineResponse(BaseModel):
@@ -96,6 +89,8 @@ class LineResponse(BaseModel):
     brand: str | None
     image_url: str | None
     product_name: str
+    #: The product has shades: it is never swapped for another one of its canonical product.
+    exact_only: bool
     packs: int
     quantity_bought: str
     cost: str
@@ -215,6 +210,7 @@ def recommend(
     brands = {pid: brand for entry in entries for pid, brand in entry.product_brands.items()}
     images = {pid: image for entry in entries for pid, image in entry.product_images.items()}
     texts = {str(entry.item_index): entry.text for entry in entries}
+    exact_only_lines = {str(entry.item_index) for entry in entries if entry.exact_only}
     names_by_id = {c.store_id: c.name for c in candidates}
     addresses_by_id = {c.store_id: c.address for c in candidates}
     data_as_of = _data_as_of(session, candidates, basket)
@@ -231,7 +227,7 @@ def recommend(
         data_as_of=_iso(data_as_of) if basket.stores else None,
         engine_version=basket.engine_version,
         stores=[
-            _store(sp, stores_by_id, names, texts, canonicals, brands, images)
+            _store(sp, stores_by_id, names, texts, canonicals, brands, images, exact_only_lines)
             for sp in basket.stores
         ],
         total_cost=_money(basket.total_cost) if basket.stores else "0",
@@ -252,10 +248,17 @@ def _reject_vague_lines(query: RecommendationQuery, categories: Mapping[str, Cat
         if item.category_key is None:
             continue
         category = categories.get(item.category_key)
-        if category is not None and category.is_vague:
-            raise VagueLine(index, item.category_key, category.name)
-        if category is not None and category.exact_only:
-            raise ExactOnlyLine(index, item.category_key, category.name)
+        if category is None:
+            continue
+        if category.is_vague:
+            message = f"Elige qué {category.name.lower()} quieres antes de calcular la cesta."
+            raise ChoiceRequired("VAGUE_LINE", index, item.category_key, message)
+        if category.exact_only:
+            message = (
+                f"Elige el producto concreto: en «{category.name.lower()}» "
+                "los tonos no se cambian uno por otro."
+            )
+            raise ChoiceRequired("EXACT_ONLY", index, item.category_key, message)
 
 
 def _flex_savings(
@@ -398,6 +401,7 @@ def _store(
     canonicals: dict[int, int | None],
     brands: dict[int, str | None],
     images: dict[int, str | None],
+    exact_only_lines: set[str],
 ) -> StoreResponse:
     store = stores.get(purchase.store_id)
     if store is None:
@@ -410,7 +414,10 @@ def _store(
         lat=store.latitude,
         lon=store.longitude,
         position=purchase.position,
-        lines=[_line(line, names, texts, canonicals, brands, images) for line in purchase.lines],
+        lines=[
+            _line(line, names, texts, canonicals, brands, images, exact_only_lines)
+            for line in purchase.lines
+        ],
         subtotal=_money(purchase.subtotal),
     )
 
@@ -422,6 +429,7 @@ def _line(
     canonicals: dict[int, int | None],
     brands: dict[int, str | None],
     images: dict[int, str | None],
+    exact_only_lines: set[str],
 ) -> LineResponse:
     product_names = list(
         dict.fromkeys(names[pack.product_id] for pack in purchase.packs if pack.product_id in names)
@@ -437,6 +445,7 @@ def _line(
         brand=brands.get(product_id),
         image_url=images.get(product_id),
         product_name=" + ".join(product_names),
+        exact_only=purchase.line_id in exact_only_lines,
         packs=sum(pack.packs for pack in purchase.packs),
         quantity_bought=_quantity(purchase.quantity_bought),
         cost=_money(purchase.cost),

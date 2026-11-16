@@ -49,6 +49,7 @@ const mockSearch: SearchResponse = {
       name: "Leche entera",
       kind: "leaf",
       path: "Lácteos > Leche > Leche entera",
+      exact_only: false,
     },
   ],
 };
@@ -125,6 +126,7 @@ const mockInterpretWithVague: InterpretResponse = {
           image_url: null,
           from_unit_price: "2.50",
           base_unit: "kg",
+          exact_only: false,
         },
         {
           category_key: "pollo_muslos",
@@ -132,6 +134,7 @@ const mockInterpretWithVague: InterpretResponse = {
           image_url: null,
           from_unit_price: "1.99",
           base_unit: "kg",
+          exact_only: false,
         },
       ],
     },
@@ -159,6 +162,7 @@ const mockRecommendation: Recommendation = {
           text: "2 l de leche",
           product_id: 101,
           canonical_id: 201,
+          exact_only: false,
           brand: "Pascual",
           image_url: null,
           product_name: "Leche entera Pascual 1L",
@@ -207,7 +211,7 @@ const mockCanonicalDetail: CanonicalDetail = {
       unit_price: "1.90",
       base_unit: "l",
       base_quantity: "1",
-      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera" },
+      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera", exact_only: false },
     },
     {
       id: 999,
@@ -221,7 +225,7 @@ const mockCanonicalDetail: CanonicalDetail = {
       unit_price: "1.05",
       base_unit: "l",
       base_quantity: "1",
-      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera" },
+      canonical: { id: 201, name: "Leche entera", category_key: "leche-entera", category_name: "Leche entera", exact_only: false },
     },
   ],
 };
@@ -457,6 +461,67 @@ test("basket line with canonical_id can be swapped for an alternative product", 
   expect(body.items[0].accept).toBe("exact");
 
   await expect.poll(() => recRequests.length).toBe(2);
+});
+
+test("a basket line of a product with shades offers no Cambiar", async ({ page }) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", mockInterpretResolved);
+  const shades: Recommendation = {
+    ...mockRecommendation,
+    stores: mockRecommendation.stores.map((store) => ({
+      ...store,
+      lines: store.lines.map((line) => ({ ...line, exact_only: true })),
+    })),
+  };
+  await mockJson(page, "**/api/recommendations", shades);
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+
+  await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cambiar" })).toHaveCount(0);
+});
+
+test("a search result with shades leaves the unknown line waiting for a product", async ({
+  page,
+}) => {
+  await setPrestoredOrigin(page);
+  await mockJson(page, "**/api/interpret", {
+    items: [
+      {
+        line: 1,
+        text: "cosa rara",
+        item: "cosa rara",
+        quantity: "1",
+        unit: "ud",
+        category_key: null,
+        category_name: null,
+        brand: null,
+        alternatives: [],
+        resolved: false,
+        needs_llm: false,
+        exact_only: false,
+        image_url: null,
+        options: [],
+      },
+    ],
+    llm_used: false,
+    degraded: false,
+  } satisfies InterpretResponse);
+  await mockJson(page, "**/api/search**", {
+    results: [{ key: "tinte", name: "Tinte de pelo", kind: "leaf", path: "Cuidado", exact_only: true }],
+  } satisfies SearchResponse);
+
+  await page.goto("/#/lista");
+  await page.getByRole("textbox", { name: "Tu lista" }).fill("cosa rara");
+  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  const search = page.getByPlaceholder("Busca el producto");
+  await search.fill("tinte");
+  await search.press("Enter");
+  await page.getByRole("button", { name: /Tinte de pelo/ }).click();
+
+  await expect(page.getByRole("button", { name: "Elegir en el catálogo" })).toBeVisible();
 });
 
 test("remembered origin appears folded on reload and is reused without prompting", async ({ page }) => {

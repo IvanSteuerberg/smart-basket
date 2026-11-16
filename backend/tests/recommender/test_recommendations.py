@@ -525,6 +525,46 @@ def test_exact_only_lines_do_not_count_in_flex_savings(world):
     assert body["flex_savings"] is None
 
 
+def test_exact_only_lines_never_trigger_the_flexible_recalculation(world, monkeypatch):
+    from smart_basket.recommender import service
+
+    _make_exact_only(world, "leche")
+    calls = []
+    original = service.build_catalog
+
+    def counting(*args, **kwargs):
+        calls.append(1)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(service, "build_catalog", counting)
+    row = product_row(world, "L4")
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [item("leche", product_id=row["id"], accept="exact", quantity="1", unit="ud")]
+        ),
+    ).json()
+    assert body["flex_savings"] is None
+    # Only the basket itself is built: no line can pass to equivalents.
+    assert len(calls) == 1
+
+
+def test_a_basket_line_says_whether_its_product_has_shades(world):
+    _make_exact_only(world, "leche")
+    shades = product_row(world, "L4")["id"]
+    body = world.client.post(
+        "/api/recommendations",
+        json=payload(
+            [
+                item("leche", product_id=shades, quantity="1", unit="ud"),
+                item("yogur natural", "yogur", "4", "ud"),
+            ]
+        ),
+    ).json()
+    flags = {line["text"]: line["exact_only"] for line in body["stores"][0]["lines"]}
+    assert flags == {"leche": True, "yogur natural": False}
+
+
 def test_a_line_needs_exactly_one_of_category_and_product(world):
     both = item("leche", "leche", "1", "l", product_id=1)
     neither = item("leche", "1", "l")

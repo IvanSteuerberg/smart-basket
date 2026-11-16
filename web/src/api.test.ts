@@ -3,7 +3,7 @@ import {
   ApiError,
   geocode,
   interpretText,
-  isExactOnly,
+  isChoiceRequired,
   requestRecommendation,
   searchProducts,
   type RecommendationRequest,
@@ -27,8 +27,8 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-describe("isExactOnly", () => {
-  it("recognizes the 422 of a generic line of a category with shades", async () => {
+describe("isChoiceRequired", () => {
+  it("recognizes the 422 of a generic line that needs a choice, vague or with shades", async () => {
     const detail = {
       code: "EXACT_ONLY",
       line_id: 1,
@@ -41,9 +41,10 @@ describe("isExactOnly", () => {
       (cause: unknown) => cause,
     );
 
-    expect(isExactOnly(error)).toBe(true);
-    expect(isExactOnly(new ApiError("otro", 422, { code: "VAGUE_LINE" }))).toBe(false);
-    expect(isExactOnly(new Error("boom"))).toBe(false);
+    expect(isChoiceRequired(error)).toBe(true);
+    expect(isChoiceRequired(new ApiError("otro", 422, { code: "VAGUE_LINE" }))).toBe(true);
+    expect(isChoiceRequired(new ApiError("otro", 422, { code: "OTHER" }))).toBe(false);
+    expect(isChoiceRequired(new Error("boom"))).toBe(false);
   });
 });
 

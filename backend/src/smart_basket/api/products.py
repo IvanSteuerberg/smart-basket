@@ -73,7 +73,8 @@ _PRODUCT_COLUMNS = """
     cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
     cp.chain_id, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
-    ec.id as category_id, ec.key as category_key, ec.name as category_name
+    ec.id as category_id, ec.key as category_key, ec.name as category_name,
+    ec.exact_only
 """
 _PRODUCT_FROM = (
     _ACTIVE_PRICED_PRODUCT_FROM
@@ -170,6 +171,8 @@ class CanonicalOut(BaseModel):
     name: str
     category_key: str
     category_name: str
+    #: Only concrete products are bought in this category (shades): never swapped.
+    exact_only: bool
 
 
 class ProductOut(BaseModel):
@@ -345,6 +348,7 @@ def _to_product(row: Mapping[str, Any], brands: Brands) -> ProductOut:
             name=row["canonical_name"],
             category_key=row["category_key"],
             category_name=row["category_name"],
+            exact_only=row["exact_only"],
         )
     return ProductOut(
         id=row["id"],

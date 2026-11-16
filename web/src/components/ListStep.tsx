@@ -6,6 +6,7 @@ import {
 import {
   chooseOption,
   isResolved,
+  lineFromSearchResult,
   type DraftItem,
 } from "../draft";
 import { formatUnitPrice } from "../format";
@@ -82,11 +83,7 @@ export function ListStep({
   }
 
   function handleResolveUnknown(id: string, result: SearchResult) {
-    onUpdateItem(id, {
-      categoryKey: result.key,
-      categoryName: result.name,
-      options: [],
-    });
+    onUpdateItem(id, lineFromSearchResult(result));
   }
 
   const resolvedItems = items.filter(isResolved);
@@ -194,15 +191,18 @@ export function ListStep({
         {unresolvedItems.length > 0 && (
           <div className="mb-4 flex flex-col gap-3">
             {unresolvedItems.map((item) => {
-              if (item.exactOnly) {
-                // Shades: only a concrete product can be bought.
+              if (item.exactOnly || item.options.length > 0) {
+                // A line the user must choose for: a vague term or one of shades.
+                const term = (item.categoryName || item.text).toLowerCase();
                 return (
                   <div
                     key={item.id}
                     className="flex flex-col gap-2.5 rounded-2xl border border-stone-200 bg-stone-50/70 p-3.5"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <h3 className="text-sm font-bold text-slate-900">{exactOnlyLine(item.text)}</h3>
+                      <h3 className="text-sm font-bold text-slate-900">
+                        {item.exactOnly ? exactOnlyLine(item.text) : `¿Qué ${term}?`}
+                      </h3>
                       <button
                         type="button"
                         onClick={() => onRemoveItem(item.id)}
@@ -211,58 +211,40 @@ export function ListStep({
                         Quitar
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onChooseInCatalog(item.text)}
-                      className="self-start rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
-                    >
-                      {EXACT_ONLY_PICK}
-                    </button>
-                  </div>
-                );
-              }
-              if (item.options.length > 0) {
-                // Vague line
-                const term = (item.categoryName || item.text).toLowerCase();
-                return (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-2.5 rounded-2xl border border-stone-200 bg-stone-50/70 p-3.5"
-                  >
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-slate-900">¿Qué {term}?</h3>
+                    {item.exactOnly ? (
                       <button
                         type="button"
-                        onClick={() => onRemoveItem(item.id)}
-                        className="text-xs font-semibold text-stone-400 hover:text-price"
+                        onClick={() => onChooseInCatalog(item.text)}
+                        className="self-start rounded-full bg-brand px-4 py-2 text-xs font-semibold text-white hover:bg-brand-dark"
                       >
-                        Quitar
+                        {EXACT_ONLY_PICK}
                       </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {item.options.map((option) => (
-                        <button
-                          key={option.category_key}
-                          type="button"
-                          onClick={() => handleChooseOption(item, option)}
-                          className="flex items-center gap-2.5 rounded-xl border border-stone-200 bg-white p-2 text-left shadow-xs transition-all hover:border-brand hover:shadow-sm"
-                        >
-                          <ProductImage
-                            src={option.image_url}
-                            alt={option.name}
-                            className="h-10 w-10 shrink-0 rounded-lg border border-stone-100"
-                          />
-                          <div>
-                            <p className="text-xs font-bold text-slate-900">{option.name}</p>
-                            {option.from_unit_price !== null && (
-                              <p className="text-[0.7rem] text-stone-500">
-                                desde {formatUnitPrice(option.from_unit_price, option.base_unit)}
-                              </p>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {item.options.map((option) => (
+                          <button
+                            key={option.category_key}
+                            type="button"
+                            onClick={() => handleChooseOption(item, option)}
+                            className="flex items-center gap-2.5 rounded-xl border border-stone-200 bg-white p-2 text-left shadow-xs transition-all hover:border-brand hover:shadow-sm"
+                          >
+                            <ProductImage
+                              src={option.image_url}
+                              alt={option.name}
+                              className="h-10 w-10 shrink-0 rounded-lg border border-stone-100"
+                            />
+                            <div>
+                              <p className="text-xs font-bold text-slate-900">{option.name}</p>
+                              {option.from_unit_price !== null && (
+                                <p className="text-[0.7rem] text-stone-500">
+                                  desde {formatUnitPrice(option.from_unit_price, option.base_unit)}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               }

@@ -310,7 +310,7 @@ export function BasketStep({
                             <span className="text-sm font-bold text-slate-900">
                               {formatEuro(line.cost)}
                             </span>
-                            {line.canonical_id !== null && (
+                            {line.canonical_id !== null && !line.exact_only && (
                               <button
                                 type="button"
                                 disabled={calculating}

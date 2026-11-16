@@ -4,6 +4,7 @@ import {
   applyAnyBrand,
   chooseOption,
   isResolved,
+  markChoiceRequired,
   draftFromInterpreted,
   draftFromSearchResult,
   normalizeQuantity,
@@ -113,6 +114,7 @@ describe("draftFromSearchResult", () => {
       name: "Yogur",
       kind: "leaf",
       path: "Lácteos › Yogur",
+      exact_only: false,
     });
 
     expect(draft.text).toBe("Yogur");
@@ -165,6 +167,7 @@ describe("concrete lines and vague options", () => {
     image_url: "https://example.test/pechuga.jpg",
     from_unit_price: "6.50",
     base_unit: "kg" as const,
+    exact_only: false,
   };
 
   it("keeps a vague line unresolved until an option is chosen", () => {
@@ -176,6 +179,38 @@ describe("concrete lines and vague options", () => {
     expect(chosen.categoryKey).toBe("pollo_pechuga");
     expect(chosen.imageUrl).toBe(option.image_url);
     expect(toRequestItem(chosen).category_key).toBe("pollo_pechuga");
+  });
+
+  it("keeps a line unresolved when the chosen option or search result has shades", () => {
+    const vague = baseItem({ categoryKey: "maquillaje", options: [option] });
+    const chosen = chooseOption(vague, { ...option, category_key: "labios", exact_only: true });
+    expect(chosen.exactOnly).toBe(true);
+    expect(chosen.productId).toBeNull();
+    expect(isResolved(chosen)).toBe(false);
+
+    const found = draftFromSearchResult({
+      key: "tinte",
+      name: "Tinte",
+      kind: "leaf",
+      path: "Cuidado personal",
+      exact_only: true,
+    });
+    expect(found.exactOnly).toBe(true);
+    expect(isResolved(found)).toBe(false);
+  });
+
+  it("marks the line a 422 refused according to its code", () => {
+    const line = baseItem({ categoryKey: "tinte", productId: 3, options: [option] });
+
+    expect(markChoiceRequired(line, "EXACT_ONLY")).toMatchObject({
+      productId: null,
+      exactOnly: true,
+    });
+    expect(markChoiceRequired(line, "VAGUE_LINE")).toMatchObject({
+      categoryKey: null,
+      productId: null,
+      options: [],
+    });
   });
 
   it("turns unpinned exact lines into equivalent ones and leaves pinned ones", () => {

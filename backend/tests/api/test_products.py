@@ -414,8 +414,27 @@ def test_canonical_is_shown_when_set(client, catalog):
         "name": "Plátano de Canarias",
         "category_key": "platano",
         "category_name": "Plátano",
+        "exact_only": False,
     }
     assert items["Fruta de temporada"]["canonical"] is None
+
+
+def test_the_canonical_of_a_product_says_whether_its_category_has_shades(client, session, catalog):
+    session.execute(text("update category set exact_only = true where key = 'platano'"))
+    session.commit()
+
+    listed = {item["name"]: item for item in _items(client)}["Plátano ecológico"]
+    detail = client.get(f"/api/products/{catalog.products['platano-2']}").json()
+
+    assert listed["canonical"]["exact_only"] is True
+    assert detail["canonical"]["exact_only"] is True
+    others = [
+        item["canonical"]["exact_only"]
+        for item in _items(client)
+        if item["canonical"] is not None and item["canonical"]["category_key"] != "platano"
+    ]
+    assert others
+    assert not any(others)
 
 
 def test_product_detail_lists_the_cheapest_alternatives(client, catalog):

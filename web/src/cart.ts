@@ -95,11 +95,9 @@ export function cartItemCount(lines: CartLine[]): number {
 }
 
 /** A specific product: its own brand and packaging, its canonical for the basket. */
-export function specificLine(
-  product: Product,
-  anyBrand = false,
-  exactOnly = false,
-): CartLine {
+export function specificLine(product: Product, anyBrand = false): CartLine {
+  // A product with shades is never swapped, wherever it was added from.
+  const exactOnly = product.canonical?.exact_only ?? false;
   return {
     id: newId(),
     product_id: product.id,
@@ -116,9 +114,9 @@ export function specificLine(
   };
 }
 
-/** «Cualquier …»: any product of the canonical, keeping the photo it was added from. */
+/** «Cualquier …»: any product of the canonical; null when the canonical has shades. */
 export function genericLine(product: Product): CartLine | null {
-  if (product.canonical === null) return null;
+  if (product.canonical === null || product.canonical.exact_only) return null;
   return {
     id: newId(),
     product_id: null,

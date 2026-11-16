@@ -46,6 +46,8 @@ export interface SearchResult {
   name: string;
   kind: SearchKind;
   path: string;
+  /** Only concrete products are bought here (shades): a list line for it needs a product. */
+  exact_only: boolean;
 }
 
 export interface SearchResponse {
@@ -79,6 +81,8 @@ export interface InterpretOption {
   image_url: string | null;
   from_unit_price: Decimal | null;
   base_unit: BaseUnit;
+  /** Only concrete products are bought here (shades): choosing it still needs a product. */
+  exact_only: boolean;
 }
 
 export interface InterpretResponse {
@@ -97,6 +101,8 @@ export interface CanonicalProduct {
   name: string;
   category_key: string;
   category_name: string;
+  /** Products with shades: never swapped for another one of the canonical product. */
+  exact_only: boolean;
 }
 
 export interface Product {
@@ -241,6 +247,8 @@ export interface BasketLine {
   text: string;
   product_id: number;
   canonical_id: number | null;
+  /** The product has shades: it is never swapped, so the line offers no "Cambiar". */
+  exact_only: boolean;
   product_name: string;
   brand: string | null;
   image_url: string | null;
@@ -297,17 +305,12 @@ export interface FlexSavings {
   lines: { line_id: number; savings: Decimal }[];
 }
 
-/** `detail` of a 422 when a line is still vague and must be resolved first. */
-export interface VagueLineDetail {
-  code: "VAGUE_LINE";
-  line_id: number;
-  category_key: string;
-  message: string;
-}
-
-/** `detail` of a 422 when a generic line names a category that only sells concrete products. */
-export interface ExactOnlyDetail {
-  code: "EXACT_ONLY";
+/**
+ * `detail` of a 422 when a generic line needs the user to choose first: `VAGUE_LINE` when the
+ * category is too vague to buy, `EXACT_ONLY` when only a concrete product can be bought (shades).
+ */
+export interface ChoiceRequiredDetail {
+  code: "VAGUE_LINE" | "EXACT_ONLY";
   line_id: number;
   category_key: string;
   message: string;
@@ -316,7 +319,7 @@ export interface ExactOnlyDetail {
 /** Error raised when the API answers with a non-2xx status and a `detail` message. */
 export class ApiError extends Error {
   readonly status: number;
-  /** The raw `detail` of the response body, when it had one (e.g. a VagueLineDetail). */
+  /** The raw `detail` of the response body, when it had one (e.g. a ChoiceRequiredDetail). */
   readonly detail: unknown;
 
   constructor(message: string, status: number, detail: unknown = null) {
@@ -327,18 +330,14 @@ export class ApiError extends Error {
   }
 }
 
-export function isVagueLine(error: unknown): error is ApiError & { detail: VagueLineDetail } {
+export function isChoiceRequired(
+  error: unknown,
+): error is ApiError & { detail: ChoiceRequiredDetail } {
   if (!(error instanceof ApiError) || error.detail === null || typeof error.detail !== "object") {
     return false;
   }
-  return (error.detail as { code?: unknown }).code === "VAGUE_LINE";
-}
-
-export function isExactOnly(error: unknown): error is ApiError & { detail: ExactOnlyDetail } {
-  if (!(error instanceof ApiError) || error.detail === null || typeof error.detail !== "object") {
-    return false;
-  }
-  return (error.detail as { code?: unknown }).code === "EXACT_ONLY";
+  const code = (error.detail as { code?: unknown }).code;
+  return code === "VAGUE_LINE" || code === "EXACT_ONLY";
 }
 
 export function describeError(error: unknown): string {

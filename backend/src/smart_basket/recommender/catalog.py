@@ -88,6 +88,8 @@ class CatalogEntry:
     product_images: Mapping[int, str | None]
     #: Whether the line asked for a concrete product with `accept="exact"`.
     exact: bool
+    #: The line is a concrete product of an exact-only leaf (shades): never swapped.
+    exact_only: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,7 +273,8 @@ def _concrete_entry(
         canonicals,
         brand_names,
         images,
-        item.accept == "exact",
+        item.accept == "exact" and not header["exact_only"],
+        header["exact_only"],
     )
 
 

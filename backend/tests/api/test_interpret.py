@@ -349,3 +349,25 @@ def test_an_exact_only_category_is_never_resolved(client):
     assert tinte["resolved"] is False
     assert leche["exact_only"] is False
     assert leche["resolved"] is True
+
+
+def test_options_of_a_vague_term_are_marked_when_they_have_shades(client, session):
+    session.execute(text("update category set exact_only = true where key = 'pollo_pechuga'"))
+    add_option_product(
+        session,
+        "pollo_pechuga",
+        sku="p1",
+        base_quantity="1",
+        base_unit="kg",
+        price="5",
+        image_url="https://example.test/pechuga.jpg",
+    )
+    session.commit()
+
+    with_provider(client, FakeProvider())
+    body = client.post("/api/interpret", json={"text": "pollo"}).json()
+
+    (item,) = body["items"]
+    flags = {option["category_key"]: option["exact_only"] for option in item["options"]}
+    assert flags["pollo_pechuga"] is True
+    assert not any(flag for key, flag in flags.items() if key != "pollo_pechuga")

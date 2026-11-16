@@ -35,6 +35,7 @@ const leche: Product = {
     name: "Leche entera",
     category_key: "leche-entera",
     category_name: "Leche entera",
+    exact_only: false,
   },
 };
 
@@ -55,6 +56,7 @@ const diaLeche: Product = {
     name: "Leche entera",
     category_key: "leche-entera",
     category_name: "Leche entera",
+    exact_only: false,
   },
 };
 
@@ -75,6 +77,7 @@ const aceite: Product = {
     name: "Aceite de oliva virgen extra",
     category_key: "aceite-oliva",
     category_name: "Aceite de oliva virgen extra",
+    exact_only: false,
   },
 };
 
@@ -139,6 +142,7 @@ const tinteProduct: Product = {
     name: "Tinte castaño",
     category_key: "tinte",
     category_name: "Tinte de pelo",
+    exact_only: true,
   },
 };
 
@@ -201,7 +205,9 @@ test.beforeEach(async ({ page }) => {
     const url = new URL(route.request().url());
     const detail = /\/api\/products\/(\d+)$/.exec(url.pathname);
     if (detail) {
-      const product = CATALOG.find((entry) => entry.product.id === Number(detail[1]))?.product;
+      const product = [...CATALOG.map((entry) => entry.product), tinteProduct].find(
+        (candidate) => candidate.id === Number(detail[1]),
+      );
       if (!product) return route.fulfill({ status: 404, body: JSON.stringify({ detail: "No existe" }) });
       const alternatives = CATALOG.map((entry) => entry.product).filter(
         (candidate) =>
@@ -475,6 +481,18 @@ test("a product with shades offers no generic add and keeps its cart line exact"
   await drawer.getByRole("switch", { name: "Me da igual la marca" }).click();
   await expect(line.getByText("Este producto", { exact: true })).toBeVisible();
   const stored = await page.evaluate(() => localStorage.getItem("smart-basket.lists"));
+  expect(JSON.parse(stored ?? "{}").cart[0]).toMatchObject({ accept: "exact", exact_only: true });
+});
+
+test("a product with shades opened by its page offers no generic add", async ({ page }) => {
+  await page.goto(`/#/producto/${tinteProduct.id}`);
+
+  await expect(page.getByRole("button", { name: "Añadir este producto" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Añadir cualquier/ })).toHaveCount(0);
+
+  // Added from the page, with no canonical card in between, the line is still exact-only.
+  await page.getByRole("button", { name: "Añadir este producto" }).click();
+  const stored = await page.evaluate(() => window.localStorage.getItem("smart-basket.lists"));
   expect(JSON.parse(stored ?? "{}").cart[0]).toMatchObject({ accept: "exact", exact_only: true });
 });
 

@@ -14,7 +14,7 @@ import { ProductImage } from "./ProductImage";
 export interface CanonicalPageProps {
   id: number;
   onAddGeneric: (card: CanonicalDetail) => void;
-  onAddSpecific: (product: Product, exactOnly?: boolean) => void;
+  onAddSpecific: (product: Product) => void;
 }
 
 /** The generic product: one tap accepts any of its concrete products, or pick one. */
@@ -93,7 +93,7 @@ export function CanonicalPage({ id, onAddGeneric, onAddSpecific }: CanonicalPage
                   <ProductCard
                     key={product.id}
                     product={product}
-                    onAdd={(chosen) => onAddSpecific(chosen, canonical.exact_only)}
+                    onAdd={onAddSpecific}
                   />
                 ))}
               </div>

@@ -28,6 +28,7 @@ from smart_basket.llm.base import LLMError, LLMProvider, provider_from_settings
 from smart_basket.llm.interpret import Interpretation, interpret_unresolved
 from smart_basket.preprocessor import PreprocessedItem, Preprocessor, PreprocessResult
 from smart_basket.preprocessor.text import fold
+from smart_basket.recommender.catalog import load_categories
 
 router = APIRouter(tags=["catalog"])
 
@@ -43,6 +44,7 @@ GEOCODING_ERROR = "No se ha podido buscar la dirección. Prueba a marcar el punt
 
 _CATEGORIES_SQL = text(
     "select c.id, c.key, c.name, c.parent_id, c.level, c.base_unit, c.forms, c.is_vague,"
+    "  c.exact_only,"
     "  coalesce(p.products, 0) as products"
     " from category c"
     " left join ("
@@ -153,6 +155,8 @@ class SearchResult(BaseModel):
     name: str
     kind: Literal["leaf", "group"]
     path: str
+    #: Only concrete products are bought here (shades): the list line is never generic.
+    exact_only: bool
 
 
 class SearchResponse(BaseModel):
@@ -208,6 +212,7 @@ def search(q: Annotated[str, Query()], session: SessionDep) -> SearchResponse:
             name=row.name,
             kind="leaf" if row.id not in with_children else "group",
             path=_ancestor_path(row, by_id),
+            exact_only=row.exact_only,
         )
         for _, _, row in scored[:SEARCH_LIMIT]
     ]
@@ -229,6 +234,8 @@ class OptionOut(BaseModel):
     image_url: str | None
     from_unit_price: str
     base_unit: str | None
+    #: Only concrete products are bought here (shades): choosing it needs a product.
+    exact_only: bool
 
 
 class InterpretedItem(BaseModel):
@@ -327,15 +334,7 @@ def _interpreted_item(
 
 def _exact_only_keys(session: Session, keys: set[str]) -> set[str]:
     """The keys among `keys` whose category only sells concrete products."""
-    if not keys:
-        return set()
-    rows = session.execute(
-        text("select key from category where exact_only and key in :keys").bindparams(
-            bindparam("keys", expanding=True)
-        ),
-        {"keys": sorted(keys)},
-    )
-    return set(rows.scalars())
+    return {key for key, info in load_categories(session, keys).items() if info.exact_only}
 
 
 def _item_key(
@@ -464,7 +463,9 @@ def _category_options(session: Session, keys: set[str]) -> dict[str, list[Option
             key=lambda child: (-child["products"], fold(child["name"]), child["key"]),
         )
         option_keys[row["key"]] = [child["key"] for child in candidates[:8]]
-    prices = _option_prices(session, {key for keys_ in option_keys.values() for key in keys_})
+    offered_keys = {key for keys_ in option_keys.values() for key in keys_}
+    prices = _option_prices(session, offered_keys)
+    exact_only_keys = _exact_only_keys(session, offered_keys)
     options: dict[str, list[OptionOut]] = {}
     for key, category_keys in option_keys.items():
         offered = []
@@ -479,6 +480,7 @@ def _category_options(session: Session, keys: set[str]) -> dict[str, list[Option
                     image_url=price["image_url"],
                     from_unit_price=price["from_unit_price"],
                     base_unit=price["base_unit"],
+                    exact_only=category_key in exact_only_keys,
                 )
             )
         options[key] = offered
