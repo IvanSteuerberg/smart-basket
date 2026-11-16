@@ -549,14 +549,6 @@
        "forms": [
         "lechuga",
         "cogollo"
-       ],
-       "vague": true,
-       "options": [
-        "lechuga_romana",
-        "escarola",
-        "cogollos",
-        "lechuga_iceberg",
-        "endibia"
        ]
       },
       {
@@ -611,12 +603,6 @@
         "ensalada",
         "ensalada preparada",
         "bolsa de ensalada"
-       ],
-       "vague": true,
-       "options": [
-        "ensalada_mezcla_lavada",
-        "canonigos",
-        "rucula"
        ]
       },
       {
@@ -1286,12 +1272,6 @@
         "chorizo fresco",
         "chorizo para cocinar",
         "chorizo de cocinar"
-       ],
-       "vague": true,
-       "options": [
-        "chistorra",
-        "zorza",
-        "chorizo_criollo"
        ]
       },
       {
@@ -1355,15 +1335,6 @@
         "flamenquín",
         "albóndigas",
         "empanados"
-       ],
-       "vague": true,
-       "options": [
-        "empanados_pollo",
-        "pinchos_brochetas",
-        "empanados_cerdo",
-        "albondigas_cerdo",
-        "albondigas_pollo",
-        "albondigas_vacuno"
        ]
       },
       {
@@ -1437,13 +1408,6 @@
         "arreglo",
         "arreglo para cocido",
         "huesos para caldo"
-       ],
-       "vague": true,
-       "options": [
-        "hueso_vacuno",
-        "espinazo_cerdo",
-        "manos_cerdo",
-        "tocino_cerdo"
        ]
       },
       {
@@ -1707,12 +1671,6 @@
         "mejillones",
         "vieiras",
         "marisco de concha"
-       ],
-       "vague": true,
-       "options": [
-        "almejas_chirlas",
-        "berberechos",
-        "navajas"
        ]
       },
       {
@@ -1830,12 +1788,6 @@
         "varitas de merluza",
         "palitos de pescado",
         "calamares a la romana"
-       ],
-       "vague": true,
-       "options": [
-        "rebozado_cefalopodos",
-        "rebozado_surimi",
-        "rebozado_langostino"
        ]
       },
       {
@@ -1882,13 +1834,6 @@
        "base_unit": "kg",
        "forms": [
         "anillas de calamar"
-       ],
-       "vague": true,
-       "options": [
-        "pota_congelada",
-        "sepia_congelada",
-        "pulpo_congelado",
-        "tinta_sepia"
        ]
       },
       {
@@ -2371,13 +2316,6 @@
         "jamón",
         "jamón curado",
         "paleta"
-       ],
-       "vague": true,
-       "options": [
-        "jamon_iberico_cebo",
-        "taquitos_jamon",
-        "jamon_bellota",
-        "paleta_curada"
        ]
       },
       {
@@ -2477,13 +2415,6 @@
         "queso curado",
         "queso manchego",
         "cuña de queso"
-       ],
-       "vague": true,
-       "options": [
-        "queso_viejo_anejo",
-        "queso_semicurado",
-        "grana_padano",
-        "queso_gallego"
        ]
       },
       {
@@ -2663,13 +2594,6 @@
         "parmesano",
         "gouda",
         "emmental"
-       ],
-       "vague": true,
-       "options": [
-        "queso_azul",
-        "queso_brie_camembert",
-        "rulo_cabra",
-        "queso_feta"
        ]
       },
       {
@@ -3013,12 +2937,6 @@
        "forms": [
         "yogur líquido",
         "yogur para beber"
-       ],
-       "vague": true,
-       "options": [
-        "bebida_lactobacilos",
-        "bebida_lactea_proteinas",
-        "bebida_colesterol"
        ]
       },
       {
@@ -3132,14 +3050,6 @@
         "arroz con leche",
         "mousse",
         "profiteroles"
-       ],
-       "vague": true,
-       "options": [
-        "postre_tarta",
-        "postre_cremoso",
-        "postre_proteico",
-        "cuajada",
-        "mousse_chocolate"
        ]
       },
       {
@@ -3311,12 +3221,6 @@
         "pan hamburguesa",
         "pan de perrito",
         "fajitas"
-       ],
-       "vague": true,
-       "options": [
-        "tortillas_trigo_wrap",
-        "pan_hot_dog",
-        "tortillas_maiz"
        ]
       },
       {
@@ -3407,12 +3311,6 @@
        "forms": [
         "picos",
         "colines"
-       ],
-       "vague": true,
-       "options": [
-        "grissini_palitos",
-        "picatostes",
-        "reganas"
        ]
       },
       {
@@ -3461,12 +3359,6 @@
         "palmera",
         "ensaimada",
         "bollería de horno"
-       ],
-       "vague": true,
-       "options": [
-        "croissant_horno",
-        "berlinas",
-        "napolitana_horno"
        ]
       },
       {
@@ -3706,15 +3598,6 @@
         "harina",
         "harina de trigo",
         "maicena"
-       ],
-       "vague": true,
-       "options": [
-        "harina_maiz",
-        "harina_arroz",
-        "harina_garbanzo",
-        "harina_fuerza",
-        "harina_espelta",
-        "semola_trigo"
        ]
       },
       {
@@ -3774,13 +3657,6 @@
         "levadura",
         "preparado para bizcocho",
         "fideos de chocolate"
-       ],
-       "vague": true,
-       "options": [
-        "preparado_flan_natillas",
-        "preparado_reposteria",
-        "impulsor_gasificante",
-        "vainilla_reposteria"
        ]
       },
       {
@@ -3855,12 +3731,6 @@
        "forms": [
         "masa de hojaldre",
         "obleas de empanadilla"
-       ],
-       "vague": true,
-       "options": [
-        "masa_empanada",
-        "masa_filo",
-        "masa_quebrada"
        ]
       },
       {
@@ -3923,12 +3793,6 @@
         "aceite de oliva",
         "aceite",
         "aceite de oliva suave"
-       ],
-       "vague": true,
-       "options": [
-        "aceite_oliva_virgen_extra",
-        "aceite_oliva_virgen",
-        "alino_aceite_perejil_ajo"
        ]
       },
       {
@@ -3984,13 +3848,6 @@
         "vinagre",
         "vinagre de módena",
         "crema de balsámico"
-       ],
-       "vague": true,
-       "options": [
-        "crema_balsamica",
-        "vinagre_balsamico",
-        "vinagre_manzana",
-        "limon_exprimido"
        ]
       },
       {
@@ -4602,8 +4459,7 @@
        "forms": [
         "caballa",
         "sardinas"
-       ],
-       "vague": true
+       ]
       },
       {
        "key": "sardinas_conserva",
@@ -6606,8 +6462,7 @@
        "name": "Verdura congelada",
        "base_unit": "kg",
        "forms": [
-        "verdura congelada",
-        "menestra"
+        "verdura congelada"
        ],
        "vague": true,
        "options": [
@@ -6626,6 +6481,7 @@
        "name": "Salteados y mezclas de verdura congelados",
        "base_unit": "kg",
        "forms": [
+        "menestra",
         "menestra congelada",
         "mezcla de verduras congelada",
         "parrillada de verduras",
@@ -6860,9 +6716,9 @@
        "name": "Rebozados congelados",
        "base_unit": "kg",
        "forms": [
+        "aros de cebolla",
         "croquetas",
         "nuggets congelados",
-        "aros de cebolla",
         "rebozados"
        ],
        "vague": true,
@@ -7015,12 +6871,6 @@
         "polo",
         "magnum",
         "barra de helado"
-       ],
-       "vague": true,
-       "options": [
-        "helado_bombon",
-        "helado_sandwich",
-        "helado_cucurucho"
        ]
       },
       {
@@ -7238,13 +7088,6 @@
        "base_unit": "kg",
        "forms": [
         "carrilleras"
-       ],
-       "vague": true,
-       "options": [
-        "albondigas_preparadas",
-        "pollo_asado_preparado",
-        "costillas_cerdo_preparadas",
-        "codillo_cerdo_asado"
        ]
       },
       {
@@ -7335,12 +7178,6 @@
        "forms": [
         "ensaladilla",
         "ensaladilla rusa"
-       ],
-       "vague": true,
-       "options": [
-        "ensalada_pasta_preparada",
-        "ensalada_marisco_preparada",
-        "tabule"
        ]
       },
       {
@@ -7594,13 +7431,6 @@
         "colonia de bebé",
         "aceite de bebé",
         "peine de bebé"
-       ],
-       "vague": true,
-       "options": [
-        "colonia_bebe",
-        "champu_gel_bebe",
-        "crema_bebe",
-        "pomada_panal"
        ]
       },
       {
@@ -7733,12 +7563,6 @@
         "acondicionador",
         "mascarilla de pelo",
         "sérum de pelo"
-       ],
-       "vague": true,
-       "options": [
-        "mascarilla_capilar",
-        "tratamiento_sin_aclarado",
-        "serum_capilar"
        ]
       },
       {
@@ -7801,15 +7625,6 @@
         "espuma de pelo",
         "gomina",
         "cera de pelo"
-       ],
-       "vague": true,
-       "options": [
-        "gel_pelo",
-        "espuma_pelo",
-        "cera_pelo",
-        "spray_peinado",
-        "protector_termico",
-        "polvos_voluminizador"
        ]
       },
       {
@@ -8008,15 +7823,6 @@
         "crema corporal",
         "crema hidratante",
         "body milk"
-       ],
-       "vague": true,
-       "options": [
-        "aceite_corporal",
-        "crema_pies",
-        "exfoliante_corporal",
-        "gel_aloe_corporal",
-        "crema_reafirmante",
-        "vaselina_antirozaduras"
        ]
       },
       {
@@ -8271,14 +8077,6 @@
        "forms": [
         "desmaquillante",
         "limpiador facial"
-       ],
-       "vague": true,
-       "options": [
-        "agua_micelar",
-        "mascarilla_facial_limpieza",
-        "discos_desmaquillantes",
-        "tonico_facial",
-        "tiras_parches_poros"
        ]
       },
       {
@@ -8335,12 +8133,6 @@
         "crema de cara",
         "crema facial",
         "crema para hombre"
-       ],
-       "vague": true,
-       "options": [
-        "serum_facial",
-        "contorno_ojos",
-        "crema_facial_hombre"
        ]
       },
       {
@@ -8539,12 +8331,6 @@
        "forms": [
         "pañales de adulto",
         "incontinencia"
-       ],
-       "vague": true,
-       "options": [
-        "compresa_incontinencia",
-        "panal_braguita",
-        "protector_cama"
        ]
       },
       {
@@ -8671,14 +8457,6 @@
        "forms": [
         "lote de colonia",
         "estuche de perfume"
-       ],
-       "vague": true,
-       "options": [
-        "lote_perfume_hombre",
-        "lote_infantil",
-        "lote_perfume_mujer",
-        "lote_corporal_mujer",
-        "lote_corporal_hombre"
        ]
       },
       {
@@ -8877,17 +8655,6 @@
         "infusión medicinal",
         "melatonina",
         "valeriana"
-       ],
-       "vague": true,
-       "options": [
-        "colageno",
-        "cabello_unas",
-        "control_peso",
-        "propolis_jalea",
-        "suplemento_deportivo",
-        "laxante",
-        "gases_digestivo",
-        "probiotico"
        ]
       },
       {
@@ -9005,17 +8772,6 @@
         "termómetro",
         "tiras adhesivas",
         "tiritas"
-       ],
-       "vague": true,
-       "options": [
-        "masaje_muscular",
-        "esparadrapo",
-        "antiseptico_heridas",
-        "vendas_gasas",
-        "agua_oxigenada",
-        "alcohol_sanitario",
-        "algodon_hidrofilo",
-        "mascarilla_quirurgica"
        ]
       },
       {
@@ -9360,13 +9116,6 @@
         "limpiador de baño",
         "pato wc",
         "bloque wc"
-       ],
-       "vague": true,
-       "options": [
-        "colgador_wc",
-        "limpiador_wc",
-        "desatascador_tuberias",
-        "escobilla_wc"
        ]
       },
       {
@@ -9508,13 +9257,6 @@
         "detergente lavavajillas",
         "abrillantador",
         "sal de lavavajillas"
-       ],
-       "vague": true,
-       "options": [
-        "limpiamaquinas_lavavajillas",
-        "abrillantador_lavavajillas",
-        "lavavajillas_gel_maquina",
-        "sal_lavavajillas"
        ]
       },
       {
@@ -9565,13 +9307,6 @@
        "base_unit": "ud",
        "forms": [
         "estropajo"
-       ],
-       "vague": true,
-       "options": [
-        "bayetas",
-        "estropajo_inox",
-        "borrador_magico",
-        "cepillo_limpieza"
        ]
       },
       {
@@ -9646,15 +9381,6 @@
         "fregona",
         "recambio de fregona",
         "cubo"
-       ],
-       "vague": true,
-       "options": [
-        "cubo_fregona",
-        "plumero",
-        "escoba",
-        "palo_fregona",
-        "mopa",
-        "recogedor"
        ]
       },
       {
@@ -9944,13 +9670,6 @@
         "matamosquitos",
         "antimosquitos",
         "raid"
-       ],
-       "vague": true,
-       "options": [
-        "antipolillas",
-        "trampas_insectos",
-        "antimosquitos_electrico",
-        "raticida"
        ]
       },
       {
@@ -10004,12 +9723,6 @@
        "forms": [
         "papel de aluminio",
         "papel albal"
-       ],
-       "vague": true,
-       "options": [
-        "bolsas_congelacion",
-        "film_transparente",
-        "papel_vegetal"
        ]
       },
       {
@@ -10100,13 +9813,6 @@
        "forms": [
         "cubiertos desechables",
         "mantel"
-       ],
-       "vague": true,
-       "options": [
-        "vasos_desechables",
-        "platos_desechables",
-        "cubiertos_desechables",
-        "manteles_papel"
        ]
       },
       {
