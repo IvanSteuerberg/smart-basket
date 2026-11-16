@@ -9131,8 +9131,16 @@
        "base_unit": "ud",
        "forms": [
         "desatascador",
-        "limpiador fosas sépticas",
         "limpiatuberías"
+       ]
+      },
+      {
+       "key": "limpiador_fosas_septicas",
+       "name": "Limpiador de fosas sépticas",
+       "base_unit": "ud",
+       "forms": [
+        "limpiador fosas sépticas",
+        "fosas sépticas"
        ]
       },
       {
