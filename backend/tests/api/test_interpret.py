@@ -82,8 +82,8 @@ def test_rule_lines_keep_the_category_of_their_own_match(client):
     assert colacao["category_key"] == "cacao_soluble"
     assert colacao["category_name"] == "Cacao soluble"
     # "pasta" alone is vague; the specific alternative wins.
-    assert pasta["category_key"] == "pasta_larga"
-    assert pasta["category_name"] == "Espaguetis y tallarines"
+    assert pasta["category_key"] == "espaguetis"
+    assert pasta["category_name"] == "Espaguetis"
 
 
 def test_unresolved_lines_go_to_the_llm(client):
