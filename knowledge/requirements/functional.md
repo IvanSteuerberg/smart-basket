@@ -18,6 +18,7 @@ Priorities follow MoSCoW: **M** must, **S** should, **C** could. Scope is define
 | FR-02 | M | The user builds the list from the catalog, browsing the seed taxonomy or searching it. Picking a product adds its generic (canonical) item by default, so the optimizer can still choose brand and chain; a specific brand is kept as a line preference (FR-04). |
 | FR-03 | M | The user reviews and corrects the agent's interpretation before the recommendation is computed. |
 | FR-04 | S | Per item, the user states preferences: exact brand only, private label accepted, dietary restrictions (gluten-free, lactose-free). |
+| FR-42 | S | The user sets dietary filters for the whole list or profile (gluten-free, lactose-free and other declared variants) and can filter the catalog by them. They apply to every line, each line shows the filter, and lines no product satisfies are reported (FR-21). Filters rely only on what the chain declares (today the variant in the product name, [0020](/decisions/0020-rule-based-canonical-matching.md)). The app never infers them, never labels a product as safe for coeliacs on its own, and says that a product without the declaration may still be suitable ([0019](/decisions/0019-shopper-preferences.md)). |
 | FR-05 | S | Lists are saved in the browser and can be reused. |
 | FR-06 | C | A list can be shared as a link. |
 

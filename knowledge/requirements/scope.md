@@ -60,6 +60,11 @@ Accounts may be added later. The MVP keeps that path open:
 After the course the author may turn the app into a product with user accounts and paid subscriptions. That is outside the MVP and changes only this path, not the MVP scope:
 
 * **Preferences and their history** (usual choices, pinned brands, chains, dietary rules) move to the server with the same shape they have in the browser ([0019](/decisions/0019-shopper-preferences.md)).
+* **Shared lists:**
+  * Several accounts (a household, flatmates) edit the same list, with an owner who invites and removes members.
+  * Changes merge per line with the same mechanism as preferences in 0019 (last writer per item, a hybrid logical clock offline).
+  * Each member keeps their own location and travel mode when computing the basket.
+  * The MVP keeps only a read-only link ([FR-06](/requirements/functional.md)).
 * **Recommendations across users** ("people who buy X also buy Y", similar profiles) become possible, first in PostgreSQL; a graph store only past the thresholds in 0019.
 * **Extra obligations:** explicit, separate consent for dietary rules (possible health data, art. 9 GDPR), consent records, a data protection impact assessment if profiling across users is introduced, and the paid Gemini tier if the cloud LLM is kept ([NFR-11](/requirements/non-functional.md)). Payments are not designed.
 

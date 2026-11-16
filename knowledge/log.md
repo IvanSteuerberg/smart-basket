@@ -2,6 +2,7 @@
 
 ## 2026-11-16
 
+* **Update** Functional requirements: FR-42, dietary filters for the whole list and the catalog, based only on what chains declare, never labelling a product as safe for coeliacs. Scope: shared lists between accounts added to the post-MVP note (FR-06 stays as a link in the MVP).
 * **Create** Agents (architecture, draft): the recommender as a rational agent with a perceive-act loop started on observations, a closed action set in a shared harness, a catalog agent and a watcher coordinated through the database, minimal author involvement, and the note that iteration 12 already ran a multi-agent process outside the product. Pending a Señal de Tiempo and a decision revising 0001.
 * **Update** Decision 0020 after batch 4 of iteration 12: every leaf reviewed for homogeneity with all its products (Claude Sonnet, four batches; consolidated by Claude Opus and approved by the author), 446 to 1,016 leaves, 18 umbrella terms asked, concrete-only leaves for products with shades. Third sample labelled by Claude Haiku: accuracy 95.6 %, hard negatives 2.7 % (NFR-04 and NFR-14 met on the point estimate). Decision 0021: concrete-only products in the web.
 
