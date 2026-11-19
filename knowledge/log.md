@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-20
+
+* **Create** Decision 0024 (Dia ingestion adapter and Catalog Agent foundation, draft) and Evaluation `catalog-agent-evaluation.md` (I14): generalized multi-chain `zone_kind`, added `DiaAdapter` (`plp-insight` + `save-shipping-address?new_postal_code=24001`, headed Playwright/`xvfb-run`), added `GeminiEmbeddingProvider` (with 429 backoff) + `OllamaEmbeddingProvider`, migration `0010` (`vector(768)` HNSW + `catalog_leaf_proposal`), generalized `AgentHarness` + Catalog Agent (`catalog_agent.py`, `catalog_executors.py`, `smart-basket-catalog-agent` CLI), worker wiring + BI migration `0011`, and multi-chain Mercadona + Dia integration tests (`1,694` backend `--db` tests passed). Embedded all 2,185 canonicals and 4,307 Mercadona products; calibration on 300 products shows raw cosine top-1 reaches 75.7–81.5 % precision (below NFR-04 90 %), confirming `pgvector` should serve as top-k retriever + clustering signal paired with variant/LLM verification.
+
 ## 2026-11-19
 
 * **Create** Decision 0023 (recommender agent model selection, draft) and Evaluation `agent-evaluation.md` (I13): completed the 10-delivery iteration (trace tables `0008`, optimizer top-k alternatives, pure harness core, detector + real/simulated executors with strict dietary checks, Gemini/Decisions/Ollama policies, `/api/agent/runs` API with privacy stripping, `smart-basket-agent-eval` CLI, web trace panel + «Sin agente» + «Pide un cambio», BI views `0009` + Metabase dashboard script; 1,587 backend `--db` tests + 119 web tests). Measured `k=3` on the 41 frozen scenarios: `gemini-3.5-flash-lite` passes all 4 pre-registered targets (92.9 % exceptions, 90.9 % `pass^3`, 100 % zero-change on safety, +68.7 pp over `DefaultPolicy` ablation); `gemini-decision-1` is faster (263 ms p50) but fails injection safety (50 %, 6 unrequested changes).

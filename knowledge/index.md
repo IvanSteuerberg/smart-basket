@@ -55,9 +55,11 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0021 Supermarket-style web and low-friction list](/decisions/0021-supermarket-style-web.md) - Catalog with photos, generic and concrete products, Tailwind and logos, cart lines that say what they accept, a one-screen typed list and a minimal browser profile.
 * [0022 Recommender agent and system agents](/decisions/0022-recommender-agent-and-system-agents.md) - The recommender is a rational agent with a perceive-act loop started on observations and a closed action set in a shared harness; three agents coordinate through the database with graded autonomy; the model is chosen by a rule fixed before measuring.
 * [0023 Recommender agent model selection](/decisions/0023-recommender-agent-model.md) - Gemini 3.5 Flash-Lite selected for the recommender agent's perceive-act loop after passing all four pre-registered ADR 0022 targets (92.9 % exceptions, 100 % zero-change on safety, +68.7 pp over ablation); DefaultPolicy stays as degraded fallback.
+* [0024 Dia ingestion adapter and Catalog Agent foundation](/decisions/0024-dia-ingestion-and-catalog-agent.md) - Multi-chain postal_code ingestion, Dia plp-insight adapter with headed Playwright transport, 768-dim pgvector HNSW embeddings, and Catalog Agent on the shared ADR 0022 harness.
 
 ## Evaluation
 
 * [AI model benchmark](/evaluation/ai-model-benchmark.md) - How the candidate LLMs and embedding models are measured on the laptop, and the rule that picks them.
 * [Recommender agent evaluation (I13)](/evaluation/agent-evaluation.md) - Frozen 41-scenario k=3 benchmark comparing DefaultPolicy ablation, Gemini 3.5 Flash-Lite, and Gemini Decision 1 with deterministic state verdicts.
+* [Catalog agent calibration (I14)](/evaluation/catalog-agent-evaluation.md) - Calibration of pgvector cosine similarity (gemini-embedding-001, 768 dims) over 2,185 canonicals and 4,307 Mercadona products.
 * [Recommender evaluation plan](/evaluation/recommender-evaluation.md) - Optimizer correctness, data quality, savings against baselines, robustness, performance, usability and BI.

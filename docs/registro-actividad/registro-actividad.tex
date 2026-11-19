@@ -258,10 +258,16 @@
 		\actividad{Análisis}{Prueba real del autor en la web (\texttt{localhost:8080}) con el agente activo: el flujo de lista con LLM resulta demasiado cargado de acciones e incoherencias acumuladas respecto a navegar el catálogo normal. Se decide cerrar la I13 sin mezclar un rediseño de interfaz y priorizar primero la ingesta de nuevas cadenas con el agente catalogador, dejando la limpieza de usabilidad en una tanda dedicada.}{Hallazgo anotado; pull request de la I13 y publicación en OSF.}
 	\end{description}
 
+	\subsection*{Viernes 20 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Tarea}{Iteración 14 (segunda cadena Dia y base del agente catalogador con \texttt{pgvector}, ADR~0022), orquestada por Gemini~4 Neon en 7 entregas con DeepSeek V4.1 Flash y Gemini~4 Hydrogen (revisiones A y final de Hydrogen high): sonda real de Dia León (\texttt{24001}, navegador normal 200~OK con \texttt{PUT save-shipping-address} y \texttt{plp-insight}), generalización multi-cadena (\texttt{zone\_kind}, \texttt{--zone}), adaptador \texttt{DiaAdapter}, clientes de embeddings Gemini (768 dims con \textit{backoff} 429) y Ollama, migración~0010 (\texttt{vector(768)} HNSW y \texttt{catalog\_leaf\_proposal}), harness compartido y agente catalogador (\texttt{smart-basket-catalog-agent} con hojas reversibles de 2 señales y $\ge 3$ productos), cableado en \texttt{worker}, vistas BI \texttt{0011} y pruebas de integración multi-cadena Mercadona + Dia.}{Rama \texttt{feat/i14-dia-agente-catalogador}; 1.694 pruebas \texttt{--db} superadas; revisión final OK para PR.}
+		\actividad{Análisis}{Embedding de los 2.185 productos canónicos y 4.307 productos de Mercadona con \texttt{gemini-embedding-001} (768 dims) y calibración sobre 300 productos: la similitud coseno sola alcanza entre el 75,7~\% ($\tau=0{,}75$) y el 81,5~\% ($\tau=0{,}95$, 30,7~\% cobertura), por debajo del objetivo NFR-04 (90~\%) por cercanía entre variantes hermanas (sin lactosa, integral, sabores). Confirma que \texttt{pgvector} debe actuar como recuperador \textit{top-k} y señal de agrupación acompañado de reglas de variante o verificador LLM.}{\texttt{knowledge/evaluation/catalog-agent-evaluation.md} y borrador de decisión~0024.}
+	\end{description}
+
 	\subsection*{Planificado para la semana}
 	\begin{itemize}
-		\item Siguiente iteración (I14): ingesta de segunda cadena (Dia) y agente catalogador clasificando productos nuevos con \texttt{pgvector} (medido por muestreo como en la I12).
-		\item Después: limpieza de usabilidad e incoherencias de la web (simplificar el flujo de lista con LLM y los controles del agente), agente vigilante de precios y comprobación de si el precio varía según la zona (decisión~0006).
+		\item Cerrar PR de la I14, ejecutar la ingesta real de Dia León (\texttt{24001}) con Playwright+\texttt{xvfb} en el \texttt{worker}, añadir verificador LLM sobre \textit{top-5} de \texttt{pgvector} y auditar por muestreo (~250 productos de Dia).
+		\item Limpieza de usabilidad e incoherencias de la web (simplificar el flujo de lista con LLM y los controles del agente), agente vigilante de precios y comprobación de si el precio varía según la zona (decisión~0006).
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
 	
