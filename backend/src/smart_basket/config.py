@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.5-flash-lite"
     llm_timeout_seconds: float = 30.0
 
+    #: Recommender agent (ADR 0022): `default` is the deterministic degradation mode.
+    agent_policy: str = "default"
+    agent_model: str | None = None
+    agent_low_confidence_threshold: float | None = 0.6
+    agent_max_steps: int = 6
+    agent_time_budget_ms: int = 10_000
+    agent_fewshot: bool = False
+
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
 
