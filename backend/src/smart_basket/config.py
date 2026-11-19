@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     agent_time_budget_ms: int = 10_000
     agent_fewshot: bool = False
 
+    #: Embeddings for public catalog text (ADR 0022).
+    embedding_provider: str = "gemini"
+    embedding_model: str = "gemini-embedding-001"
+    embedding_dimensions: int = 768
+
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
 
