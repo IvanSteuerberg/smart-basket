@@ -14,7 +14,7 @@ import sys
 import time
 from collections.abc import Iterator, Mapping
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from typing import Any, Protocol
+from typing import Any, NamedTuple, Protocol
 from urllib.parse import urlencode
 
 from smart_basket.ingestion.base import (
@@ -27,8 +27,8 @@ from smart_basket.ingestion.base import (
 
 BASE_URL = "https://www.dia.es"
 API_ROOT = "/api/v1/plp-insight/initial_analytics"
-#: Navigation code of the site's "everything" menu, whose payload carries the category tree.
-ROOT_NAVIGATION = "L1_todo"
+#: Any product listing of the site carries the whole `menu_analytics` tree; `L1_todo` 404s.
+BOOTSTRAP_URL = f"{API_ROOT}/quesos/curado/c/L2007?navigation=L2007&page=1"
 IMAGE_URL = "https://www.dia.es/product_images/{sku}/{sku}_ISO_0_ES.jpg?imwidth=384"
 
 SIZE_STEP = Decimal("0.0001")
@@ -72,10 +72,18 @@ _PARENT_CODE_KEYS = ("parent_code", "parent_id")
 _PARENT_NAME_KEYS = ("parent_name", "parent_label", "parent_title")
 _CHILD_CODE_KEYS = ("child_code", "child_id")
 _CHILD_NAME_KEYS = ("child_name", "child_label")
-_SKU_KEYS = ("object_id", "id", "sku", "product_id")
-_PRODUCT_NAME_KEYS = ("display_name", "name", "title")
+_SKU_KEYS = ("item_id", "object_id", "id", "sku", "product_id")
+_PRODUCT_NAME_KEYS = ("item_name", "display_name", "name", "title")
 _PRICE_KEYS = ("prices_price", "price", "unit_price", "price_value")
 _URL_KEYS = ("url", "share_url", "link")
+
+
+class _MenuEntry(NamedTuple):
+    """One menu node: the navigation code and PLP path Dia pages it with, plus the category."""
+
+    navigation: str
+    path: str | None
+    observation: CategoryObservation
 
 
 class DiaTransportError(RuntimeError):
@@ -188,11 +196,13 @@ class PlaywrightDiaTransport:
 def parse_dia_menu(payload: Mapping[str, Any]) -> list[CategoryObservation]:
     """Yield the level 1 and level 2 categories of a `plp-insight` payload.
 
-    Dia's menu mixes both levels, repeats the level 1 node as its own child and adds an
-    "L2_todo ..." umbrella link; those self-links are dropped. Codes lose their `L1_`/`L2_`
-    prefix so they match the taxonomy used by the other chains.
+    Dia's menu mixes both levels, repeats the level 1 node as its own child and adds a
+    "todo ..." umbrella link; those self-links are dropped. In the real payload
+    `menu_analytics` is keyed by level 1 code and each node carries its display name in
+    `parameter` (`"L1_quesos"` -> `"quesos"`); the older nested and flat shapes are still
+    accepted.
     """
-    return [observation for _, observation in _menu_entries_with_codes(payload)]
+    return [entry.observation for entry in _menu_entries_with_codes(payload)]
 
 
 def parse_dia_size(name: str) -> tuple[Decimal | None, str | None, int]:
@@ -207,7 +217,9 @@ def parse_dia_size(name: str) -> tuple[Decimal | None, str | None, int]:
     text = name.replace("×", "x")
     match = _MULTIPACK.search(text)
     if match is not None:
-        pack_count = max(int(match.group("pack")), 1)
+        pack_count = int(match.group("pack"))
+        if pack_count <= 0:
+            return (None, None, 1)
         quantity, unit = _normalized_size(match.group("qty"), match.group("unit"))
         return (quantity, unit, pack_count) if quantity is not None else (None, None, 1)
     match = _SINGLE_SIZE.search(text)
@@ -254,39 +266,43 @@ class DiaAdapter:
 
     def crawl(self, zone_code: str, *, max_categories: int | None = None) -> Iterator[Observation]:
         self._transport.set_postal_code(zone_code)
-        menu_url = _plp_url(ROOT_NAVIGATION, 1)
-        status, body = self._transport.fetch_json(menu_url)
-        yield RawResponse(menu_url, status, body)
+        status, body = self._transport.fetch_json(BOOTSTRAP_URL)
+        yield RawResponse(BOOTSTRAP_URL, status, body)
         if status != 200:
-            yield CrawlError(url=menu_url, error=f"HTTP {status}")
+            yield CrawlError(url=BOOTSTRAP_URL, error=f"HTTP {status}")
             return
         payload = _payload(body)
         if payload is None:
-            yield CrawlError(url=menu_url, error="invalid JSON")
+            yield CrawlError(url=BOOTSTRAP_URL, error="invalid JSON")
             return
 
         entries = _menu_entries_with_codes(payload)
-        navigation = {
-            (observation.parent_code, observation.code): raw for raw, observation in entries
+        sources = {
+            (entry.observation.parent_code, entry.observation.code): entry for entry in entries
         }
-        categories = [observation for _, observation in entries]
+        categories = [entry.observation for entry in entries]
         yield from categories
 
         level_two = [category for category in categories if category.parent_code is not None]
         if max_categories is not None:
             level_two = level_two[:max_categories]
         for category in level_two:
-            code = navigation.get((category.parent_code, category.code)) or _navigation_code(
-                category
-            )
-            yield from self._crawl_category(category, code)
+            entry = sources.get((category.parent_code, category.code))
+            if entry is None:
+                navigation, path = _navigation_code(category), None
+            else:
+                navigation, path = entry.navigation, entry.path
+            yield from self._crawl_category(category, navigation, path)
 
     def _crawl_category(
-        self, category: CategoryObservation, navigation: str
+        self,
+        category: CategoryObservation,
+        navigation: str,
+        path: str | None = None,
     ) -> Iterator[Observation]:
         seen: set[str] = set()
         for page in range(1, self._max_pages + 1):
-            url = _plp_url(navigation, page)
+            url = _plp_url(navigation, page, path)
             status, body = self._transport.fetch_json(url)
             yield RawResponse(url, status, body)
             if status != 200:
@@ -296,20 +312,33 @@ class DiaAdapter:
             if payload is None:
                 yield CrawlError(url=url, error="invalid JSON")
                 return
-            products = parse_dia_products(payload, category_code=category.code)
-            if not products:
+            # Stop on raw rows, not parsed products: a page of out-of-stock items parses empty
+            # but a later page can still carry the rest of the listing.
+            raw_skus = _raw_skus(payload)
+            if not raw_skus:
                 return
-            fresh = [product for product in products if product.sku not in seen]
+            fresh = {sku for sku in raw_skus if sku not in seen}
             if not fresh:
                 return
-            for product in fresh:
-                seen.add(product.sku)
-                yield product
+            seen.update(fresh)
+            for product in parse_dia_products(payload, category_code=category.code):
+                if product.sku in fresh:
+                    yield product
 
 
-def _plp_url(navigation: str, page: int) -> str:
+def _raw_skus(payload: Mapping[str, Any]) -> list[str]:
+    skus: list[str] = []
+    for row in _product_rows(payload):
+        sku = _first(row, _SKU_KEYS)
+        if sku is not None:
+            skus.append(str(sku))
+    return skus
+
+
+def _plp_url(navigation: str, page: int, path: str | None = None) -> str:
     query = urlencode({"navigation": navigation, "page": page})
-    return f"{API_ROOT}?{query}"
+    base = f"{API_ROOT}{path}" if path else API_ROOT
+    return f"{base}?{query}"
 
 
 def _navigation_code(category: CategoryObservation) -> str:
@@ -326,14 +355,78 @@ def _payload(body: bytes) -> Mapping[str, Any] | None:
     return payload if isinstance(payload, Mapping) else None
 
 
-def _menu_entries_with_codes(
-    payload: Mapping[str, Any],
-) -> list[tuple[str, CategoryObservation]]:
-    """Return each category next to the raw navigation code Dia uses to page it."""
+def _menu_entries_with_codes(payload: Mapping[str, Any]) -> list[_MenuEntry]:
+    """Return each category next to the navigation code and PLP path Dia pages it with."""
+    menu = payload.get("menu_analytics")
+    if _is_keyed_menu(menu):
+        return _keyed_menu_entries(menu)
     rows = _menu_rows(payload)
     if any(_first(row, _CHILD_CODE_KEYS) is not None for row in rows if isinstance(row, Mapping)):
         return _flat_menu_entries(rows)
     return _nested_menu_entries(rows)
+
+
+def _is_keyed_menu(menu: object) -> bool:
+    """True for the real shape: `{l1_code: {parameter, path, children: {l2_code: ...}}}`."""
+    if not isinstance(menu, Mapping) or not menu:
+        return False
+    if any(key in menu for key in _MENU_KEYS):
+        return False
+    return all(
+        isinstance(value, Mapping)
+        and any(field in value for field in ("parameter", "path", "children"))
+        for value in menu.values()
+    )
+
+
+def _keyed_menu_entries(menu: Mapping[str, Any]) -> list[_MenuEntry]:
+    """Parse the dict-keyed menu of the live `plp-insight` endpoint."""
+    entries: list[_MenuEntry] = []
+    for parent_raw, node in menu.items():
+        if not isinstance(node, Mapping):
+            continue
+        parent_name = _parameter_name(node)
+        if not parent_name:
+            continue
+        parent_code = _clean_code(parent_raw)
+        entries.append(
+            _MenuEntry(
+                str(parent_raw),
+                _menu_path(node),
+                CategoryObservation(parent_code, parent_name, None),
+            )
+        )
+        children = node.get("children")
+        if not isinstance(children, Mapping):
+            continue
+        for child_raw, child in children.items():
+            if not isinstance(child, Mapping):
+                continue
+            child_name = _parameter_name(child)
+            if not child_name or _is_self_link(parent_raw, child_raw):
+                continue
+            entries.append(
+                _MenuEntry(
+                    str(child_raw),
+                    _menu_path(child),
+                    CategoryObservation(_clean_code(child_raw), child_name, parent_code),
+                )
+            )
+    return entries
+
+
+def _parameter_name(node: Mapping[str, Any]) -> str | None:
+    """Display name of a keyed menu node: `parameter` without its `L1_`/`L2_` prefix."""
+    parameter = _first(node, (*_NAME_KEYS, "parameter"))
+    if parameter is None:
+        return None
+    name = _clean_code(parameter)
+    return name or None
+
+
+def _menu_path(node: Mapping[str, Any]) -> str | None:
+    path = node.get("path")
+    return path if isinstance(path, str) and path.startswith("/") else None
 
 
 def _menu_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -354,11 +447,9 @@ def _menu_rows(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     return [menu] if _first(menu, _CODE_KEYS) is not None else []
 
 
-def _flat_menu_entries(
-    rows: list[Mapping[str, Any]],
-) -> list[tuple[str, CategoryObservation]]:
+def _flat_menu_entries(rows: list[Mapping[str, Any]]) -> list[_MenuEntry]:
     """Parse the flat `parent_code`/`child_code` menu rows Dia returns for some payloads."""
-    entries: list[tuple[str, CategoryObservation]] = []
+    entries: list[_MenuEntry] = []
     parents: set[str] = set()
     for row in rows:
         parent_raw = _first(row, _PARENT_CODE_KEYS)
@@ -369,41 +460,51 @@ def _flat_menu_entries(
         if parent_code not in parents:
             parents.add(parent_code)
             entries.append(
-                (str(parent_raw), CategoryObservation(parent_code, str(parent_name), None))
+                _MenuEntry(
+                    str(parent_raw),
+                    None,
+                    CategoryObservation(parent_code, str(parent_name), None),
+                )
             )
         child_raw = _first(row, _CHILD_CODE_KEYS)
         child_name = _first(row, _CHILD_NAME_KEYS)
         if child_raw is None or not child_name or _is_self_link(parent_raw, child_raw):
             continue
         entries.append(
-            (
+            _MenuEntry(
                 str(child_raw),
+                None,
                 CategoryObservation(_clean_code(child_raw), str(child_name), parent_code),
             )
         )
     return entries
 
 
-def _nested_menu_entries(
-    rows: list[Mapping[str, Any]],
-) -> list[tuple[str, CategoryObservation]]:
+def _nested_menu_entries(rows: list[Mapping[str, Any]]) -> list[_MenuEntry]:
     """Parse the nested menu where each level 1 node carries its level 2 children."""
-    entries: list[tuple[str, CategoryObservation]] = []
+    entries: list[_MenuEntry] = []
     for node in rows:
         parent_raw = _first(node, _CODE_KEYS)
         parent_name = _first(node, _NAME_KEYS)
         if parent_raw is None or not parent_name:
             continue
         parent_code = _clean_code(parent_raw)
-        entries.append((str(parent_raw), CategoryObservation(parent_code, str(parent_name), None)))
+        entries.append(
+            _MenuEntry(
+                str(parent_raw),
+                None,
+                CategoryObservation(parent_code, str(parent_name), None),
+            )
+        )
         for child in _children(node):
             child_raw = _first(child, _CODE_KEYS)
             child_name = _first(child, _NAME_KEYS)
             if child_raw is None or not child_name or _is_self_link(parent_raw, child_raw):
                 continue
             entries.append(
-                (
+                _MenuEntry(
                     str(child_raw),
+                    None,
                     CategoryObservation(_clean_code(child_raw), str(child_name), parent_code),
                 )
             )
@@ -458,6 +559,11 @@ def _product_rows(payload: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
             if isinstance(analytics.get(key), list):
                 rows = analytics[key]
                 break
+        else:
+            # Real payload: the mapping itself is keyed by SKU.
+            values = list(analytics.values())
+            if values and all(isinstance(value, Mapping) for value in values):
+                rows = values
     elif isinstance(analytics, list):
         rows = analytics
     if not isinstance(rows, list):

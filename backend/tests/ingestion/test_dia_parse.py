@@ -73,6 +73,30 @@ def flat_menu() -> dict[str, object]:
     }
 
 
+def keyed_menu() -> dict[str, object]:
+    """The real shape: dict keyed by level 1 code, with `parameter`, `path` and `children`."""
+    return {
+        "menu_analytics": {
+            "L101": {
+                "parameter": "L1_quesos",
+                "path": "/quesos/c/L101",
+                "children": {
+                    "L101": {"parameter": "L2_todo quesos", "path": "/quesos/c/L101"},
+                    "L2007": {"parameter": "L2_curado", "path": "/quesos/curado/c/L2007"},
+                    "L2008": {"parameter": "L2_frescos", "path": "/quesos/frescos/c/L2008"},
+                },
+            },
+            "L102": {
+                "parameter": "L1_lacteos",
+                "path": "/lacteos/c/L102",
+                "children": {
+                    "L2009": {"parameter": "L2_leche", "path": "/lacteos/leche/c/L2009"},
+                },
+            },
+        }
+    }
+
+
 def make_product(
     *,
     sku: str = "100",
@@ -105,6 +129,20 @@ def test_parse_dia_menu_keeps_level_one_and_two_and_drops_self_links(payload):
         "refrescos",
         "limpieza",
         "hogar",
+    )
+
+
+def test_parse_dia_menu_reads_the_real_dict_keyed_shape():
+    categories = parse_dia_menu(keyed_menu())
+
+    assert tuple(
+        (category.code, category.name, category.parent_code) for category in categories
+    ) == (
+        ("L101", "quesos", None),
+        ("L2007", "curado", "L101"),
+        ("L2008", "frescos", "L101"),
+        ("L102", "lacteos", None),
+        ("L2009", "leche", "L102"),
     )
 
 
@@ -141,6 +179,10 @@ def test_parse_dia_size_normalizes_spanish_expressions(name, quantity, unit, pac
 @pytest.mark.parametrize("name", ["Producto sin tamaño", "", "Bolsa reutilizable"])
 def test_parse_dia_size_leaves_names_without_a_size_empty(name):
     assert parse_dia_size(name) == (None, None, 1)
+
+
+def test_a_zero_pack_count_is_rejected():
+    assert parse_dia_size("Pack 0 x 33 cl") == (None, None, 1)
 
 
 def test_a_product_gets_decimal_price_size_per_unit_and_deterministic_image():
@@ -231,6 +273,34 @@ def test_the_listing_alternate_keys_are_accepted():
     assert product.price == D("0.99")
     assert product.base_quantity == D("1")
     assert product.base_unit == "l"
+
+
+def test_parse_dia_products_reads_the_real_dict_keyed_shape():
+    payload = {
+        "page_product_analytics": {
+            "192": {
+                "item_id": "192",
+                "item_name": "cerveza clasica dia ramblers 33 cl",
+                "item_brand": "dia ramblers",
+                "price": 0.32,
+                "stock_availability": True,
+            },
+            "193": {
+                "item_id": "193",
+                "item_name": "cerveza tostada dia ramblers 33 cl",
+                "item_brand": "dia ramblers",
+                "price": 0.35,
+                "stock_availability": False,
+            },
+        }
+    }
+
+    products = parse_dia_products(payload, category_code="cervezas")
+
+    assert [product.sku for product in products] == ["192"]
+    assert products[0].name == "cerveza clasica dia ramblers 33 cl"
+    assert products[0].price == D("0.32")
+    assert (products[0].base_quantity, products[0].base_unit) == (D("0.33"), "l")
 
 
 def test_an_empty_or_missing_product_page_yields_no_products():

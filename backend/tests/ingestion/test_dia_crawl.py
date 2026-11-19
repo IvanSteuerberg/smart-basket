@@ -12,9 +12,9 @@ from smart_basket.ingestion.dia import DiaAdapter, PlaywrightDiaTransport
 
 
 class FakeDiaTransport:
-    """Serves synthetic pages keyed by (`navigation`, `page`) and records every request."""
+    """Serves synthetic pages keyed by (`path`, `navigation`, `page`) or (`navigation`, `page`)."""
 
-    def __init__(self, responses: dict[tuple[str, int], tuple[int, Any]]) -> None:
+    def __init__(self, responses: dict[tuple[Any, ...], tuple[int, Any]]) -> None:
         self.responses = responses
         self.postal_codes: list[str] = []
         self.calls: list[str] = []
@@ -25,11 +25,15 @@ class FakeDiaTransport:
 
     def fetch_json(self, path_and_query: str) -> tuple[int, bytes]:
         self.calls.append(path_and_query)
-        query = parse_qs(urlparse(path_and_query).query)
+        parsed = urlparse(path_and_query)
+        query = parse_qs(parsed.query)
         navigation = query.get("navigation", [""])[0]
         page = int(query.get("page", ["1"])[0])
         status, payload = self.responses.get(
-            (navigation, page), (200, {"page_product_analytics": {"products": []}})
+            (parsed.path, navigation, page),
+            self.responses.get(
+                (navigation, page), (200, {"page_product_analytics": {"products": []}})
+            ),
         )
         body = payload if isinstance(payload, bytes) else json.dumps(payload).encode("utf-8")
         return status, body
@@ -61,13 +65,40 @@ def menu_payload() -> dict[str, Any]:
     }
 
 
-def product(sku: str, name: str, price: str) -> dict[str, Any]:
+def product(sku: str, name: str, price: str, *, stock: bool = True) -> dict[str, Any]:
     return {
         "object_id": sku,
         "display_name": name,
         "prices_price": price,
-        "stock_availability": True,
+        "stock_availability": stock,
         "url": f"/supermercado/{sku}",
+    }
+
+
+def real_menu_payload() -> dict[str, Any]:
+    """The dict-keyed `menu_analytics` the live `plp-insight` endpoint returns."""
+    return {
+        "menu_analytics": {
+            "L101": {
+                "parameter": "L1_quesos",
+                "path": "/quesos/c/L101",
+                "children": {
+                    "L101": {"parameter": "L2_todo quesos", "path": "/quesos/c/L101"},
+                    "L2007": {"parameter": "L2_curado", "path": "/quesos/curado/c/L2007"},
+                },
+            }
+        }
+    }
+
+
+def real_product(sku: str, name: str, price: str, *, stock: bool = True) -> dict[str, Any]:
+    """One entry of the dict-keyed `page_product_analytics` of the live endpoint."""
+    return {
+        "item_id": sku,
+        "item_name": name,
+        "item_brand": "dia ramblers",
+        "price": price,
+        "stock_availability": stock,
     }
 
 
@@ -75,7 +106,7 @@ def pages(
     overrides: dict[tuple[str, int], tuple[int, Any]] | None = None,
 ) -> dict[tuple[str, int], tuple[int, Any]]:
     responses: dict[tuple[str, int], tuple[int, Any]] = {
-        ("L1_todo", 1): (200, menu_payload()),
+        ("L2007", 1): (200, menu_payload()),
         ("L2_agua", 1): (
             200,
             {
@@ -131,7 +162,7 @@ def test_crawl_binds_the_postal_code_and_walks_the_whole_tree():
     prices = {entry.sku: str(entry.price) for entry in result.products}
     assert prices == {"1": "0.65", "2": "0.25", "3": "1.80", "4": "2.50"}
     assert next(raw.url for raw in result.raw) == (
-        "/api/v1/plp-insight/initial_analytics?navigation=L1_todo&page=1"
+        "/api/v1/plp-insight/initial_analytics/quesos/curado/c/L2007?navigation=L2007&page=1"
     )
     assert len(result.raw) == 7
 
@@ -145,6 +176,71 @@ def test_pagination_stops_on_an_empty_page():
     assert any("navigation=L2_agua&page=2" in call for call in transport.calls)
     assert not any("navigation=L2_agua&page=3" in call for call in transport.calls)
     assert {entry.sku for entry in result.products} == {"1", "2", "3", "4"}
+
+
+def test_pagination_continues_past_a_page_with_only_out_of_stock_products():
+    transport = FakeDiaTransport(
+        pages(
+            {
+                ("L2_agua", 1): (
+                    200,
+                    {
+                        "page_product_analytics": {
+                            "products": [
+                                product("1", "Agua 1,5 l", "0,65", stock=False),
+                                product("2", "Agua 33 cl", "0,25", stock=False),
+                            ]
+                        }
+                    },
+                ),
+                ("L2_agua", 2): (
+                    200,
+                    {"page_product_analytics": {"products": [product("5", "Agua 2 l", "0,80")]}},
+                ),
+            }
+        )
+    )
+
+    result = crawl(transport)
+
+    assert any("navigation=L2_agua&page=2" in call for call in transport.calls)
+    assert "5" in {entry.sku for entry in result.products}
+    assert {"1", "2"}.isdisjoint({entry.sku for entry in result.products})
+
+
+CURO_PATH = "/api/v1/plp-insight/initial_analytics/quesos/curado/c/L2007"
+
+
+def test_real_dict_keyed_payload_walks_path_based_plp_urls():
+    first_page = {
+        **real_menu_payload(),
+        "page_product_analytics": {
+            "192": real_product("192", "cerveza clasica dia ramblers 33 cl", "0.32"),
+        },
+    }
+    transport = FakeDiaTransport(
+        {
+            (CURO_PATH, "L2007", 1): (200, first_page),
+            (CURO_PATH, "L2007", 2): (200, {"page_product_analytics": {}}),
+        }
+    )
+
+    result = crawl(transport)
+
+    assert result.status == "succeeded"
+    found = {(category.code, category.name, category.parent_code) for category in result.categories}
+    assert found == {
+        ("L101", "quesos", None),
+        ("L2007", "curado", "L101"),
+    }
+    assert {entry.sku for entry in result.products} == {"192"}
+    assert str(result.products[0].price) == "0.32"
+    assert transport.calls == [
+        f"{CURO_PATH}?navigation=L2007&page=1",
+        f"{CURO_PATH}?navigation=L2007&page=1",
+        f"{CURO_PATH}?navigation=L2007&page=2",
+    ]
+    assert [raw.url for raw in result.raw] == transport.calls
 
 
 def test_pagination_stops_when_a_page_repeats_every_sku():
@@ -171,7 +267,7 @@ def test_pagination_stops_when_a_page_repeats_every_sku():
 def test_max_pages_caps_a_listing_that_never_ends():
     transport = FakeDiaTransport(
         {
-            ("L1_todo", 1): (200, menu_payload()),
+            ("L2007", 1): (200, menu_payload()),
             **{
                 ("L2_agua", page): (
                     200,
@@ -215,7 +311,7 @@ def test_max_categories_limits_the_level_two_pages():
 
 
 def test_a_non_200_menu_ends_the_run_with_a_crawl_error():
-    transport = FakeDiaTransport({("L1_todo", 1): (500, b"")})
+    transport = FakeDiaTransport({("L2007", 1): (500, b"")})
 
     result = crawl(transport)
 
@@ -240,7 +336,7 @@ def test_a_non_200_listing_page_is_reported_and_the_next_category_continues():
 
 
 def test_invalid_json_is_reported_as_a_crawl_error():
-    transport = FakeDiaTransport({("L1_todo", 1): (200, b"not json")})
+    transport = FakeDiaTransport({("L2007", 1): (200, b"not json")})
 
     result = crawl(transport)
 
