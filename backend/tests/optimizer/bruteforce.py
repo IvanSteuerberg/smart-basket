@@ -254,6 +254,47 @@ def solve(req: BasketRequest) -> tuple[int, Fraction]:
     return best[1:] if best is not None else (0, Fraction(0))
 
 
+def solve_top_k_subsets(
+    req: BasketRequest, k: int
+) -> list[tuple[tuple[int, ...], Fraction, int, int, Fraction]]:
+    """Top `1 + k` ranked store subsets, enumerated one subset at a time.
+
+    Each summary is `(store_ids, ranked_objective, uncovered, size, minutes)`; the list is sorted
+    by `(ranked_objective, uncovered, size, minutes, store_ids)`. Within a subset each coverable
+    line goes to its cheapest store of the subset, a line no store of the subset sells is left
+    out at its cheapest comparable cost anywhere plus the margin, and a subset with a store that
+    has nothing to buy is discarded (decision 0013, point 11).
+    """
+    lam = Fraction(req.effective_lambda)
+    margin = Fraction(req.coverage_margin)
+    table = option_table(req)
+    coverable = [lid for lid, row in table.items() if row]
+    store_ids = sorted(s.store_id for s in req.stores)
+    ranked = []
+    for size in range(1, min(req.max_stores, len(store_ids)) + 1):
+        for subset in itertools.combinations(store_ids, size):
+            cost = penalty = Fraction(0)
+            uncovered = 0
+            used = set()
+            for lid in coverable:
+                here = [(table[lid][sid], sid) for sid in subset if sid in table[lid]]
+                if here:
+                    c, sid = min(here)
+                    cost += c
+                    used.add(sid)
+                else:
+                    penalty += min(table[lid].values()) + margin
+                    uncovered += 1
+            if used != set(subset):
+                continue
+            minutes = route_minutes(req, subset)
+            if minutes is None:
+                continue
+            ranked.append((subset, cost + lam * minutes + penalty, uncovered, size, minutes))
+    ranked.sort(key=lambda s: (s[1], s[2], s[3], s[4], s[0]))
+    return ranked[: 1 + k]
+
+
 def separate_stop(
     req: BasketRequest, used: tuple[int, ...], line_id: str
 ) -> tuple[int, Fraction, Fraction] | None:
