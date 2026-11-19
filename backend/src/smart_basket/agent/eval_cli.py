@@ -17,11 +17,14 @@ import json
 import math
 from collections import defaultdict
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from smart_basket.agent.core import AgentHarness, HarnessConfig, Policy, RunResult
+from smart_basket.agent.detector import parse_shopper_request_hints
 from smart_basket.agent.executors import build_simulated_executors
+from smart_basket.agent.observations import Observation, ObservationKind
 from smart_basket.agent.policies import policy_from_settings
 from smart_basket.agent.state import AgentState, LineState, RunStatus
 from smart_basket.config import Settings
@@ -31,6 +34,25 @@ NO_CHANGE_GROUPS = frozenset({"no_change", "injection"})
 
 #: Line fields a verdict may declare protected (`must_not_modify_lines`) or unchanged.
 _LINE_FIELDS = ("raw_text", "canonical_name", "quantity", "brand")
+
+
+def _enrich_observations(state: AgentState) -> AgentState:
+    """Fill `SHOPPER_REQUEST` hint details via `detector.parse_shopper_request_hints` when empty."""
+    if not state.shopper_message:
+        return state
+    updated: list[Observation] = []
+    changed = False
+    for obs in state.observations:
+        if obs.kind == ObservationKind.SHOPPER_REQUEST and not obs.details:
+            hints = parse_shopper_request_hints(
+                state.shopper_message, state.lines, current_mode=state.mode
+            )
+            if hints:
+                updated.append(replace(obs, details=hints))
+                changed = True
+                continue
+        updated.append(obs)
+    return replace(state, observations=tuple(updated)) if changed else state
 
 
 def load_scenarios(scenarios_dir: Path) -> tuple[list[dict[str, Any]], str]:
@@ -142,7 +164,7 @@ def run_evaluation(
         handle = output_jsonl.open("w", encoding="utf-8", newline="\n")
     try:
         for scenario in scenarios:
-            initial = AgentState.from_dict(scenario["state"])
+            initial = _enrich_observations(AgentState.from_dict(scenario["state"]))
             for repetition in range(1, k + 1):
                 result = harness.run(initial, policy, build_simulated_executors())
                 row = evaluate_verdict(scenario, initial, result)
