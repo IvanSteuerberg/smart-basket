@@ -162,7 +162,8 @@ export function AgentTracePanel({
 }: AgentTracePanelProps) {
   const [traceOpen, setTraceOpen] = useState(false);
 
-  if (!agentRun && !loading) {
+  // Follow-up controls (e.g. «Pide un cambio») stay available even if the agent failed.
+  if (!agentRun && !loading && !children) {
     return null;
   }
 

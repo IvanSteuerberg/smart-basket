@@ -221,6 +221,60 @@ describe("agent API client", () => {
     expect(result).toEqual(payload);
   });
 
+  it("answers the pending question with the chosen option and its canonical id", async () => {
+    const payload = sampleAgentRunResponse({ status: "completed", pending_question: null });
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    await answerAgentRun("run-1", {
+      option_index: 1,
+      choice_label: "Leche entera",
+      canonical_id: null,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run-1/answer");
+    expect(init.body).toBe(
+      JSON.stringify({ option_index: 1, choice_label: "Leche entera", canonical_id: null }),
+    );
+  });
+
+  it("answers a pending question that offers no options with free text", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+
+    await answerAgentRun("run-2", { message: "Prefiero plátanos" });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run-2/answer");
+    expect(init.body).toBe(JSON.stringify({ message: "Prefiero plátanos" }));
+  });
+
+  it("requests a change with a free-text shopper message", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+
+    const requestBody: AgentRunRequest = {
+      request: {
+        items: [],
+        origin: { lat: 42.5987, lon: -5.5671 },
+        mode: "walk",
+        max_stores: 2,
+        priority_mode: "balanced",
+        return_to_origin: true,
+        degraded: false,
+      },
+      recommendation_id: "rec-1",
+      shopper_message: "¿y si voy en coche?",
+    };
+
+    await startAgentRun(requestBody);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify(requestBody));
+    const sent = JSON.parse(init.body as string) as AgentRunRequest;
+    expect(sent.shopper_message).toBe("¿y si voy en coche?");
+  });
+
   it("fetches an existing agent run via GET /api/agent/runs/:id", async () => {
     const payload = sampleAgentRunResponse();
     fetchMock.mockResolvedValue(jsonResponse(payload));

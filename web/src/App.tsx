@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import {
+  answerAgentRun,
   describeError,
   getHealth,
   getSections,
@@ -8,6 +9,7 @@ import {
   requestRecommendation,
   startAgentRun,
   type Accept,
+  type AgentAnswerRequest,
   type AgentRunRequest,
   type AgentRunResponse,
   type CanonicalCard,
@@ -62,6 +64,7 @@ import {
   type SavedList,
   type StoredOrigin,
 } from "./storage";
+import { AgentActions } from "./components/AgentActions";
 import { BasketStep } from "./components/BasketStep";
 import { CanonicalPage } from "./components/CanonicalPage";
 import { CartDrawer } from "./components/CartDrawer";
@@ -243,6 +246,7 @@ export default function App() {
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
   const [agentRun, setAgentRun] = useState<AgentRunResponse | null>(null);
   const [agentLoading, setAgentLoading] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
   const [withoutAgent, setWithoutAgent] = useState(false);
   const busyRef = useRef(false);
   const lastRecommendationRequestRef = useRef<RecommendationRequest | null>(null);
@@ -447,6 +451,7 @@ export default function App() {
     agentAbortRef.current = null;
     setAgentRun(null);
     setAgentLoading(false);
+    setAgentError(null);
   }
 
   async function runAgentForPlan(
@@ -653,12 +658,90 @@ export default function App() {
 
   function handleToggleWithoutAgent(next: boolean) {
     setWithoutAgent(next);
+    setAgentError(null);
     if (lastRecommendationRequestRef.current && baseRecommendationRef.current) {
       void runAgentForPlan(
         lastRecommendationRequestRef.current,
         baseRecommendationRef.current,
         next,
       );
+    }
+  }
+
+  /** Sends the shopper's reply to the agent's pending question and shows the updated run. */
+  async function handleAnswerAgentQuestion(answer: AgentAnswerRequest) {
+    if (!agentRun) return;
+    const runId = agentRun.run_id;
+
+    const seq = agentSeqRef.current + 1;
+    agentSeqRef.current = seq;
+    agentAbortRef.current?.abort();
+    const controller = new AbortController();
+    agentAbortRef.current = controller;
+    setAgentLoading(true);
+    setAgentError(null);
+    try {
+      const run = await answerAgentRun(runId, answer, controller.signal);
+      if (controller.signal.aborted || seq !== agentSeqRef.current) return;
+      setAgentRun(run);
+      if (run.recommendation) setRecommendation(run.recommendation);
+    } catch (error) {
+      if (!controller.signal.aborted && seq === agentSeqRef.current) {
+        setAgentError(describeError(error));
+      }
+    } finally {
+      if (seq === agentSeqRef.current) {
+        setAgentLoading(false);
+      }
+    }
+  }
+
+  /**
+   * Asks the agent for a change in plain language («¿y si voy en coche?», «sin Lidl»…).
+   * Resolves to true when the agent accepted the request, so the form clears its input.
+   */
+  async function handleRequestAgentChange(message: string): Promise<boolean> {
+    const trimmed = message.trim();
+    const requestPayload = lastRecommendationRequestRef.current;
+    const baseResult = baseRecommendationRef.current;
+    if (trimmed === "" || agentLoading || !requestPayload || !baseResult) return false;
+
+    const seq = agentSeqRef.current + 1;
+    agentSeqRef.current = seq;
+    agentAbortRef.current?.abort();
+    const controller = new AbortController();
+    agentAbortRef.current = controller;
+    setAgentLoading(true);
+    setAgentError(null);
+    try {
+      await profileLoaded.current.catch(() => undefined);
+      if (controller.signal.aborted || seq !== agentSeqRef.current) return false;
+
+      const habits = deriveHabitsFromProfile(profileRef.current);
+      const dietaryRules = deriveDietaryRulesFromProfile(profileRef.current);
+      const body: AgentRunRequest = {
+        request: requestPayload,
+        recommendation_id:
+          baseResult.id !== null && baseResult.id !== undefined ? String(baseResult.id) : null,
+        shopper_message: trimmed,
+        ...(Object.keys(habits).length > 0 ? { habits } : {}),
+        ...(dietaryRules.length > 0 ? { dietary_rules: dietaryRules } : {}),
+        ...(withoutAgent ? { policy: "default" } : {}),
+      };
+      const run = await startAgentRun(body, controller.signal);
+      if (controller.signal.aborted || seq !== agentSeqRef.current) return false;
+      setAgentRun(run);
+      if (run.recommendation) setRecommendation(run.recommendation);
+      return true;
+    } catch (error) {
+      if (!controller.signal.aborted && seq === agentSeqRef.current) {
+        setAgentError(describeError(error));
+      }
+      return false;
+    } finally {
+      if (seq === agentSeqRef.current) {
+        setAgentLoading(false);
+      }
     }
   }
 
@@ -702,6 +785,16 @@ export default function App() {
           agentLoading={agentLoading}
           withoutAgent={withoutAgent}
           onToggleWithoutAgent={handleToggleWithoutAgent}
+          agentSlot={
+            <AgentActions
+              agentRun={agentRun}
+              loading={agentLoading}
+              withoutAgent={withoutAgent}
+              error={agentError}
+              onAnswerQuestion={handleAnswerAgentQuestion}
+              onRequestChange={handleRequestAgentChange}
+            />
+          }
           onBack={() => setStep("list")}
           onNewList={handleNewList}
           onApplyAnyBrand={handleApplyAnyBrand}
