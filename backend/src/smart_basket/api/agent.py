@@ -4,7 +4,8 @@
 the resulting state, persisting one `agent_run` row and every `agent_step`. A run that asks the
 shopper pauses in `waiting_shopper`; `POST /api/agent/runs/{id}/answer` restores the state, the
 base query and the policy, and continues from the next step. The exact origin only lives in the
-persisted state needed to re-optimize on resume: it is never logged nor echoed in the trace.
+persisted state needed to re-optimize on resume, and only while the run stays paused: once it
+completes, fails or times out, `_query` is stripped. It is never logged nor echoed in the trace.
 """
 
 from __future__ import annotations
@@ -12,11 +13,12 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from smart_basket.agent.core import AgentHarness, HarnessConfig, Policy, StepRecord
@@ -84,7 +86,7 @@ class AgentRunRequest(BaseModel):
     habits: dict[str, HabitInput] = Field(default_factory=dict)
     dietary_rules: list[str] = Field(default_factory=list)
     #: Optional policy override; `"default"` forces the deterministic ablation mode.
-    policy: str | None = None
+    policy: Literal["default", "gemini_chat", "gemini_decision", "ollama_chat"] | None = None
 
 
 class AgentAnswerRequest(BaseModel):
@@ -164,6 +166,10 @@ def _item(item: Any) -> Item:
 
 
 def _query_from_request(request: RecommendationRequest) -> RecommendationQuery:
+    # The exact origin never travels inside the payload: only the typed `origin` field keeps it,
+    # and that is what the persistence layer rounds before storing (NFR-06).
+    payload = request.model_dump(mode="json")
+    payload.pop("origin", None)
     return RecommendationQuery(
         items=tuple(_item(item) for item in request.items),
         origin=GeoPoint(request.origin.lat, request.origin.lon),
@@ -173,7 +179,7 @@ def _query_from_request(request: RecommendationRequest) -> RecommendationQuery:
         return_to_origin=request.return_to_origin,
         degraded=request.degraded,
         chains=tuple(request.chains or ()),
-        payload=request.model_dump(mode="json"),
+        payload=payload,
         max_alternatives=MAX_ALTERNATIVES,
     )
 
@@ -181,8 +187,11 @@ def _query_from_request(request: RecommendationRequest) -> RecommendationQuery:
 def _query_payload(query: RecommendationQuery) -> dict[str, Any]:
     """JSON-safe inputs needed to rebuild the query on resume.
 
-    The origin travels here only because re-optimizing requires it; it is never logged.
+    The exact origin travels only in the top-level `origin` field because re-optimizing
+    requires it; it is never logged, and the whole payload is only persisted while the run is
+    `waiting_shopper` (see `_state_payload`).
     """
+    request_payload = {key: value for key, value in query.payload.items() if key != "origin"}
     return {
         "items": [
             {
@@ -205,7 +214,7 @@ def _query_payload(query: RecommendationQuery) -> dict[str, Any]:
         "return_to_origin": query.return_to_origin,
         "degraded": query.degraded,
         "chains": list(query.chains),
-        "payload": query.payload,
+        "payload": request_payload,
     }
 
 
@@ -283,11 +292,17 @@ def _recommendation_payload(response: RecommendationResponse) -> dict[str, Any]:
 
 def _state_payload(
     state: AgentState,
-    query_payload: dict[str, Any],
+    query_payload: dict[str, Any] | None,
     recommendation: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    """The persisted state; the resume-only `_query` is kept only while the run is paused.
+
+    `_query` carries the exact origin that `/answer` needs to re-optimize. Once the run leaves
+    `waiting_shopper` it is stripped, so the table never holds the shopper's coordinates.
+    """
     payload = state.to_dict()
-    payload["_query"] = query_payload
+    if query_payload is not None:
+        payload["_query"] = query_payload
     if recommendation is not None:
         payload["_recommendation"] = recommendation
     return payload
@@ -471,7 +486,11 @@ def create_agent_run(
         policy_name=result.policy_name,
         model_name=result.model_name,
         recommendation_id=recommendation_id,
-        state_json=_state_payload(result.state, _query_payload(query), recommendation_data),
+        state_json=_state_payload(
+            result.state,
+            _query_payload(query) if result.status is RunStatus.WAITING_SHOPPER else None,
+            recommendation_data,
+        ),
         status=result.status.value,
     )
     _persist_steps(session, run_id, result.steps)
@@ -506,6 +525,20 @@ def answer_agent_run(
             status_code=status.HTTP_409_CONFLICT,
             detail="The agent run is not waiting for an answer.",
         )
+    # Claim the run atomically: of two concurrent answers only one may resume it, or both
+    # would append steps with the same `(run_id, step_number)`.
+    claimed = session.execute(
+        text(
+            "update agent_run set status = 'running', updated_at = now() "
+            "where id = :run_id and status = 'waiting_shopper'"
+        ),
+        {"run_id": run_id},
+    )
+    if claimed.rowcount != 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The agent run is not waiting for an answer.",
+        )
     stored = run.state_json or {}
     query_payload = stored.get("_query")
     if not isinstance(query_payload, dict):
@@ -531,7 +564,7 @@ def answer_agent_run(
     recommendation_data = stored.get("_recommendation")
     state_json = _state_payload(
         result.state,
-        query_payload,
+        query_payload if result.status is RunStatus.WAITING_SHOPPER else None,
         recommendation_data if isinstance(recommendation_data, dict) else None,
     )
     update_run(

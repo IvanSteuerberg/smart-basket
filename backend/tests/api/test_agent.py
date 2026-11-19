@@ -10,6 +10,7 @@ silenced for the module because pytest registers them by their original names.
 
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -185,6 +186,79 @@ def test_unknown_run_returns_404_on_read_and_answer(world):
     assert world.client.get(f"/api/agent/runs/{unknown}").status_code == 404
     answered = world.client.post(f"/api/agent/runs/{unknown}/answer", json={"message": "hola"})
     assert answered.status_code == 404
+
+
+def _stored_state(world, run_id: str) -> dict:
+    return world.connection.execute(
+        text("select state_json from agent_run where id = cast(:id as uuid)"),
+        {"id": run_id},
+    ).scalar_one()
+
+
+def _assert_origin_not_persisted(state: dict) -> None:
+    assert "_query" not in state
+    dumped = json.dumps(state, ensure_ascii=False)
+    assert "latitude" not in dumped
+    assert "longitude" not in dumped
+
+
+def test_completed_run_never_persists_the_exact_origin(world):
+    response = world.client.post("/api/agent/runs", json=run_body(FIVE_ITEMS, policy="default"))
+    assert response.status_code == 200
+    run = response.json()
+    assert run["status"] == "completed"
+
+    _assert_origin_not_persisted(_stored_state(world, run["run_id"]))
+
+
+def test_resumed_run_strips_the_query_once_it_completes(world):
+    paused = world.client.post(
+        "/api/agent/runs",
+        json=run_body([item("pollo preparado", "vague", "1", "kg")], policy="default"),
+    ).json()
+    assert paused["status"] == "waiting_shopper"
+
+    # While paused the exact origin is kept so `/answer` can re-optimize, but the payload
+    # nested in `_query` never carries it.
+    paused_state = _stored_state(world, paused["run_id"])
+    assert paused_state["_query"]["origin"]["lat"] == pytest.approx(42.5987)
+    assert paused_state["_query"]["origin"]["lon"] == pytest.approx(-5.5671)
+    assert "origin" not in paused_state["_query"]["payload"]
+
+    resumed = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer",
+        json={"message": "quiero pechuga de pollo"},
+    ).json()
+    assert resumed["status"] == "completed"
+
+    _assert_origin_not_persisted(_stored_state(world, paused["run_id"]))
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected_message"),
+    [
+        ({"option_index": 1}, "Opción 2"),
+        ({"canonical_id": 4242}, "Producto 4242"),
+    ],
+)
+def test_answering_a_paused_run_with_a_structured_choice(world, answer, expected_message):
+    paused = world.client.post(
+        "/api/agent/runs",
+        json=run_body([item("pollo preparado", "vague", "1", "kg")], policy="default"),
+    ).json()
+    assert paused["status"] == "waiting_shopper"
+
+    resumed = world.client.post(f"/api/agent/runs/{paused['run_id']}/answer", json=answer)
+    assert resumed.status_code == 200
+    final = resumed.json()
+    assert final["status"] == "completed"
+    assert final["steps"][-1]["observation"]["kind"] == "shopper_request"
+    assert final["steps"][-1]["observation"]["details"]["message"] == expected_message
+
+
+def test_unknown_policy_is_rejected_with_422(world):
+    response = world.client.post("/api/agent/runs", json=run_body(FIVE_ITEMS, policy="unknown"))
+    assert response.status_code == 422
 
 
 def test_answering_a_completed_run_returns_409(world):
