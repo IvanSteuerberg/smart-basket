@@ -1,0 +1,102 @@
+{
+  "group": "mode_and_what_if",
+  "description": "Explicit travel mode changes vs hypothetical what-if comparisons.",
+  "scenarios": [
+    {
+      "id": "c01",
+      "group": "mode_and_what_if",
+      "phenomenon": "user_mode_change_to_car",
+      "why": "Petición imperativa («mejor voy en coche»): recalcular cambiando el modo a coche.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "mejor voy en coche",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Lidl"], "total_cost": "42.10", "travel_minutes": "24.0", "comparable_cost": "42.10"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «mejor voy en coche»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "cambiar_modo",
+        "also_ok": [],
+        "verdict": {"expected_mode": "car", "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "c02",
+      "group": "mode_and_what_if",
+      "phenomenon": "user_what_if_car",
+      "why": "Pregunta hipotética («¿cuánto me ahorraría si fuese en coche?»): comparar sin sustituir el plan a pie todavía.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "¿cuánto me ahorraría si fuese en coche?",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Lidl"], "total_cost": "42.10", "travel_minutes": "24.0", "comparable_cost": "42.10"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «¿cuánto me ahorraría si fuese en coche?»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": [],
+        "verdict": {"expected_mode": "walk", "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "c03",
+      "group": "mode_and_what_if",
+      "phenomenon": "user_mode_change_to_walk",
+      "why": "Petición directa de cambiar de coche a pie («hoy prefiero ir andando»).",
+      "state": {
+        "mode": "car",
+        "priority": "balanced",
+        "shopper_message": "hoy prefiero ir andando",
+        "lines": [
+          {"index": 0, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 1, "raw_text": "plátanos", "canonical_name": "Plátano de Canarias", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Carrefour"], "total_cost": "15.20", "travel_minutes": "7.0", "comparable_cost": "15.20"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «hoy prefiero ir andando»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "cambiar_modo",
+        "also_ok": [],
+        "verdict": {"expected_mode": "walk", "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "c04",
+      "group": "mode_and_what_if",
+      "phenomenon": "user_what_if_one_store",
+      "why": "Pregunta hipotética sobre ir a una sola tienda en lugar de dos: comparar escenarios.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "shopper_message": "¿y si en vez de ir a dos tiendas voy solo a una?",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Carrefour"], "total_cost": "19.80", "travel_minutes": "22.0", "comparable_cost": "19.80"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «¿y si en vez de ir a dos tiendas voy solo a una?»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": ["explicar"],
+        "verdict": {"must_not_modify_lines": [0, 1]}
+      }
+    }
+  ]
+}

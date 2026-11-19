@@ -1,0 +1,130 @@
+{
+  "group": "near_tie",
+  "description": "Nearly tied plans returned by the optimizer's top-k alternatives.",
+  "scenarios": [
+    {
+      "id": "t01",
+      "group": "near_tie",
+      "phenomenon": "near_tie_two_vs_one_store",
+      "why": "Diferencia menor de 0,10 € en objetivo entre ir a 2 tiendas (21 min) o a 1 (9 min): enseñar ambos escenarios.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "queso curado", "canonical_name": "Queso curado", "quantity": "0.5", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {
+          "store_names": ["Mercadona", "Lidl"],
+          "total_cost": "30.10",
+          "travel_minutes": "21.0",
+          "comparable_cost": "30.10",
+          "alternatives": [
+            {"store_names": ["Mercadona"], "total_cost": "30.40", "travel_minutes": "9.0", "objective_delta": "0.08"}
+          ]
+        },
+        "observations": [
+          {"kind": "near_tie", "summary": "Empate técnico (< 0,10 € de objetivo): Mercadona+Lidl (30,10 €, 21 min) frente a solo Mercadona (30,40 €, 9 min)."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "t02",
+      "group": "near_tie",
+      "phenomenon": "near_tie_savings_mode",
+      "why": "Incluso en modo ahorro, 0,08 € de diferencia evitando una segunda tienda merece mostrarse como alternativa.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "lines": [
+          {"index": 0, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "2", "unit": "kg", "status": "ok"},
+          {"index": 1, "raw_text": "atún al natural", "canonical_name": "Atún al natural", "quantity": "6", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {
+          "store_names": ["Mercadona", "Carrefour"],
+          "total_cost": "41.20",
+          "travel_minutes": "22.0",
+          "comparable_cost": "41.20",
+          "alternatives": [
+            {"store_names": ["Mercadona"], "total_cost": "41.28", "travel_minutes": "10.0", "objective_delta": "0.08"}
+          ]
+        },
+        "observations": [
+          {"kind": "near_tie", "summary": "Modo ahorro: Mercadona+Carrefour (41,20 €, 22 min) casi empatado con solo Mercadona (41,28 €, 10 min)."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "t03",
+      "group": "near_tie",
+      "phenomenon": "near_tie_two_single_stores",
+      "why": "Dos tiendas únicas empatadas en tiempo (12 min) y 0,05 € de diferencia: mostrar comparativa.",
+      "state": {
+        "mode": "walk",
+        "priority": "time",
+        "lines": [
+          {"index": 0, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 1, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {
+          "store_names": ["Mercadona"],
+          "total_cost": "28.50",
+          "travel_minutes": "12.0",
+          "comparable_cost": "28.50",
+          "alternatives": [
+            {"store_names": ["Dia"], "total_cost": "28.55", "travel_minutes": "12.0", "objective_delta": "0.05"}
+          ]
+        },
+        "observations": [
+          {"kind": "near_tie", "summary": "Mercadona (28,50 €, 12 min) y Dia (28,55 €, 12 min) empatan con 0,05 € de diferencia."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": ["no_hacer_nada"],
+        "verdict": {"must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "t04",
+      "group": "near_tie",
+      "phenomenon": "near_tie_car_extra_stop",
+      "why": "En coche, dos paradas frente a una empatan en 0,05 € de objetivo: comparar escenarios.",
+      "state": {
+        "mode": "car",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "espaguetis", "canonical_name": "Espaguetis", "quantity": "2", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {
+          "store_names": ["Mercadona", "Carrefour"],
+          "total_cost": "22.10",
+          "travel_minutes": "14.0",
+          "comparable_cost": "22.10",
+          "alternatives": [
+            {"store_names": ["Carrefour"], "total_cost": "22.55", "travel_minutes": "8.0", "objective_delta": "0.05"}
+          ]
+        },
+        "observations": [
+          {"kind": "near_tie", "summary": "En coche, Mercadona+Carrefour (22,10 €, 14 min) empata con solo Carrefour (22,55 €, 8 min) en 0,05 € de objetivo."}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "must_not_modify_lines": [0, 1]}
+      }
+    }
+  ]
+}

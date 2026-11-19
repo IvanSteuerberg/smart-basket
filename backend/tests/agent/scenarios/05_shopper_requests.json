@@ -1,0 +1,229 @@
+{
+  "group": "shopper_requests",
+  "description": "Free-text shopper requests: remove, add, quantity, brand, exclude chain, explain.",
+  "scenarios": [
+    {
+      "id": "r01",
+      "group": "shopper_requests",
+      "phenomenon": "user_remove",
+      "why": "Petición directa de quitar el pan de la lista.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "quita el pan, que ya tengo",
+        "lines": [
+          {"index": 0, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 1, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 2, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"},
+          {"index": 3, "raw_text": "tomates", "canonical_name": "Tomate", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "7.20", "travel_minutes": "8.5", "comparable_cost": "7.20"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «quita el pan, que ya tengo»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "quitar_linea",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [1, 2, 3]}
+      }
+    },
+    {
+      "id": "r02",
+      "group": "shopper_requests",
+      "phenomenon": "user_add",
+      "why": "Petición directa de añadir una docena de huevos.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "añade una docena de huevos",
+        "lines": [
+          {"index": 0, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 1, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 2, "raw_text": "tomates", "canonical_name": "Tomate", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "5.10", "travel_minutes": "8.5", "comparable_cost": "5.10"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «añade una docena de huevos»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "anadir_linea",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [0, 1, 2]}
+      }
+    },
+    {
+      "id": "r03",
+      "group": "shopper_requests",
+      "phenomenon": "user_quantity",
+      "why": "El comprador cambia la cantidad de naranjas de 1 kg a 2 kg.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "mejor 2 kilos de naranjas",
+        "lines": [
+          {"index": 0, "raw_text": "1 kg de naranjas", "canonical_name": "Naranja", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "4.80", "travel_minutes": "8.5", "comparable_cost": "4.80"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «mejor 2 kilos de naranjas»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "modificar_cantidad",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "r04",
+      "group": "shopper_requests",
+      "phenomenon": "user_brand_all",
+      "why": "Petición global de pasar todas las líneas con marca a marca blanca.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "shopper_message": "ponlo todo en marca blanca",
+        "lines": [
+          {"index": 0, "raw_text": "leche Pascual", "canonical_name": "Leche entera", "brand": "Pascual", "brand_pinned": true, "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "yogur Danone", "canonical_name": "Yogur natural", "brand": "Danone", "brand_pinned": true, "quantity": "4", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "cacao Nocilla", "canonical_name": "Crema de cacao", "brand": "Nocilla", "brand_pinned": true, "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "7.90", "travel_minutes": "8.5", "comparable_cost": "7.90"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «ponlo todo en marca blanca»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "cambiar_marca",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed"}
+      }
+    },
+    {
+      "id": "r05",
+      "group": "shopper_requests",
+      "phenomenon": "user_brand_one",
+      "why": "El comprador suelta la marca fijada solo para la leche.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "la marca de la leche me da igual",
+        "lines": [
+          {"index": 0, "raw_text": "leche Pascual semidesnatada", "canonical_name": "Leche semidesnatada", "brand": "Pascual", "brand_pinned": true, "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "5.20", "travel_minutes": "8.5", "comparable_cost": "5.20"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «la marca de la leche me da igual»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "cambiar_marca",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "r06",
+      "group": "shopper_requests",
+      "phenomenon": "user_exclude_chain",
+      "why": "El comprador excluye explícitamente la cadena Lidl del plan.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "no quiero ir al Lidl",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Lidl"], "total_cost": "21.40", "travel_minutes": "18.0", "comparable_cost": "21.40"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «no quiero ir al Lidl»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "excluir_cadena",
+        "also_ok": [],
+        "verdict": {"expected_excluded_chains": ["lidl"], "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "r07",
+      "group": "shopper_requests",
+      "phenomenon": "user_explain",
+      "why": "Pregunta por qué el plan no manda todo a Mercadona: explicar (o comparar escenarios).",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "¿por qué no me mandas todo a Mercadona, que me pilla más cerca?",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "queso curado", "canonical_name": "Queso curado", "quantity": "0.5", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Dia", "Lidl"], "total_cost": "33.50", "travel_minutes": "18.0", "comparable_cost": "33.50"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «¿por qué no me mandas todo a Mercadona, que me pilla más cerca?»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "explicar",
+        "also_ok": ["comparar_escenarios"],
+        "verdict": {"must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "r08",
+      "group": "shopper_requests",
+      "phenomenon": "user_quantity_milk",
+      "why": "El comprador sube la leche de 1 litro a 6 litros.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "en vez de 1 litro de leche pon 6 litros",
+        "lines": [
+          {"index": 0, "raw_text": "1 l de leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "café", "canonical_name": "Café molido", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "3.45", "travel_minutes": "8.5", "comparable_cost": "3.45"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «en vez de 1 litro de leche pon 6 litros»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "modificar_cantidad",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [1]}
+      }
+    },
+    {
+      "id": "r09",
+      "group": "shopper_requests",
+      "phenomenon": "user_remove_snack",
+      "why": "El comprador pide quitar las galletas de la lista.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "quita las galletas",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "galletas", "canonical_name": "Galletas María", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "plátanos", "canonical_name": "Plátano de Canarias", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "3.65", "travel_minutes": "8.5", "comparable_cost": "3.65"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «quita las galletas»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "quitar_linea",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [0, 2]}
+      }
+    }
+  ]
+}

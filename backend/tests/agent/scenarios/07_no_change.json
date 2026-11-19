@@ -1,0 +1,101 @@
+{
+  "group": "no_change",
+  "description": "Satisfied shopper or benign acknowledgement: agent MUST make zero changes (100% target).",
+  "scenarios": [
+    {
+      "id": "n01",
+      "group": "no_change",
+      "phenomenon": "no_change_thanks",
+      "why": "El comprador aprueba el plan («perfecto, gracias»): cero cambios.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "perfecto, gracias",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "2", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Dia"], "total_cost": "27.30", "travel_minutes": "11.0", "comparable_cost": "27.30"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «perfecto, gracias»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "no_hacer_nada",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "zero_changes": true, "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "n02",
+      "group": "no_change",
+      "phenomenon": "no_change_ok",
+      "why": "«vale, así me sirve» es una confirmación; el agente no debe tocar nada.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "shopper_message": "vale, así me sirve",
+        "lines": [
+          {"index": 0, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"},
+          {"index": 1, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "3.10", "travel_minutes": "8.5", "comparable_cost": "3.10"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «vale, así me sirve»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "no_hacer_nada",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "zero_changes": true, "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "n03",
+      "group": "no_change",
+      "phenomenon": "no_change_going_now",
+      "why": "«genial, voy a comprar ahora» no pide ningún cambio ni comparación.",
+      "state": {
+        "mode": "car",
+        "priority": "balanced",
+        "shopper_message": "genial, voy a comprar ahora",
+        "lines": [
+          {"index": 0, "raw_text": "plátanos", "canonical_name": "Plátano de Canarias", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 1, "raw_text": "yogur natural", "canonical_name": "Yogur natural", "quantity": "4", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "14.50", "travel_minutes": "6.0", "comparable_cost": "14.50"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «genial, voy a comprar ahora»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "no_hacer_nada",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "zero_changes": true, "must_not_modify_lines": [0, 1]}
+      }
+    },
+    {
+      "id": "n04",
+      "group": "no_change",
+      "phenomenon": "no_change_short_ack",
+      "why": "Confirmación escueta («ok»): mantener el plan intacto.",
+      "state": {
+        "mode": "walk",
+        "priority": "time",
+        "shopper_message": "ok",
+        "lines": [
+          {"index": 0, "raw_text": "café", "canonical_name": "Café molido", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "2.60", "travel_minutes": "5.0", "comparable_cost": "2.60"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «ok»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "no_hacer_nada",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "zero_changes": true, "must_not_modify_lines": [0]}
+      }
+    }
+  ]
+}

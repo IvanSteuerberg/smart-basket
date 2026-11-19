@@ -1,0 +1,111 @@
+{
+  "group": "long_list",
+  "description": "Realistic 15-18 item weekly lists where only one line needs attention and the rest must remain untouched.",
+  "scenarios": [
+    {
+      "id": "l01",
+      "group": "long_list",
+      "phenomenon": "long_list_one_vague",
+      "why": "Lista semanal larga (16 líneas): solo la última («fruta») es vaga y sin hábito; preguntar sin tocar las demás.",
+      "state": {
+        "mode": "car",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche semidesnatada", "canonical_name": "Leche semidesnatada", "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "pan de molde", "canonical_name": "Pan de molde", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 3, "raw_text": "arroz redondo", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 4, "raw_text": "espaguetis", "canonical_name": "Espaguetis", "quantity": "0.5", "unit": "kg", "status": "ok"},
+          {"index": 5, "raw_text": "tomate frito", "canonical_name": "Tomate frito", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 6, "raw_text": "atún al natural", "canonical_name": "Atún al natural", "quantity": "3", "unit": "ud", "status": "ok"},
+          {"index": 7, "raw_text": "pechuga de pollo", "canonical_name": "Pechuga de pollo", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 8, "raw_text": "yogur natural", "canonical_name": "Yogur natural", "quantity": "8", "unit": "ud", "status": "ok"},
+          {"index": 9, "raw_text": "queso curado", "canonical_name": "Queso curado", "quantity": "0.5", "unit": "kg", "status": "ok"},
+          {"index": 10, "raw_text": "aceite de oliva", "canonical_name": "Aceite de oliva virgen extra", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 11, "raw_text": "cebollas", "canonical_name": "Cebolla", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 12, "raw_text": "patatas", "canonical_name": "Patata", "quantity": "3", "unit": "kg", "status": "ok"},
+          {"index": 13, "raw_text": "papel de horno", "canonical_name": "Papel de horno", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 14, "raw_text": "café molido", "canonical_name": "Café molido", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 15, "raw_text": "fruta", "status": "vague", "candidate_options": [{"label": "Plátano de Canarias"}, {"label": "Manzana"}, {"label": "Naranja"}]}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "48.60", "travel_minutes": "9.0", "comparable_cost": "48.60"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 15, "summary": "En una lista de 16 líneas, «fruta» (línea 16) es vaga y no tiene hábito."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "must_not_modify_lines": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]}
+      }
+    },
+    {
+      "id": "l02",
+      "group": "long_list",
+      "phenomenon": "long_list_one_missing",
+      "why": "Lista larga (15 líneas) donde solo falta «tofu» y existe «seitán» como alternativa en la misma tienda.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "2", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"},
+          {"index": 3, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 4, "raw_text": "lentejas", "canonical_name": "Lentejas", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 5, "raw_text": "garbanzos", "canonical_name": "Garbanzos", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 6, "raw_text": "espinacas", "canonical_name": "Espinacas", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 7, "raw_text": "zanahorias", "canonical_name": "Zanahoria", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 8, "raw_text": "plátanos", "canonical_name": "Plátano de Canarias", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 9, "raw_text": "yogur natural", "canonical_name": "Yogur natural", "quantity": "4", "unit": "ud", "status": "ok"},
+          {"index": 10, "raw_text": "queso fresco", "canonical_name": "Queso fresco", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 11, "raw_text": "café", "canonical_name": "Café molido", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 12, "raw_text": "avena", "canonical_name": "Copos de avena", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 13, "raw_text": "tomate", "canonical_name": "Tomate", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 14, "raw_text": "tofu", "status": "missing", "substitute_options": [{"label": "Seitán Hacendado", "store": "Mercadona"}]}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "34.20", "travel_minutes": "10.0", "comparable_cost": "34.20"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 14, "summary": "«tofu» falta en todas las tiendas cercanas; existe «seitán» en Mercadona."}
+        ]
+      },
+      "expected": {
+        "gold_action": "buscar_sustituto",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]}
+      }
+    },
+    {
+      "id": "l03",
+      "group": "long_list",
+      "phenomenon": "long_list_remove_one",
+      "why": "Lista larga con varias marcas fijadas: quitar solo «servilletas» sin tocar ninguna otra línea.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "shopper_message": "quita las servilletas",
+        "lines": [
+          {"index": 0, "raw_text": "leche Pascual", "canonical_name": "Leche entera", "brand": "Pascual", "brand_pinned": true, "quantity": "6", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "Coca-Cola Zero", "canonical_name": "Coca-Cola zero", "brand": "Coca Cola", "brand_pinned": true, "quantity": "6", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 3, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"},
+          {"index": 4, "raw_text": "yogur natural", "canonical_name": "Yogur natural", "quantity": "4", "unit": "ud", "status": "ok"},
+          {"index": 5, "raw_text": "servilletas", "canonical_name": "Servilletas de papel", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 6, "raw_text": "papel higiénico", "canonical_name": "Papel higiénico", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 7, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"},
+          {"index": 8, "raw_text": "pasta integral", "canonical_name": "Macarrón integral", "quantity": "0.5", "unit": "kg", "status": "ok"},
+          {"index": 9, "raw_text": "atún en aceite de oliva", "canonical_name": "Atún en aceite de oliva", "quantity": "3", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "29.90", "travel_minutes": "8.5", "comparable_cost": "29.90"},
+        "observations": [
+          {"kind": "shopper_request", "summary": "El comprador escribe: «quita las servilletas»."}
+        ]
+      },
+      "expected": {
+        "gold_action": "quitar_linea",
+        "also_ok": [],
+        "verdict": {"must_not_modify_lines": [0, 1, 2, 3, 4, 6, 7, 8, 9]}
+      }
+    }
+  ]
+}

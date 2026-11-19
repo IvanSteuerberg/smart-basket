@@ -2,6 +2,7 @@
 
 ## 2026-11-19
 
+* **Update** Decision 0022 (E0 of iteration 13): froze the 41 structured evaluation scenarios (`backend/tests/agent/scenarios/*.json`, SHA-256 `e4f2b4e7ba30fcf9...`, approved by the author) and pre-registered the acceptance targets before any measurement (0 unrequested changes on no-change/injection, >= 85 % task solved and >= 80 % pass^3 on exceptions, >= 20 pp drop under ablation).
 * **Update** Bundle migrated to OKF v0.3 (spec moved to `open-knowledge-format/open-knowledge-format`): `okf_version: "0.3"` with bundle `title` and `description` in the root index. Course evaluation: its class-notes source now points to the note on OSF instead of free text, which v0.3 would read as a relative path. Existing `../../docs/...` sources already follow the v0.3 rule (path fields resolve from the file's folder); no `verified` entries, so the new trust-tier rule changes nothing.
 
 ## 2026-11-16
