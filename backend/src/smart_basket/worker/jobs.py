@@ -8,8 +8,8 @@ from sqlalchemy import text
 from smart_basket import stores
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
-from smart_basket.ingestion import MercadonaAdapter, ingest_catalog
-from smart_basket.ingestion.store import log_ingest_summary
+from smart_basket.ingestion.__main__ import ADAPTERS
+from smart_basket.ingestion.store import ingest_catalog, log_ingest_summary
 from smart_basket.matching import run as run_matching
 from smart_basket.matching import sync_decisions
 
@@ -17,26 +17,29 @@ log = logging.getLogger(__name__)
 
 
 def ingest_catalogs() -> None:
-    """Collect the Mercadona catalog for every configured warehouse (decision 0006).
+    """Collect every registered chain's catalog for its configured zones (decision 0006).
 
-    A failing warehouse is logged and skipped so the scheduled chain jobs keep running (NFR-09).
+    A failing zone is logged and skipped so the other zones and chains keep running (NFR-09).
     """
     settings = get_settings()
     ingested = False
-    for warehouse in settings.mercadona_warehouse_codes:
-        adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
-        try:
-            summary = ingest_catalog(adapter, warehouse, data_dir=settings.data_dir)
-            log_ingest_summary(summary)
-            ingested = ingested or summary.status == "succeeded"
-        except Exception:
-            log.exception(
-                "catalog ingestion failed for warehouse %s; other chains keep running", warehouse
-            )
-        finally:
-            adapter.close()
+    for chain_code, entry in ADAPTERS.items():
+        for zone_code in entry.zones(settings):
+            adapter = entry.adapter(delay=settings.ingest_delay_seconds)
+            try:
+                summary = ingest_catalog(adapter, zone_code, data_dir=settings.data_dir)
+                log_ingest_summary(summary)
+                ingested = ingested or summary.status == "succeeded"
+            except Exception:
+                log.exception(
+                    "catalog ingestion failed for zone %s of chain %s; other chains keep running",
+                    zone_code,
+                    chain_code,
+                )
+            finally:
+                adapter.close()
     # The new products need a canonical product before the recommender can price them, and
-    # one pass after every warehouse classifies them all.
+    # one pass after every chain and zone classifies them all.
     if ingested:
         try:
             match_products()

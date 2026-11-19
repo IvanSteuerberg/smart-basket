@@ -90,6 +90,20 @@ def db(engine) -> Db:
     return Db(url=URL, engine=engine, chain_id=chain_id, zone_id=zone_id)
 
 
+def seed_zone(db: Db, *, chain: str, kind: str, code: str) -> tuple[int, int]:
+    """Add one more chain with a single zone of the given kind (postal code, warehouse...)."""
+    sql = "insert into zone (chain_id, kind, code) values (:chain, :kind, :code) returning id"
+    with db.engine.begin() as conn:
+        chain_id = conn.execute(
+            text("insert into chain (code, name) values (:code, :name) returning id"),
+            {"code": chain, "name": chain.title()},
+        ).scalar_one()
+        zone_id = conn.execute(
+            text(sql), {"chain": chain_id, "kind": kind, "code": code}
+        ).scalar_one()
+    return chain_id, zone_id
+
+
 def rows(db: Db, sql: str, **params):
     with db.engine.connect() as conn:
         return conn.execute(text(sql), params).all()
@@ -674,3 +688,28 @@ def test_missing_chain_or_zone_asks_for_the_seed_loader(tmp_path):
         ingest_catalog(adapter, "W1", data_dir=tmp_path, database_url=URL)
     with pytest.raises(IngestSetupError, match="smart-basket-seed"):
         ingest_catalog(FakeAdapter(()), "W9", data_dir=tmp_path, database_url=URL)
+
+
+def test_postal_code_adapter_ingests_the_matching_zone_kind(db, tmp_path):
+    chain_id, _ = seed_zone(db, chain="dia", kind="postal_code", code="24001")
+
+    class PostalCodeAdapter(FakeAdapter):
+        zone_kind = "postal_code"
+
+    adapter = PostalCodeAdapter((*CATEGORIES, product("900", "1.00")), chain_code="dia")
+    summary = ingest_catalog(adapter, "24001", data_dir=tmp_path, now=T1, database_url=db.url)
+
+    assert summary.status == "succeeded"
+    assert (summary.chain_code, summary.zone_code) == ("dia", "24001")
+    stored = rows(db, "select status from ingest_run where chain_id = :chain", chain=chain_id)
+    assert [record.status for record in stored] == ["succeeded"]
+
+
+def test_adapter_without_zone_kind_looks_the_zone_up_as_a_warehouse(db, tmp_path):
+    # FakeAdapter omits `zone_kind`, so the store reads it as `warehouse`: a seeded postal code
+    # is not found and the error names the kind it looked for.
+    seed_zone(db, chain="dia", kind="postal_code", code="24001")
+    adapter = FakeAdapter((), chain_code="dia")
+
+    with pytest.raises(IngestSetupError, match="warehouse zone '24001' of chain 'dia'"):
+        ingest_catalog(adapter, "24001", data_dir=tmp_path, now=T1, database_url=db.url)
