@@ -25,12 +25,12 @@ The author works from several computers, and documents edited outside the repo h
 
 ## Knowledge base (`knowledge/`)
 
-Engineering knowledge (vision, requirements, architecture, decisions, glossary) lives in `knowledge/`, an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle. Read `knowledge/index.md` first.
+Engineering knowledge (vision, requirements, architecture, decisions, glossary) lives in `knowledge/`, an [Open Knowledge Format](https://github.com/open-knowledge-format/open-knowledge-format) v0.3 bundle ([spec](https://github.com/open-knowledge-format/open-knowledge-format/blob/main/SPEC.md)). Read `knowledge/index.md` first.
 
-- One concept per file, with YAML frontmatter. `type` is required; also set `title`, `description`, `tags`, `status` (`draft` | `stable` | `deprecated`) and `generated: { by, at }` (ISO 8601 with UTC offset).
+- One concept per file, with YAML frontmatter. `type` is required; also set `title`, `description`, `tags`, `status` (`draft` | `stable` | `deprecated`) and `generated: { by, at }` (RFC 3339 date-time with UTC offset). Only bump `generated.at` on meaningful changes, not typo fixes. A `deprecated` concept points to its replacement with `superseded_by`.
 - Actors: agents as `<producer>/<version>` (e.g. `claude-code/claude-opus-5-5`); the author as `human:IvanSteuerberg`. Only the author adds `verified` entries.
 - Decisions go in `knowledge/decisions/NNNN-short-title.md` (`type: Architecture Decision`) with Context, Decision, Consequences and, when relevant, Revisit when. Cite the prompt log entry they come from in `sources`.
-- Links are bundle-root-relative (`/decisions/0001-...md`).
+- Links are bundle-root-relative (`/decisions/0001-...md`). In path fields such as `sources[].resource`, a value without a leading `/` resolves from the file's own folder, so files outside the bundle are reached as `../../docs/...`; anything that is not a file gets a URL, never free text.
 - Every change gets a bullet in `knowledge/log.md` under a `YYYY-MM-DD` heading (newest first), and new concepts are listed in `knowledge/index.md`.
 - The bundle is in English. The academic documents in `docs/` stay in Spanish and narrate how decisions were reached; the bundle states what was decided.
 

@@ -1,5 +1,9 @@
 # Log
 
+## 2026-11-19
+
+* **Update** Bundle migrated to OKF v0.3 (spec moved to `open-knowledge-format/open-knowledge-format`): `okf_version: "0.3"` with bundle `title` and `description` in the root index. Course evaluation: its class-notes source now points to the note on OSF instead of free text, which v0.3 would read as a relative path. Existing `../../docs/...` sources already follow the v0.3 rule (path fields resolve from the file's folder); no `verified` entries, so the new trust-tier rule changes nothing.
+
 ## 2026-11-16
 
 * **Note** Decision spike for 0022 (`experiments/decision-spike`, not the evaluation 0022 asks for): on 20 synthetic Spanish situations, Gemini 3.5 Flash-Lite 18/20 and Gemini Decision 1 17/20 in under 1 s; local models on CPU 6-14/20 in 3-7 s; Gemma 4 E4B with 6 worked examples 17/20 (20/20 lenient) at about 6 s per decision. Ollama's local decision models are documented in English only.

@@ -1,9 +1,11 @@
 ---
-okf_version: "0.2"
+okf_version: "0.3"
+title: Smart Basket knowledge base
+description: Vision, requirements, architecture, data and decisions of Smart Basket, a grocery basket recommender for León.
 ---
 # Smart Basket knowledge base
 
-Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2 bundle. This is the source of truth for scope, architecture and decisions. The academic documents (concept document and prompt log, in Spanish) live in `docs/` and cite this bundle.
+Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format](https://github.com/open-knowledge-format/open-knowledge-format) v0.3 bundle. This is the source of truth for scope, architecture and decisions. The academic documents (concept document and prompt log, in Spanish) live in `docs/` and cite this bundle.
 
 ## Product
 

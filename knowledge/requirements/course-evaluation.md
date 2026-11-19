@@ -9,8 +9,8 @@ generated:
   at: 2026-11-09T18:30:00+01:00
 sources:
   - id: class-2026-11-04
-    resource: author's class notes, 2026-11-04 (evaluation)
-    title: Class notes on evaluation
+    resource: https://osf.io/ysmkz/files/osfstorage/6af1f7ac4894522259b8c51d
+    title: Class notes on evaluation, 2026-11-04 (OSF 05-notas-de-clase/04-11-2026.txt)
 ---
 The course uses project-based learning, assessed from two sides: outward, the lessons learned; inward, the content, which lives in the GitHub repository and its README.
 

@@ -43,7 +43,7 @@ infra/
 compose.yaml          db, migrate, api, worker, routing (Valhalla), web (Caddy), metabase
 .env.example          Configuration template (copy to .env, which is git-ignored)
 experiments/          One-off benchmarks (LLM benchmark of decision 0005)
-knowledge/            Engineering knowledge base (OKF v0.2): vision, architecture, decisions
+knowledge/            Engineering knowledge base (OKF v0.3): vision, architecture, decisions
 docs/
   idea-base/          Concept document (LaTeX, Spanish)
   memoria-prompts/    Generative AI prompt log (LaTeX, Spanish)
