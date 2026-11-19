@@ -69,10 +69,11 @@ def ingest_catalog(
     database_url: str | None = None,
 ) -> IngestSummary:
     """Crawl one zone with `adapter` and persist the result, closing the `ingest_run`."""
+    zone_kind = getattr(adapter, "zone_kind", "warehouse")
     started_at = datetime.now(UTC)
     with session_scope(database_url) as session:
         chain_id = _lookup_chain(session, adapter.chain_code)
-        zone_id = _lookup_zone(session, chain_id, adapter.chain_code, zone_code)
+        zone_id = _lookup_zone(session, chain_id, adapter.chain_code, zone_code, zone_kind)
         run_id = _open_run(session, chain_id=chain_id, zone_id=zone_id, started_at=started_at)
 
     try:
@@ -174,14 +175,16 @@ def _lookup_chain(session: Session, chain_code: str) -> int:
     return chain_id
 
 
-def _lookup_zone(session: Session, chain_id: int, chain_code: str, zone_code: str) -> int:
+def _lookup_zone(
+    session: Session, chain_id: int, chain_code: str, zone_code: str, zone_kind: str
+) -> int:
     zone_id = session.execute(
-        text("select id from zone where chain_id = :chain and kind = 'warehouse' and code = :code"),
-        {"chain": chain_id, "code": zone_code},
+        text("select id from zone where chain_id = :chain and kind = :kind and code = :code"),
+        {"chain": chain_id, "kind": zone_kind, "code": zone_code},
     ).scalar_one_or_none()
     if zone_id is None:
         raise IngestSetupError(
-            f"warehouse zone '{zone_code}' of chain '{chain_code}' not found; "
+            f"{zone_kind} zone '{zone_code}' of chain '{chain_code}' not found; "
             "run `smart-basket-seed` first"
         )
     return zone_id

@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     match_decisions_file: Path | None = None
     mercadona_warehouses: str = "3683"
+    dia_zones: str = "24001"
     ingest_delay_seconds: float = 1.5
 
     @field_validator("match_decisions_file", mode="before")
@@ -87,6 +88,11 @@ class Settings(BaseSettings):
     def mercadona_warehouse_codes(self) -> list[str]:
         """The configured warehouse codes, without blanks left by the comma list."""
         return [code.strip() for code in self.mercadona_warehouses.split(",") if code.strip()]
+
+    @property
+    def dia_zone_codes(self) -> list[str]:
+        """The configured Dia postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.dia_zones.split(",") if code.strip()]
 
 
 @lru_cache

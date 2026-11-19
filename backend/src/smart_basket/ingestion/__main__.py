@@ -3,14 +3,33 @@
 import argparse
 import logging
 import sys
+from collections.abc import Callable
+from dataclasses import dataclass
 
-from smart_basket.config import get_settings
+from smart_basket.config import Settings, get_settings
 from smart_basket.ingestion.backfill import backfill_images
-from smart_basket.ingestion.base import collect
+from smart_basket.ingestion.base import ChainAdapter, collect
 from smart_basket.ingestion.mercadona import MercadonaAdapter
 from smart_basket.ingestion.store import IngestSetupError, ingest_catalog, log_ingest_summary
 
 log = logging.getLogger("smart_basket.ingestion")
+
+
+@dataclass(frozen=True, slots=True)
+class ChainEntry:
+    """How to build one chain's adapter and which zones it crawls when none is given."""
+
+    adapter: Callable[..., ChainAdapter]
+    zones: Callable[[Settings], list[str]]
+
+
+#: Every chain the CLI and the worker can ingest; supporting a chain is adding one entry here.
+ADAPTERS: dict[str, ChainEntry] = {
+    "mercadona": ChainEntry(
+        adapter=MercadonaAdapter,
+        zones=lambda settings: settings.mercadona_warehouse_codes,
+    ),
+}
 
 
 def _non_negative_int(value: str) -> int:
@@ -23,10 +42,12 @@ def _non_negative_int(value: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="smart-basket-ingest")
-    parser.add_argument("chain", choices=["mercadona"])
+    parser.add_argument("chain", choices=sorted(ADAPTERS))
     parser.add_argument(
+        "--zone",
         "--warehouse",
-        help="warehouse code; defaults to MERCADONA_WAREHOUSES",
+        dest="zone",
+        help="zone code (warehouse, postal code, sale point); defaults to the chain's zones",
     )
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument(
@@ -56,16 +77,17 @@ def main(argv: list[str] | None = None) -> int:
         summary = backfill_images(args.chain, data_dir=settings.data_dir)
         print(summary.message())
         return 0
-    warehouses = [args.warehouse] if args.warehouse else settings.mercadona_warehouse_codes
-    adapter = MercadonaAdapter(delay=settings.ingest_delay_seconds)
+    entry = ADAPTERS[args.chain]
+    zones = [args.zone] if args.zone else entry.zones(settings)
+    adapter = entry.adapter(delay=settings.ingest_delay_seconds)
     failed = False
     try:
-        for warehouse in warehouses:
+        for zone in zones:
             try:
                 if args.dry_run:
-                    result = collect(adapter, warehouse, max_categories=args.max_categories)
+                    result = collect(adapter, zone, max_categories=args.max_categories)
                     print(
-                        f"{warehouse}: categories={len(result.categories)} "
+                        f"{zone}: categories={len(result.categories)} "
                         f"products={len(result.products)} responses={len(result.raw)} "
                         f"errors={len(result.errors)} status={result.status} "
                         f"complete={result.complete}"
@@ -74,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
                     continue
                 summary = ingest_catalog(
                     adapter,
-                    warehouse,
+                    zone,
                     data_dir=settings.data_dir,
                     max_categories=args.max_categories,
                 )
@@ -84,8 +106,9 @@ def main(argv: list[str] | None = None) -> int:
                 raise
             except Exception:
                 log.exception(
-                    "catalog ingestion failed for warehouse %s; continuing with the rest",
-                    warehouse,
+                    "catalog ingestion failed for zone %s of chain %s; continuing with the rest",
+                    zone,
+                    args.chain,
                 )
                 failed = True
     except IngestSetupError as exc:
