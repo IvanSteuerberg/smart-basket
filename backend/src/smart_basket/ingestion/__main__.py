@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from smart_basket.config import Settings, get_settings
 from smart_basket.ingestion.backfill import backfill_images
 from smart_basket.ingestion.base import ChainAdapter, collect
+from smart_basket.ingestion.dia import DiaAdapter
 from smart_basket.ingestion.mercadona import MercadonaAdapter
 from smart_basket.ingestion.store import IngestSetupError, ingest_catalog, log_ingest_summary
 
@@ -28,6 +29,10 @@ ADAPTERS: dict[str, ChainEntry] = {
     "mercadona": ChainEntry(
         adapter=MercadonaAdapter,
         zones=lambda settings: settings.mercadona_warehouse_codes,
+    ),
+    "dia": ChainEntry(
+        adapter=DiaAdapter,
+        zones=lambda settings: settings.dia_zone_codes,
     ),
 }
 
