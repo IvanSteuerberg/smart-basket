@@ -149,6 +149,33 @@ GROUP BY policy_name, COALESCE(model_name, 'sin modelo'), is_ablation
 ORDER BY is_ablation ASC, total_ejecuciones DESC;
 """.strip(),
     },
+    {
+        "name": "Agente Catalogador — Propuestas de Hojas",
+        "description": (
+            "Propuestas de hoja del agente catalogador por estado (bi.v_catalog_leaf_proposal) "
+            "con la política de su ejecución (bi.v_catalog_agent_summary): número de propuestas, "
+            "productos agrupados, medias de productos y señales."
+        ),
+        "display": "table",
+        "size_x": 18,
+        "size_y": 6,
+        "row": 17,
+        "col": 0,
+        "sql": """
+SELECT
+    lp.status AS estado,
+    COUNT(*) AS propuestas,
+    COALESCE(SUM(lp.product_count), 0) AS productos_agrupados,
+    ROUND(AVG(lp.product_count)::numeric, 2) AS productos_medios,
+    ROUND(AVG(lp.signal_count)::numeric, 2) AS senales_medias,
+    COUNT(DISTINCT lp.run_id) AS ejecuciones,
+    STRING_AGG(DISTINCT s.policy_name, ', ') AS politica
+FROM bi.v_catalog_leaf_proposal lp
+LEFT JOIN bi.v_catalog_agent_summary s ON s.run_id = lp.run_id
+GROUP BY lp.status
+ORDER BY propuestas DESC;
+""".strip(),
+    },
 ]
 
 
@@ -274,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print the dashboard and 5 SQL card definitions without calling Metabase.",
+        help="Print the dashboard and 6 SQL card definitions without calling Metabase.",
     )
     args = parser.parse_args(argv)
 
