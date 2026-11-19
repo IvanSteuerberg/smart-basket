@@ -412,6 +412,60 @@ def test_simulated_accepts_a_declared_dietary_substitute() -> None:
     assert "sin gluten" in (result.state.lines[0].canonical_name or "")
 
 
+@pytest.mark.parametrize(
+    ("label", "rules", "error_expected"),
+    [
+        # No variant key: the label must declare the phrase and carry no warning or negation.
+        ("Tortitas de arroz sin gluten", ("sin_gluten",), False),
+        ("Galletas (puede contener trazas, línea sin gluten)", ("sin_gluten",), True),
+        ("Galletas sin gluten, con gluten añadido", ("sin_gluten",), True),
+        ("Leche sin lactosa", ("sin_lactosa",), False),
+        # An unknown dietary rule fails closed instead of being ignored.
+        ("Leche sin soja", ("sin_soja",), True),
+    ],
+)
+def test_simulated_label_only_dietary_checks(
+    label: str, rules: tuple[str, ...], error_expected: bool
+) -> None:
+    state = AgentState(
+        lines=(
+            LineState(
+                index=0,
+                raw_text="galletas",
+                status="missing",
+                substitute_options=({"label": label},),
+            ),
+        ),
+        dietary_rules=rules,
+    )
+    observation = replace(_MISSING, line_index=0)
+
+    result = _run(state, observation, _key_for(state, observation, ActionKind.BUSCAR_SUSTITUTO))
+
+    if error_expected:
+        assert result.steps[0].error is not None
+        assert "no safe substitute" in result.steps[0].error
+        assert result.state.lines[0].status == "missing"
+    else:
+        assert result.steps[0].error is None
+        assert result.state.lines[0].status == "ok"
+
+
+def test_simulated_habit_respects_dietary_rules() -> None:
+    habit = LineHabit(term="pan", canonical_id=3, canonical_name="Pan de pueblo", count=4, total=5)
+    state = AgentState(
+        lines=(LineState(index=0, raw_text="pan", status="vague", habit=habit),),
+        dietary_rules=("sin_gluten",),
+    )
+    observation = replace(_VAGUE, line_index=0)
+
+    result = _run(state, observation, _key_for(state, observation, ActionKind.APLICAR_HABITUAL))
+
+    assert result.steps[0].error is not None
+    assert "reglas dietéticas" in result.steps[0].error
+    assert result.state.lines[0].status == "vague"
+
+
 def test_simulated_habit_and_question() -> None:
     state = _base_state()
     applied = _run(state, _VAGUE, _key_for(state, _VAGUE, ActionKind.APLICAR_HABITUAL))
@@ -674,6 +728,168 @@ def test_real_buscar_sustituto_rejects_an_unsafe_sibling(session: Session) -> No
     assert result.steps[0].error is not None
     assert "no safe substitute" in result.steps[0].error
     assert result.state.lines[0].status == "missing"
+
+
+def _add_deceptive_gluten_product(session: Session, world: recommender.World) -> None:
+    """A dairy product whose name mentions `sin gluten` only to warn about traces."""
+    canonical = session.execute(
+        text(
+            "insert into canonical_product (category_id, name, variant_key, base_unit) "
+            "values (:category, 'Galletas de mantequilla', '', 'kg') returning id"
+        ),
+        {"category": world.ids["leche"]},
+    ).scalar_one()
+    product = session.execute(
+        text(
+            "insert into chain_product (chain_id, chain_sku, name, base_quantity, base_unit, "
+            "pack_count, canonical_id, match_method, match_confidence) "
+            "values (:chain, 'GF1', :name, 0.5, 'kg', 1, :canonical, 'rule', 1.0) returning id"
+        ),
+        {
+            "chain": world.ids["chain"],
+            "name": "Galletas (puede contener trazas, línea sin gluten)",
+            "canonical": canonical,
+        },
+    ).scalar_one()
+    session.execute(
+        text(
+            "insert into chain_product_zone (chain_product_id, zone_id, is_available) "
+            "values (:product, :zone, true)"
+        ),
+        {"product": product, "zone": world.ids["z1"]},
+    )
+    session.execute(
+        text(
+            "insert into price_current (chain_product_id, zone_id, price, valid_from, "
+            "last_seen_at) values (:product, :zone, 0.01, '2026-11-13 05:00:00+00', "
+            "'2026-11-13 05:07:00+00')"
+        ),
+        {"product": product, "zone": world.ids["z1"]},
+    )
+
+
+@pytest.mark.db
+def test_real_buscar_sustituto_rejects_a_dietary_name_false_positive(
+    session: Session, world: recommender.World
+) -> None:
+    _add_deceptive_gluten_product(session, world)
+    state, executors = _db_setup(session, _db_query())
+    state = replace(
+        state,
+        dietary_rules=("sin_gluten",),
+        lines=tuple(
+            replace(line, status="missing") if line.index == 0 else line for line in state.lines
+        ),
+    )
+    observation = Observation(
+        kind=ObservationKind.MISSING_EVERYWHERE,
+        summary="falta leche",
+        line_index=0,
+        details={"substitute_allowed": True},
+    )
+
+    result = _db_run(
+        state, observation, _key_for(state, observation, ActionKind.BUSCAR_SUSTITUTO), executors
+    )
+
+    # `variant_key` is empty: the warning in the name must not make it look gluten-free.
+    assert result.steps[0].error is not None
+    assert "no safe substitute" in result.steps[0].error
+    assert result.state.lines[0].status == "missing"
+
+
+@pytest.mark.db
+def test_real_excluir_cadena_rejects_an_already_excluded_chain(session: Session) -> None:
+    state, executors = _db_setup(session, _db_query())
+    state = replace(state, excluded_chains=("carrefour",))
+    observation = Observation(
+        kind=ObservationKind.SHOPPER_REQUEST,
+        summary="sin carrefour",
+        details={"message": "no quiero ir a Carrefour", "chain": "carrefour"},
+    )
+
+    result = _db_run(
+        state, observation, _key_for(state, observation, ActionKind.EXCLUIR_CADENA), executors
+    )
+
+    assert result.steps[0].error is not None
+    assert "ya está excluida" in result.steps[0].error
+    assert result.state.excluded_chains == ("carrefour",)
+
+
+@pytest.mark.db
+def test_real_excluir_cadena_rejects_the_last_active_chain(session: Session) -> None:
+    state, executors = _db_setup(session, _db_query())
+    state = replace(state, excluded_chains=("carrefour",))
+    observation = Observation(
+        kind=ObservationKind.SHOPPER_REQUEST,
+        summary="sin mercadona",
+        details={"message": "no quiero ir a Mercadona", "chain": "mercadona"},
+    )
+
+    result = _db_run(
+        state, observation, _key_for(state, observation, ActionKind.EXCLUIR_CADENA), executors
+    )
+
+    assert result.steps[0].error is not None
+    assert "ninguna cadena activa" in result.steps[0].error
+    assert result.state.excluded_chains == ("carrefour",)
+
+
+@pytest.mark.db
+def test_real_cambiar_marca_reoptimizes(session: Session) -> None:
+    state, executors = _db_setup(session, _db_query())
+    observation = Observation(
+        kind=ObservationKind.SHOPPER_REQUEST,
+        summary="marca",
+        line_index=1,
+        details={"message": "pon yogur Hacendado", "brand": "Hacendado"},
+    )
+
+    result = _db_run(
+        state, observation, _key_for(state, observation, ActionKind.CAMBIAR_MARCA), executors
+    )
+
+    assert result.steps[0].error is None
+    assert result.state.lines[1].status == "ok"
+    assert result.state.lines[1].brand == "Hacendado"
+
+
+@pytest.mark.db
+def test_real_aplicar_habitual_uses_the_canonical_product(session: Session) -> None:
+    state, executors = _db_setup(session, _db_query())
+    canonical_id, canonical_name = session.execute(
+        text(
+            "select cp.id, cp.name from canonical_product cp "
+            "join category c on c.id = cp.category_id "
+            "where c.key = 'yogur' order by cp.id limit 1"
+        )
+    ).one()
+    habit = LineHabit(
+        term="yogur",
+        canonical_id=canonical_id,
+        canonical_name=canonical_name,
+        count=8,
+        total=10,
+    )
+    state = replace(
+        state,
+        lines=tuple(
+            replace(line, status="vague", habit=habit) if line.index == 1 else line
+            for line in state.lines
+        ),
+    )
+    observation = Observation(
+        kind=ObservationKind.VAGUE_LINE, summary="yogur es vago", line_index=1
+    )
+
+    result = _db_run(
+        state, observation, _key_for(state, observation, ActionKind.APLICAR_HABITUAL), executors
+    )
+
+    assert result.steps[0].error is None
+    assert result.state.lines[1].status == "ok"
+    assert result.state.lines[1].canonical_id == canonical_id
 
 
 @pytest.mark.db

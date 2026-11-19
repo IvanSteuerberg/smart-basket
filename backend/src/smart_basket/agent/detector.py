@@ -98,25 +98,25 @@ _STOPWORDS = frozenset(
     }
 )
 
-_NUMBER_WORDS: dict[str, int] = {
-    "un": 1,
-    "una": 1,
-    "uno": 1,
-    "dos": 2,
-    "tres": 3,
-    "cuatro": 4,
-    "cinco": 5,
-    "seis": 6,
-    "siete": 7,
-    "ocho": 8,
-    "nueve": 9,
-    "diez": 10,
-    "once": 11,
-    "doce": 12,
-    "docena": 12,
-    "docenas": 12,
-    "media": 0.5,
-    "medio": 0.5,
+_NUMBER_WORDS: dict[str, Decimal] = {
+    "un": Decimal(1),
+    "una": Decimal(1),
+    "uno": Decimal(1),
+    "dos": Decimal(2),
+    "tres": Decimal(3),
+    "cuatro": Decimal(4),
+    "cinco": Decimal(5),
+    "seis": Decimal(6),
+    "siete": Decimal(7),
+    "ocho": Decimal(8),
+    "nueve": Decimal(9),
+    "diez": Decimal(10),
+    "once": Decimal(11),
+    "doce": Decimal(12),
+    "docena": Decimal(12),
+    "docenas": Decimal(12),
+    "media": Decimal("0.5"),
+    "medio": Decimal("0.5"),
 }
 
 _UNIT_WORDS = frozenset(
@@ -298,7 +298,7 @@ def state_from_recommendation(
             )
         )
 
-    plan = _plan(session, response, basket_result)
+    plan = plan_snapshot_from_result(session, response, basket_result)
     state = AgentState(
         lines=tuple(line_states),
         mode=query.mode.value,
@@ -414,25 +414,29 @@ def _shopper_request(state: AgentState) -> Observation:
 # -- state construction ---------------------------------------------------
 
 
-def _plan(
+def plan_snapshot_from_result(
     session: Session,
     response: RecommendationResponse | None,
     basket_result: BasketResult | None,
 ) -> PlanSnapshot:
-    store_names = tuple(store.name for store in response.stores) if response is not None else ()
+    """Reduce the pipeline output to the plan the agent remembers (stores, figures, alternatives).
+
+    Shared by the detector and the recommender executors so both see the same snapshot.
+    """
+    plan_stores = tuple(store.name for store in response.stores) if response is not None else ()
     if basket_result is None:
         if response is None:
             return PlanSnapshot()
         total = _decimal(response.total_cost)
         return PlanSnapshot(
-            store_names=store_names,
+            store_names=plan_stores,
             total_cost=total,
             travel_minutes=_decimal(response.minutes),
             comparable_cost=total,
         )
     alternatives = tuple(
         AlternativePlanSummary(
-            store_names=_store_names(session, alternative.plan.visiting_order),
+            store_names=store_names(session, alternative.plan.visiting_order),
             total_cost=alternative.plan.total_cost,
             travel_minutes=alternative.plan.minutes,
             objective_delta=alternative.objective_delta,
@@ -440,9 +444,9 @@ def _plan(
         for alternative in basket_result.alternatives
     )
     return PlanSnapshot(
-        store_names=store_names
+        store_names=plan_stores
         or tuple(
-            name for name in _store_names(session, basket_result.visiting_order) if name is not None
+            name for name in store_names(session, basket_result.visiting_order) if name is not None
         ),
         total_cost=basket_result.total_cost,
         travel_minutes=basket_result.minutes,
@@ -451,7 +455,8 @@ def _plan(
     )
 
 
-def _store_names(session: Session, store_ids: Sequence[int]) -> tuple[str, ...]:
+def store_names(session: Session, store_ids: Sequence[int]) -> tuple[str, ...]:
+    """Names of the stores at `store_ids`, in the given order, for plan snapshots."""
     if not store_ids:
         return ()
     rows = session.execute(
@@ -593,7 +598,7 @@ def _quantity(folded: str, tokens: Sequence[str]) -> Decimal | None:
                 for index in range(position + 1, min(position + 3, len(tokens)))
             )
             if near_unit or has_trigger:
-                value = Decimal(_NUMBER_WORDS[token])
+                value = _NUMBER_WORDS[token]
                 return value if value > 0 else None
     return None
 
