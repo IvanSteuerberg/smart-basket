@@ -14,6 +14,9 @@ sources:
   - id: eval
     resource: /evaluation/agent-evaluation.md
     title: Recommender agent evaluation (I13)
+  - id: st10
+    resource: ../../docs/memoria-prompts/entradas/noviembre.tex
+    title: Señal de Tiempo 10
 ---
 # Context
 
@@ -35,10 +38,12 @@ The `k = 3` evaluation ([agent-evaluation.md](/evaluation/agent-evaluation.md)) 
 # Consequences
 
 * All four pre-registered ADR 0022 acceptance targets are met by the selected model (`gemini-3.5-flash-lite`), and the +68.7 pp ablation gap provides quantitative evidence for the defence that the agent loop adds value over fixed rules.
-* p95 latency on `gemini-3.5-flash-lite` is 954 ms (slightly above the 800 ms target for local models, well within the interactive shopper budget because the initial basket still comes from the fast deterministic pipeline).
-* Because the model choice moves the online recommender to cloud fallback rather than local-first, the author can record this as Señal de Tiempo 10 if desired.
+* DeepSeek V4.1 Flash (Señal de Tiempo 10, without project context and with primary-source verification) confirmed that Google's official Decisions API documentation explicitly states there is no dedicated prompt-injection defense or `system_prompt` channel, and that exact probability ties break alphabetically by key — reinforcing both the rejection of `gemini-decision-1` for online use and the architectural rule to pass only sanitized canonical labels rather than raw catalog strings.
+* p95 latency on `gemini-3.5-flash-lite` is 954 ms (slightly above the 800 ms target for local models, well within the interactive shopper budget because the initial basket still comes from the fast deterministic pipeline). At MVP scale cost is negligible (~$0.0005/decision); at 1,000 concurrent users the bottleneck is RPM rate limits, sized by the exception ratio rather than total baskets.
+* Model catalogs rotate roughly every 12 months, so the explicit model ID is pinned and the 41-scenario harness remains model-agnostic for periodic re-baselining.
 
 # Revisit when
 
-* A local model (on Arc GPU or newer small model) achieves >= 85 % on the frozen set with 0 unrequested changes and p95 <= 800 ms.
-* Gemini Decision API adds a system-prompt channel or reaches 100 % on the frozen injection split.
+* Any local option (discrete GPU, Intel Arc measured with OpenVINO/INT4, or a new small Spanish model) meets the pre-registered rule on the frozen 41×3 harness (lower 95 % Wilson bound within 3 pp of the best option and p95 <= 800 ms).
+* Gemini Decisions API adds a system-prompt channel or reaches 100 % on the frozen injection split.
+* A cheaper equivalent cloud model (e.g. `gemini-3.1-flash-lite`) or a mandatory model deprecation triggers a quarterly re-baseline.
