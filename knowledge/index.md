@@ -54,8 +54,10 @@ Engineering knowledge for Smart Basket, structured as an [Open Knowledge Format]
 * [0020 Rule-based canonical matching and canonical baskets](/decisions/0020-rule-based-canonical-matching.md) - Products assigned to canonicals by rules with a review queue decided by the author, decisions re-applied by chain and SKU from outside the repository, and list lines resolved through canonicals with vague terms asked.
 * [0021 Supermarket-style web and low-friction list](/decisions/0021-supermarket-style-web.md) - Catalog with photos, generic and concrete products, Tailwind and logos, cart lines that say what they accept, a one-screen typed list and a minimal browser profile.
 * [0022 Recommender agent and system agents](/decisions/0022-recommender-agent-and-system-agents.md) - The recommender is a rational agent with a perceive-act loop started on observations and a closed action set in a shared harness; three agents coordinate through the database with graded autonomy; the model is chosen by a rule fixed before measuring.
+* [0023 Recommender agent model selection](/decisions/0023-recommender-agent-model.md) - Gemini 3.5 Flash-Lite selected for the recommender agent's perceive-act loop after passing all four pre-registered ADR 0022 targets (92.9 % exceptions, 100 % zero-change on safety, +68.7 pp over ablation); DefaultPolicy stays as degraded fallback.
 
 ## Evaluation
 
 * [AI model benchmark](/evaluation/ai-model-benchmark.md) - How the candidate LLMs and embedding models are measured on the laptop, and the rule that picks them.
+* [Recommender agent evaluation (I13)](/evaluation/agent-evaluation.md) - Frozen 41-scenario k=3 benchmark comparing DefaultPolicy ablation, Gemini 3.5 Flash-Lite, and Gemini Decision 1 with deterministic state verdicts.
 * [Recommender evaluation plan](/evaluation/recommender-evaluation.md) - Optimizer correctness, data quality, savings against baselines, robustness, performance, usability and BI.

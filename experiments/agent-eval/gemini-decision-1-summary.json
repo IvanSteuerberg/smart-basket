@@ -1,0 +1,154 @@
+{
+  "scenario_count": 41,
+  "scenario_sha256": "e4f2b4e7ba30fcf95c48bfe8180f1b012c9609a4f3c6d834894f1d44f9c4ac0e",
+  "policy_name": "gemini_decision",
+  "model_name": "gemini-decision-1",
+  "k": 3,
+  "overall": {
+    "scenario_count": 41,
+    "runs": 123,
+    "strict_rate": 0.6829268292682927,
+    "solved_rate": 0.8292682926829268,
+    "solved_wilson_95": [
+      0.7530592530815491,
+      0.8855332130812957
+    ],
+    "pass_at_k": 0.8292682926829268,
+    "p50_ms": 263.1403980049072,
+    "p95_ms": 515.5944074940637
+  },
+  "groups": {
+    "injection": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 0.5,
+      "solved_rate": 0.5,
+      "solved_wilson_95": [
+        0.2537815976337061,
+        0.7462184023662939
+      ],
+      "pass_at_k": 0.5,
+      "p50_ms": 214.04184199491283,
+      "p95_ms": 447.7140642462473
+    },
+    "long_list": {
+      "scenario_count": 3,
+      "runs": 9,
+      "strict_rate": 0.6666666666666666,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7008549515804559,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 290.70958599913865,
+      "p95_ms": 469.50133120117243
+    },
+    "missing_everywhere": {
+      "scenario_count": 7,
+      "runs": 21,
+      "strict_rate": 0.42857142857142855,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.8453609810751531,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 307.26559400500264,
+      "p95_ms": 625.7721839938313
+    },
+    "mode_and_what_if": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7575059933447592,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 293.8451024965616,
+      "p95_ms": 541.8623775985906
+    },
+    "near_tie": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 0.0,
+      "solved_rate": 0.25,
+      "solved_wilson_95": [
+        0.08894166839405471,
+        0.5323053349335657
+      ],
+      "pass_at_k": 0.25,
+      "p50_ms": 453.33646099606995,
+      "p95_ms": 624.3605714022124
+    },
+    "no_change": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7575059933447592,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 271.4924219981185,
+      "p95_ms": 455.31003630312625
+    },
+    "shopper_requests": {
+      "scenario_count": 9,
+      "runs": 27,
+      "strict_rate": 0.7777777777777778,
+      "solved_rate": 0.7777777777777778,
+      "solved_wilson_95": [
+        0.5924307113336742,
+        0.8939276054763996
+      ],
+      "pass_at_k": 0.7777777777777778,
+      "p50_ms": 243.6738830001559,
+      "p95_ms": 455.83596479846165
+    },
+    "vague_line": {
+      "scenario_count": 6,
+      "runs": 18,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.8241207763533425,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 248.55675650178455,
+      "p95_ms": 353.9476781988921
+    }
+  },
+  "exceptions": {
+    "scenario_count": 33,
+    "runs": 99,
+    "strict_rate": 0.6666666666666666,
+    "solved_rate": 0.8484848484848485,
+    "solved_wilson_95": [
+      0.7649588925157853,
+      0.9059767475581533
+    ],
+    "pass_at_k": 0.8484848484848485,
+    "p50_ms": 265.47907799249515,
+    "p95_ms": 529.7222539928039
+  },
+  "no_change_and_injection": {
+    "scenario_count": 8,
+    "runs": 24,
+    "strict_rate": 0.75,
+    "solved_rate": 0.75,
+    "solved_wilson_95": [
+      0.55100555994846,
+      0.8800063377140499
+    ],
+    "pass_at_k": 0.75,
+    "p50_ms": 227.3576445004437,
+    "p95_ms": 450.81624225058476,
+    "unrequested_changes_count": 6,
+    "zero_change_rate": 0.75
+  }
+}
