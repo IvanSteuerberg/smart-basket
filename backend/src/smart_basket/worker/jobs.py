@@ -6,12 +6,16 @@ from datetime import date
 from sqlalchemy import text
 
 from smart_basket import stores
-from smart_basket.config import get_settings
+from smart_basket.agent.catalog_executors import run_catalog_agent
+from smart_basket.config import Settings, get_settings
 from smart_basket.db import session_scope
 from smart_basket.ingestion.__main__ import ADAPTERS
 from smart_basket.ingestion.store import ingest_catalog, log_ingest_summary
+from smart_basket.llm.base import LLMError
+from smart_basket.llm.embeddings import embedding_provider_from_settings
 from smart_basket.matching import run as run_matching
 from smart_basket.matching import sync_decisions
+from smart_basket.matching.embeddings import embed_missing_canonicals, embed_missing_products
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +49,32 @@ def ingest_catalogs() -> None:
             match_products()
         except Exception:
             log.exception("product classification failed")
+        # Rule-based matching comes first; the catalog agent only refines what it left behind
+        # and must never make the ingestion job depend on an AI provider (ADR 0022, NFR-09).
+        _run_catalog_agent_step(settings)
+
+
+def _run_catalog_agent_step(settings: Settings) -> None:
+    """Embed the new catalog text and let the catalog agent refine the rule-based matching.
+
+    A missing API key, an unreachable provider or a malformed batch is logged and skipped: the
+    ingestion job keeps its result from the rule-based matching instead of failing (NFR-09).
+    """
+    try:
+        provider = embedding_provider_from_settings(settings)
+        with session_scope() as session:
+            embedded_canonicals = embed_missing_canonicals(session, provider)
+            embedded_products = embed_missing_products(session, provider)
+            summary = run_catalog_agent(session)
+    except (LLMError, ValueError) as error:
+        log.warning("catalog agent step skipped: %s", error)
+        return
+    log.info(
+        "catalog agent: %s canonicals and %s products embedded; %s",
+        embedded_canonicals,
+        embedded_products,
+        summary,
+    )
 
 
 def import_stores() -> None:

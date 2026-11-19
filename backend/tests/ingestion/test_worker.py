@@ -1,11 +1,13 @@
 """The worker's catalog job and the ingestion settings, without network or database."""
 
 import logging
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 
 from smart_basket.config import Settings
 from smart_basket.ingestion.__main__ import ChainEntry
+from smart_basket.llm.base import LLMError
 from smart_basket.worker import jobs
 
 
@@ -141,3 +143,68 @@ def test_a_classifier_error_is_logged_as_a_classification_error(monkeypatch, cap
     messages = [record.getMessage() for record in caplog.records]
     assert "product classification failed" in messages
     assert not any(message.startswith("catalog ingestion failed") for message in messages)
+
+
+def test_the_catalog_agent_runs_after_the_classifier(monkeypatch):
+    _patch_ingestion(monkeypatch)
+    calls = []
+    monkeypatch.setattr(jobs, "match_products", lambda: calls.append("match"))
+    monkeypatch.setattr(jobs, "_run_catalog_agent_step", lambda settings: calls.append("agent"))
+
+    jobs.ingest_catalogs()
+
+    assert calls == ["match", "agent"]
+
+
+def test_the_catalog_agent_does_not_run_without_a_successful_ingestion(monkeypatch):
+    _patch_ingestion(monkeypatch, failing=("W1", "W2"))
+    calls = []
+    monkeypatch.setattr(jobs, "match_products", lambda: None)
+    monkeypatch.setattr(jobs, "_run_catalog_agent_step", lambda settings: calls.append("agent"))
+
+    jobs.ingest_catalogs()
+
+    assert calls == []
+
+
+def test_the_catalog_agent_step_embeds_and_runs(monkeypatch):
+    settings = Settings(_env_file=None)
+    provider = object()
+    events = []
+    monkeypatch.setattr(jobs, "embedding_provider_from_settings", lambda s: provider)
+    monkeypatch.setattr(jobs, "session_scope", lambda: nullcontext(object()))
+    monkeypatch.setattr(
+        jobs,
+        "embed_missing_canonicals",
+        lambda session, p: events.append(("canonicals", p)) or 1,
+    )
+    monkeypatch.setattr(
+        jobs,
+        "embed_missing_products",
+        lambda session, p: events.append(("products", p)) or 2,
+    )
+    monkeypatch.setattr(
+        jobs,
+        "run_catalog_agent",
+        lambda session: events.append(("agent", session)) or {"assigned": 0},
+    )
+
+    jobs._run_catalog_agent_step(settings)
+
+    assert events[0] == ("canonicals", provider)
+    assert events[1] == ("products", provider)
+    assert events[2][0] == "agent"
+
+
+def test_the_catalog_agent_step_survives_a_provider_error(monkeypatch, caplog):
+    settings = Settings(_env_file=None)
+
+    def fail(settings):
+        raise LLMError("EMBEDDING_PROVIDER=gemini needs GEMINI_API_KEY")
+
+    monkeypatch.setattr(jobs, "embedding_provider_from_settings", fail)
+    with caplog.at_level(logging.WARNING, logger=jobs.log.name):
+        jobs._run_catalog_agent_step(settings)
+
+    messages = [record.getMessage() for record in caplog.records]
+    assert any(message.startswith("catalog agent step skipped") for message in messages)
