@@ -1,0 +1,286 @@
+"""Dia crawls against a fake transport, never the real site or a real browser."""
+
+import json
+import sys
+from typing import Any
+from urllib.parse import parse_qs, urlparse
+
+from smart_basket.config import Settings
+from smart_basket.ingestion import __main__ as cli
+from smart_basket.ingestion.base import CrawlError, RawResponse, collect
+from smart_basket.ingestion.dia import DiaAdapter, PlaywrightDiaTransport
+
+
+class FakeDiaTransport:
+    """Serves synthetic pages keyed by (`navigation`, `page`) and records every request."""
+
+    def __init__(self, responses: dict[tuple[str, int], tuple[int, Any]]) -> None:
+        self.responses = responses
+        self.postal_codes: list[str] = []
+        self.calls: list[str] = []
+        self.closed = False
+
+    def set_postal_code(self, postal_code: str) -> None:
+        self.postal_codes.append(postal_code)
+
+    def fetch_json(self, path_and_query: str) -> tuple[int, bytes]:
+        self.calls.append(path_and_query)
+        query = parse_qs(urlparse(path_and_query).query)
+        navigation = query.get("navigation", [""])[0]
+        page = int(query.get("page", ["1"])[0])
+        status, payload = self.responses.get(
+            (navigation, page), (200, {"page_product_analytics": {"products": []}})
+        )
+        body = payload if isinstance(payload, bytes) else json.dumps(payload).encode("utf-8")
+        return status, body
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def menu_payload() -> dict[str, Any]:
+    return {
+        "menu_analytics": {
+            "menu": [
+                {
+                    "code": "L1_bebidas",
+                    "name": "Bebidas",
+                    "children": [
+                        {"code": "L2_agua", "name": "Agua"},
+                        {"code": "L2_refrescos", "name": "Refrescos"},
+                        {"code": "L2_todo_bebidas", "name": "Todo en bebidas"},
+                    ],
+                },
+                {
+                    "code": "L1_limpieza",
+                    "name": "Limpieza",
+                    "children": [{"code": "L2_hogar", "name": "Hogar"}],
+                },
+            ]
+        }
+    }
+
+
+def product(sku: str, name: str, price: str) -> dict[str, Any]:
+    return {
+        "object_id": sku,
+        "display_name": name,
+        "prices_price": price,
+        "stock_availability": True,
+        "url": f"/supermercado/{sku}",
+    }
+
+
+def pages(
+    overrides: dict[tuple[str, int], tuple[int, Any]] | None = None,
+) -> dict[tuple[str, int], tuple[int, Any]]:
+    responses: dict[tuple[str, int], tuple[int, Any]] = {
+        ("L1_todo", 1): (200, menu_payload()),
+        ("L2_agua", 1): (
+            200,
+            {
+                "page_product_analytics": {
+                    "products": [
+                        product("1", "Agua 1,5 l", "0,65"),
+                        product("2", "Agua 33 cl", "0,25"),
+                    ]
+                }
+            },
+        ),
+        ("L2_agua", 2): (200, {"page_product_analytics": {"products": []}}),
+        ("L2_refrescos", 1): (
+            200,
+            {"page_product_analytics": {"products": [product("3", "Refresco 6 x 33 cl", "1,80")]}},
+        ),
+        ("L2_hogar", 1): (
+            200,
+            {"page_product_analytics": {"products": [product("4", "Detergente 1 l", "2,50")]}},
+        ),
+    }
+    if overrides:
+        responses.update(overrides)
+    return responses
+
+
+def crawl(
+    transport: FakeDiaTransport,
+    *,
+    max_categories: int | None = None,
+    max_pages: int = 50,
+):
+    adapter = DiaAdapter(transport=transport, delay_seconds=0.0, max_pages=max_pages)
+    return collect(adapter, "24001", max_categories=max_categories)
+
+
+def test_crawl_binds_the_postal_code_and_walks_the_whole_tree():
+    transport = FakeDiaTransport(pages())
+
+    result = crawl(transport)
+
+    assert transport.postal_codes == ["24001"]
+    assert result.status == "succeeded"
+    assert result.complete is True
+    assert result.errors == ()
+    assert {category.code for category in result.categories} == {
+        "bebidas",
+        "agua",
+        "refrescos",
+        "limpieza",
+        "hogar",
+    }
+    prices = {entry.sku: str(entry.price) for entry in result.products}
+    assert prices == {"1": "0.65", "2": "0.25", "3": "1.80", "4": "2.50"}
+    assert next(raw.url for raw in result.raw) == (
+        "/api/v1/plp-insight/initial_analytics?navigation=L1_todo&page=1"
+    )
+    assert len(result.raw) == 7
+
+
+def test_pagination_stops_on_an_empty_page():
+    transport = FakeDiaTransport(pages())
+
+    result = crawl(transport)
+
+    assert any("navigation=L2_agua&page=1" in call for call in transport.calls)
+    assert any("navigation=L2_agua&page=2" in call for call in transport.calls)
+    assert not any("navigation=L2_agua&page=3" in call for call in transport.calls)
+    assert {entry.sku for entry in result.products} == {"1", "2", "3", "4"}
+
+
+def test_pagination_stops_when_a_page_repeats_every_sku():
+    transport = FakeDiaTransport(
+        pages(
+            {
+                ("L2_agua", 2): (
+                    200,
+                    {"page_product_analytics": {"products": [product("1", "Agua 1,5 l", "0,65")]}},
+                )
+            }
+        )
+    )
+
+    result = crawl(transport)
+
+    assert [call for call in transport.calls if "navigation=L2_agua" in call] == [
+        "/api/v1/plp-insight/initial_analytics?navigation=L2_agua&page=1",
+        "/api/v1/plp-insight/initial_analytics?navigation=L2_agua&page=2",
+    ]
+    assert {entry.sku for entry in result.products} == {"1", "2", "3", "4"}
+
+
+def test_max_pages_caps_a_listing_that_never_ends():
+    transport = FakeDiaTransport(
+        {
+            ("L1_todo", 1): (200, menu_payload()),
+            **{
+                ("L2_agua", page): (
+                    200,
+                    {
+                        "page_product_analytics": {
+                            "products": [product(str(page), f"Agua {page} l", "1,00")]
+                        }
+                    },
+                )
+                for page in range(1, 10)
+            },
+        }
+    )
+
+    result = crawl(transport, max_pages=3)
+
+    agua_calls = [call for call in transport.calls if "navigation=L2_agua" in call]
+    assert len(agua_calls) == 3
+    assert {entry.sku for entry in result.products} >= {"1", "2", "3"}
+    assert "9" not in {entry.sku for entry in result.products}
+
+
+def test_max_categories_limits_the_level_two_pages():
+    transport = FakeDiaTransport(pages())
+
+    result = crawl(transport, max_categories=1)
+
+    assert result.status == "succeeded"
+    assert result.complete is False
+    assert not any("navigation=L2_refrescos" in call for call in transport.calls)
+    assert not any("navigation=L2_hogar" in call for call in transport.calls)
+    assert {entry.sku for entry in result.products} == {"1", "2"}
+    # The tree is still reported: only the paging is limited.
+    assert {category.code for category in result.categories} == {
+        "bebidas",
+        "agua",
+        "refrescos",
+        "limpieza",
+        "hogar",
+    }
+
+
+def test_a_non_200_menu_ends_the_run_with_a_crawl_error():
+    transport = FakeDiaTransport({("L1_todo", 1): (500, b"")})
+
+    result = crawl(transport)
+
+    assert result.status == "partial"
+    assert result.complete is False
+    assert result.categories == ()
+    assert result.products == ()
+    assert len(result.errors) == 1
+    assert isinstance(result.errors[0], CrawlError)
+    assert "HTTP 500" in result.errors[0].error
+
+
+def test_a_non_200_listing_page_is_reported_and_the_next_category_continues():
+    transport = FakeDiaTransport(pages({("L2_agua", 1): (500, b"")}))
+
+    result = crawl(transport)
+
+    assert result.status == "partial"
+    assert result.complete is False
+    assert "navigation=L2_agua&page=1" in result.errors[0].url
+    assert {entry.sku for entry in result.products} == {"3", "4"}
+
+
+def test_invalid_json_is_reported_as_a_crawl_error():
+    transport = FakeDiaTransport({("L1_todo", 1): (200, b"not json")})
+
+    result = crawl(transport)
+
+    assert result.status == "partial"
+    assert result.errors[0].error == "invalid JSON"
+
+
+def test_close_closes_the_injected_transport():
+    transport = FakeDiaTransport(pages())
+    adapter = DiaAdapter(transport=transport, delay_seconds=0.0)
+
+    adapter.close()
+
+    assert transport.closed is True
+
+
+def test_dia_is_registered_in_the_cli_with_its_postal_code_zones():
+    entry = cli.ADAPTERS["dia"]
+    settings = Settings(_env_file=None, dia_zones="24001, 03001")
+
+    assert entry.adapter is DiaAdapter
+    assert entry.zones(settings) == ["24001", "03001"]
+    assert DiaAdapter.zone_kind == "postal_code"
+
+
+def test_importing_the_adapter_does_not_need_playwright():
+    assert "playwright.sync_api" not in sys.modules
+    adapter = DiaAdapter(delay=0.0)
+    try:
+        assert isinstance(adapter._transport, PlaywrightDiaTransport)
+    finally:
+        adapter.close()
+
+
+def test_raw_response_archives_carry_the_body_bytes():
+    transport = FakeDiaTransport(pages())
+
+    result = crawl(transport)
+
+    menu = result.raw[0]
+    assert isinstance(menu, RawResponse)
+    assert menu.status_code == 200
+    assert b"menu_analytics" in menu.body
