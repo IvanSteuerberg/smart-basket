@@ -26,6 +26,7 @@ smart-basket-lexicon = "smart_basket.vocabulary.__main__:main"
 smart-basket-ingest = "smart_basket.ingestion.__main__:main"
 smart-basket-stores = "smart_basket.stores.__main__:main"
 smart-basket-match = "smart_basket.matching.__main__:main"
+smart-basket-agent-eval = "smart_basket.agent.eval_cli:main"
 
 [dependency-groups]
 dev = [
