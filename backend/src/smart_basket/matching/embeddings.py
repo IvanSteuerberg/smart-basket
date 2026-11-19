@@ -155,13 +155,14 @@ def nearest_canonicals(
     """The `top_k` canonicals closest to `embedding`, by descending cosine similarity."""
     if top_k <= 0:
         return []
+    _check_vector(embedding)
     rows = session.execute(
         text(
             "select cp.id as canonical_id, cp.category_id, cat.key as category_key, cp.name, "
             "  cp.variant_key, 1 - (cp.embedding <=> cast(:vec as vector)) as similarity "
             "from canonical_product cp "
             "join category cat on cat.id = cp.category_id "
-            "where cp.embedding is not null "
+            "where cp.embedding is not null and cp.merged_into is null "
             "order by cp.embedding <=> cast(:vec as vector) asc "
             "limit :top_k"
         ),
@@ -193,6 +194,8 @@ def cluster_unmatched_products(
     connected component of `min_cluster_size` or more products becomes one `ProductCluster`,
     with the mean of the similarities that joined it. Ordered by their smallest product id.
     """
+    if min_cluster_size < 2:
+        raise ValueError("min_cluster_size must be at least 2")
     chain_filter = "" if chain_code is None else "and ch.code = :chain"
     params: dict[str, object] = {} if chain_code is None else {"chain": chain_code}
     products = list(

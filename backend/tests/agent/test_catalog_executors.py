@@ -105,12 +105,13 @@ def add_canonical(
     embedding: Sequence[float] | None = None,
     base_unit: str = "kg",
     variant_key: str = "",
+    merged_into: int | None = None,
 ) -> int:
     return world.session.execute(
         text(
             "insert into canonical_product "
-            "  (category_id, name, variant_key, base_unit, embedding) "
-            "values (:category, :name, :variant, :unit, cast(:vec as vector)) returning id"
+            "  (category_id, name, variant_key, base_unit, embedding, merged_into) "
+            "values (:category, :name, :variant, :unit, cast(:vec as vector), :merged) returning id"
         ),
         {
             "category": world.categories[category_key],
@@ -118,6 +119,7 @@ def add_canonical(
             "variant": variant_key,
             "unit": base_unit,
             "vec": None if embedding is None else _literal(embedding),
+            "merged": merged_into,
         },
     ).scalar_one()
 
@@ -218,6 +220,27 @@ def test_nearest_canonicals_orders_by_cosine_similarity(db):
     assert matches[0].name == "Alfa"
     assert matches[0].category_key == "platano"
     assert len(nearest_canonicals(world.session, vector(1, 0, 0), top_k=1)) == 1
+
+
+def test_nearest_canonicals_skips_merged_canonicals(db):
+    world = db
+    survivor = add_canonical(world, "platano", "Alfa", embedding=vector(1, 0, 0))
+    add_canonical(
+        world,
+        "platano",
+        "Alfa (antiguo)",
+        embedding=vector(1, 0, 0),
+        merged_into=survivor,
+    )
+
+    matches = nearest_canonicals(world.session, vector(1, 0, 0), top_k=5)
+
+    assert [match.canonical_id for match in matches] == [survivor]
+
+
+def test_cluster_unmatched_products_rejects_trivial_cluster_size(db):
+    with pytest.raises(ValueError, match="min_cluster_size"):
+        cluster_unmatched_products(db.session, min_cluster_size=1)
 
 
 def test_cluster_unmatched_products_groups_close_products(db):
@@ -332,6 +355,49 @@ def test_assign_canonical_refuses_protected_and_low_confidence(db):
     )
     assert row["canonical_id"] == canonical
     assert row["match_method"] == "review"
+
+
+def test_assign_canonical_refuses_ean_and_embedding(db):
+    world = db
+    canonical = add_canonical(world, "platano", "Plátano de Canarias", embedding=vector(1, 0, 0))
+    other = add_canonical(world, "manzana", "Manzana", embedding=vector(0, 1, 0))
+    products = {
+        method: add_product(
+            world,
+            f"P-{method}",
+            "Plátano",
+            canonical_id=canonical,
+            match_method=method,
+            embedding=vector(1, 0, 0),
+        )
+        for method in ("ean", "embedding")
+    }
+
+    for method, product in products.items():
+        problem = validate_action(
+            world,
+            CatalogActionKind.ASIGNAR_CANONICO,
+            {
+                "product_id": product,
+                "canonical_id": other,
+                "confidence": 0.95,
+            },
+        )
+        assert problem is not None
+        assert method in problem
+
+    untouched = (
+        world.session.execute(
+            text("select canonical_id, match_method from chain_product where id = any(:ids)"),
+            {"ids": list(products.values())},
+        )
+        .mappings()
+        .all()
+    )
+    assert {(row["canonical_id"], row["match_method"]) for row in untouched} == {
+        (canonical, "ean"),
+        (canonical, "embedding"),
+    }
 
 
 def test_propose_new_leaf_creates_category_and_undo_reverts_it(db):
@@ -496,6 +562,76 @@ def test_propose_new_leaf_enforces_signals_and_products(db):
     )
     assert few_products is not None
     assert "products" in few_products
+
+
+def test_propose_new_leaf_rejects_duplicate_product_ids(db):
+    world = db
+    product = add_product(world, "T1", "Tahini integral")
+
+    problem = validate_action(
+        world,
+        CatalogActionKind.PROPONER_HOJA_NUEVA,
+        {
+            "label": "Tahini",
+            "signals": ["embedding", "name_tokens"],
+            "product_ids": [product, product, product],
+        },
+    )
+
+    assert problem is not None
+    assert "grouped products" in problem
+    categories = world.session.execute(
+        text("select count(*) from category where key = 'tahini'")
+    ).scalar_one()
+    assert categories == 0
+
+
+def test_undo_leaf_proposal_spares_products_reassigned_to_review(db):
+    world = db
+    tahini = [
+        add_product(world, "T1", "Tahini integral", embedding=vector(0, 1, 0)),
+        add_product(world, "T2", "Tahini blanco", embedding=vector(0, 1, 0.15)),
+        add_product(world, "T3", "Tahini ecológico", embedding=vector(0, 1, 0.3)),
+    ]
+    state = run_action(
+        world,
+        CatalogActionKind.PROPONER_HOJA_NUEVA,
+        {
+            "cluster_id": "cluster_1",
+            "label": "Tahini",
+            "signals": ["embedding", "category", "name_tokens"],
+            "product_ids": tahini,
+        },
+    )
+    record = state.leaf_proposals[0]
+    world.session.execute(
+        text("update chain_product set match_method = 'review' where id = :product"),
+        {"product": tahini[0]},
+    )
+
+    undone = undo_leaf_proposal(world.session, record["proposal_id"])
+
+    assert undone["status"] == "undone"
+    assert undone["products_cleared"] == 2
+    assert undone["reviews_queued"] == 2
+    spared = (
+        world.session.execute(
+            text("select canonical_id, match_method from chain_product where id = :product"),
+            {"product": tahini[0]},
+        )
+        .mappings()
+        .one()
+    )
+    assert spared["canonical_id"] == record["canonical_id"]
+    assert spared["match_method"] == "review"
+    pending = world.session.execute(
+        text(
+            "select count(*) from match_review "
+            "where chain_product_id = :product and status = 'pending'"
+        ),
+        {"product": tahini[0]},
+    ).scalar_one()
+    assert pending == 0
 
 
 def test_run_catalog_agent_persists_its_trace(db):

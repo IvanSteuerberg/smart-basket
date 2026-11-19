@@ -215,13 +215,25 @@ def undo_leaf_proposal(session: Session, proposal_id: int) -> dict[str, Any]:
 
     cleared: list[int] = []
     with session.begin_nested():
-        session.execute(
+        claimed = session.execute(
             text(
                 "update catalog_leaf_proposal set status = 'undone', undone_at = now() "
-                "where id = :id and status = 'applied'"
+                "where id = :id and status = 'applied' returning id"
             ),
             {"id": proposal_id},
-        )
+        ).scalar_one_or_none()
+        if claimed is None:
+            current = session.execute(
+                text("select status from catalog_leaf_proposal where id = :id"),
+                {"id": proposal_id},
+            ).scalar_one()
+            return {
+                "proposal_id": proposal_id,
+                "status": current,
+                "products_cleared": 0,
+                "reviews_queued": 0,
+                "already_undone": True,
+            }
         product_ids = [int(value) for value in row.product_ids_json]
         canonical_ids = list(
             session.execute(
@@ -290,7 +302,8 @@ def calibrate_thresholds(
                 "  1 - (s.embedding <=> oc.embedding) as own_similarity, "
                 "  (select max(1 - (s.embedding <=> c.embedding)) "
                 "     from canonical_product c "
-                "    where c.embedding is not null and c.id <> s.canonical_id) as best_other "
+                "    where c.embedding is not null and c.merged_into is null "
+                "      and c.id <> s.canonical_id) as best_other "
                 "from ("
                 "  select cp.id as product_id, cp.canonical_id, cp.embedding "
                 "  from chain_product cp "
@@ -299,7 +312,7 @@ def calibrate_thresholds(
                 "  order by cp.id limit :sample_size"
                 ") s "
                 "join canonical_product oc on oc.id = s.canonical_id "
-                "  and oc.embedding is not null"
+                "  and oc.embedding is not null and oc.merged_into is null"
             ),
             params,
         ).mappings()
@@ -494,12 +507,13 @@ class _DbProposeNewLeaf:
                 f"proponer_hoja_nueva needs {MIN_SIGNALS_FOR_NEW_LEAF} independent signals, "
                 f"got {len(signals)}"
             )
-        products = payload["product_ids"]
+        products = list(dict.fromkeys(payload["product_ids"]))
         if len(products) < MIN_PRODUCTS_FOR_NEW_LEAF:
             return (
                 f"proponer_hoja_nueva needs {MIN_PRODUCTS_FOR_NEW_LEAF} grouped products, "
                 f"got {len(products)}"
             )
+        payload["product_ids"] = tuple(products)
         label = payload["label"]
         if label is None:
             return "proponer_hoja_nueva needs a label"
@@ -549,6 +563,7 @@ class _DbProposeNewLeaf:
         parent_id = payload["parent_category_id"]
         level = payload["parent_level"] + 1 if parent_id is not None else 3
         name = label
+        unit = self._base_unit(products)
         with self.session.begin_nested():
             category_key = _unique_category_key(self.session, _slugify(label))
             category_id = self.session.execute(
@@ -562,7 +577,7 @@ class _DbProposeNewLeaf:
                     "name": name,
                     "level": level,
                     "parent": parent_id,
-                    "unit": self._base_unit(products),
+                    "unit": unit,
                 },
             ).scalar_one()
             self.session.execute(
@@ -587,7 +602,7 @@ class _DbProposeNewLeaf:
                     "  (category_id, name, variant_key, base_unit) "
                     "values (:category, :name, '', :unit) returning id"
                 ),
-                {"category": category_id, "name": name, "unit": self._base_unit(products)},
+                {"category": category_id, "name": name, "unit": unit},
             ).scalar_one()
             assigned = list(
                 self.session.execute(
