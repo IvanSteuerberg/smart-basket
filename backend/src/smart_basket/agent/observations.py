@@ -28,7 +28,8 @@ class Observation:
     """One phenomenon observed in the list or in the plan.
 
     `details` carries the typed evidence the actions need (candidate options, a target
-    quantity, an extra stop...) and must hold JSON-safe values.
+    quantity, an extra stop...). It may hold rich Python values while the run is in memory, but
+    serialization normalizes it to JSON-native primitives (see `jsonable`).
     """
 
     kind: ObservationKind
@@ -41,7 +42,7 @@ class Observation:
             "kind": self.kind.value,
             "summary": self.summary,
             "line_index": self.line_index,
-            "details": _jsonable(self.details),
+            "details": jsonable(self.details),
         }
 
     @classmethod
@@ -54,14 +55,20 @@ class Observation:
         )
 
 
-def _jsonable(value: Any) -> Any:
-    """Convert decimals, enums, mappings and sequences into JSON-safe values."""
+def jsonable(value: Any) -> Any:
+    """Normalize `value` to JSON-native primitives for serialization.
+
+    Free-form fields (`Observation.details`, `LineState.candidate_options`,
+    `CandidateAction.args`...) follow one contract: on serialization they become `str`, `int`,
+    `float`, `bool`, `None`, `list` or `dict`. `Decimal` travels as `str` so no precision is
+    lost, and enums travel as their value.
+    """
     if isinstance(value, Decimal):
         return str(value)
     if isinstance(value, StrEnum):
         return value.value
     if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
+        return {str(key): jsonable(item) for key, item in value.items()}
     if isinstance(value, tuple | list):
-        return [_jsonable(item) for item in value]
+        return [jsonable(item) for item in value]
     return value

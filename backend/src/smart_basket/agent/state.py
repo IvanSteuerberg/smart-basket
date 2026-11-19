@@ -13,7 +13,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from smart_basket.agent.observations import Observation, _jsonable
+from smart_basket.agent.observations import Observation, jsonable
 
 
 class RunStatus(StrEnum):
@@ -87,8 +87,8 @@ class LineState:
             "exact_only": self.exact_only,
             "status": self.status,
             "habit": self.habit.to_dict() if self.habit is not None else None,
-            "candidate_options": _jsonable(self.candidate_options),
-            "substitute_options": _jsonable(self.substitute_options),
+            "candidate_options": jsonable(self.candidate_options),
+            "substitute_options": jsonable(self.substitute_options),
         }
 
     @classmethod
@@ -182,7 +182,7 @@ class PendingQuestion:
         return {
             "line_index": self.line_index,
             "prompt": self.prompt,
-            "options": _jsonable(self.options),
+            "options": jsonable(self.options),
         }
 
     @classmethod
@@ -226,7 +226,7 @@ class AgentState:
             ),
             "shopper_message": self.shopper_message,
             "buyer_summary": self.buyer_summary,
-            "alternatives_shown": _jsonable(self.alternatives_shown),
+            "alternatives_shown": jsonable(self.alternatives_shown),
             "steps_taken": self.steps_taken,
             "status": self.status.value,
         }

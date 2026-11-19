@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Any
 
-from smart_basket.agent.observations import Observation, ObservationKind, _jsonable
+from smart_basket.agent.observations import Observation, ObservationKind, jsonable
 from smart_basket.agent.state import AgentState, LineState
 
 
@@ -35,7 +36,12 @@ class ActionKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class CandidateAction:
-    """One concrete option offered to the policy: a stable `key`, its kind and its arguments."""
+    """One concrete option offered to the policy: a stable `key`, its kind and its arguments.
+
+    `args` may hold rich Python values while the run is in memory; serialization normalizes it
+    to JSON-native primitives (`str`, `int`, `float`, `bool`, `None`, `list`, `dict`), with
+    `Decimal` travelling as `str` (see `jsonable`).
+    """
 
     key: str
     kind: ActionKind
@@ -46,7 +52,7 @@ class CandidateAction:
         return {
             "key": self.key,
             "kind": self.kind.value,
-            "args": _jsonable(self.args),
+            "args": jsonable(self.args),
             "label": self.label,
         }
 
@@ -98,29 +104,41 @@ def valid_actions(state: AgentState, observation: Observation) -> tuple[Candidat
 
 def _vague_line(state: AgentState, observation: Observation) -> list[CandidateAction]:
     line = _line_at(state, observation.line_index)
-    index = observation.line_index
-    options: Sequence[dict[str, Any]] = line.candidate_options if line is not None else ()
-    candidates = [_candidate(ActionKind.PREGUNTAR, line_index=index, options=list(options))]
-    if line is not None and line.habit is not None:
-        candidates.append(_candidate(ActionKind.APLICAR_HABITUAL, line_index=index))
-    if index is not None:
-        candidates.append(_candidate(ActionKind.DEJAR_SIN_COMPRAR, line_index=index))
+    if line is None:
+        # The observation points at a line that is not in the state: never target it. A generic
+        # question is still safe; everything else needs a concrete line.
+        return [_candidate(ActionKind.PREGUNTAR), _no_change()]
+    candidates = [
+        _candidate(
+            ActionKind.PREGUNTAR,
+            line_index=line.index,
+            options=list(line.candidate_options),
+        )
+    ]
+    if line.habit is not None:
+        candidates.append(_candidate(ActionKind.APLICAR_HABITUAL, line_index=line.index))
+    candidates.append(_candidate(ActionKind.DEJAR_SIN_COMPRAR, line_index=line.index))
     return [*candidates, _no_change()]
 
 
 def _missing_everywhere(state: AgentState, observation: Observation) -> list[CandidateAction]:
     line = _line_at(state, observation.line_index)
-    index = observation.line_index
     substitute_allowed = observation.details.get("substitute_allowed", True) is not False
     candidates: list[CandidateAction] = []
-    if substitute_allowed or (line is not None and line.substitute_options):
-        candidates.append(_candidate(ActionKind.BUSCAR_SUSTITUTO, line_index=index))
-    candidates.append(_candidate(ActionKind.PREGUNTAR, line_index=index))
-    candidates.append(_candidate(ActionKind.DEJAR_SIN_COMPRAR, line_index=index))
-    if line is not None and line.brand_pinned:
-        candidates.append(_candidate(ActionKind.CAMBIAR_MARCA, line_index=index))
+    if line is None:
+        # No valid target line: only line-free actions are safe.
+        candidates.append(_candidate(ActionKind.PREGUNTAR))
+        if _has_extra_stop(observation.details):
+            candidates.append(_candidate(ActionKind.COMPARAR_ESCENARIOS))
+        return [*candidates, _no_change()]
+    if substitute_allowed or line.substitute_options:
+        candidates.append(_candidate(ActionKind.BUSCAR_SUSTITUTO, line_index=line.index))
+    candidates.append(_candidate(ActionKind.PREGUNTAR, line_index=line.index))
+    candidates.append(_candidate(ActionKind.DEJAR_SIN_COMPRAR, line_index=line.index))
+    if line.brand_pinned:
+        candidates.append(_candidate(ActionKind.CAMBIAR_MARCA, line_index=line.index))
     if _has_extra_stop(observation.details):
-        candidates.append(_candidate(ActionKind.COMPARAR_ESCENARIOS, line_index=index))
+        candidates.append(_candidate(ActionKind.COMPARAR_ESCENARIOS, line_index=line.index))
     return [*candidates, _no_change()]
 
 
@@ -141,27 +159,24 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
         _candidate(ActionKind.COMPARAR_ESCENARIOS, mode=other_mode),
     ]
 
-    targets = (
-        (observation.line_index,)
-        if observation.line_index is not None
-        else tuple(line.index for line in state.lines)
-    )
+    # Only existing lines can be targeted; a request naming a missing line still allows the
+    # line-free actions (add an item, exclude a chain, explain, ask).
+    if observation.line_index is not None:
+        line = _line_at(state, observation.line_index)
+        targets = (line.index,) if line is not None else ()
+    else:
+        targets = tuple(line.index for line in state.lines)
+
+    quantity = _positive_quantity(details.get("quantity"))
     for index in targets:
-        candidates.append(
-            _candidate(
-                ActionKind.QUITAR_LINEA,
-                key=f"{ActionKind.QUITAR_LINEA.value}:{index}",
-                line_index=index,
-            )
-        )
-    if details.get("quantity") is not None:
-        for index in targets:
+        candidates.append(_candidate(ActionKind.QUITAR_LINEA, line_index=index, suffix=index))
+        if quantity is not None:
             candidates.append(
                 _candidate(
                     ActionKind.MODIFICAR_CANTIDAD,
-                    key=f"{ActionKind.MODIFICAR_CANTIDAD.value}:{index}",
                     line_index=index,
-                    quantity=str(details["quantity"]),
+                    quantity=str(quantity),
+                    suffix=index,
                 )
             )
     if "brand" in details or details.get("accept_any_brand"):
@@ -169,29 +184,18 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
             candidates.append(
                 _candidate(
                     ActionKind.CAMBIAR_MARCA,
-                    key=f"{ActionKind.CAMBIAR_MARCA.value}:{index}",
                     line_index=index,
                     brand=details.get("brand"),
+                    suffix=index,
                 )
             )
+    # Keys stay opaque: free text from the shopper travels only in `args`, never in the key.
     text = details.get("text")
     if text:
-        candidates.append(
-            _candidate(
-                ActionKind.ANADIR_LINEA,
-                key=f"{ActionKind.ANADIR_LINEA.value}:{text}",
-                text=str(text),
-            )
-        )
+        candidates.append(_candidate(ActionKind.ANADIR_LINEA, text=str(text), suffix=0))
     chain = details.get("chain")
     if chain:
-        candidates.append(
-            _candidate(
-                ActionKind.EXCLUIR_CADENA,
-                key=f"{ActionKind.EXCLUIR_CADENA.value}:{chain}",
-                chain=str(chain),
-            )
-        )
+        candidates.append(_candidate(ActionKind.EXCLUIR_CADENA, chain=str(chain), suffix=0))
     candidates.extend(
         [
             _candidate(ActionKind.EXPLICAR),
@@ -202,13 +206,33 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
     return candidates
 
 
-def _candidate(kind: ActionKind, *, key: str | None = None, **args: Any) -> CandidateAction:
+def _candidate(
+    kind: ActionKind,
+    *,
+    key: str | None = None,
+    suffix: str | int | None = None,
+    **args: Any,
+) -> CandidateAction:
+    """Build a candidate; `suffix` namespaces its key (e.g. `quitar_linea:0`)."""
     return CandidateAction(
-        key=key or kind.value,
+        key=key or (kind.value if suffix is None else f"{kind.value}:{suffix}"),
         kind=kind,
         args=args,
         label=_LABELS[kind],
     )
+
+
+def _positive_quantity(value: Any) -> Decimal | None:
+    """Parse `value` as a finite positive `Decimal`, or return None when it is not one."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        quantity = Decimal(str(value))
+    except InvalidOperation, ValueError:
+        return None
+    if not quantity.is_finite() or quantity <= 0:
+        return None
+    return quantity
 
 
 def _no_change() -> CandidateAction:

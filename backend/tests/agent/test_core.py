@@ -59,6 +59,20 @@ class RejectingExecutor(RecordingExecutor):
         return "rejected by test"
 
 
+class RaisingProposeExecutor(RecordingExecutor):
+    """Executor that blows up in `propose`, before any state is touched."""
+
+    def propose(self, state: AgentState, action: CandidateAction) -> Proposal:
+        raise RuntimeError("propose boom")
+
+
+class RaisingApplyExecutor(RecordingExecutor):
+    """Executor that blows up in `apply`, after validation succeeds."""
+
+    def apply(self, state: AgentState, proposal: Proposal) -> AgentState:
+        raise RuntimeError("apply boom")
+
+
 class StepClock:
     """Fake clock that advances a fixed amount on every read, in milliseconds."""
 
@@ -118,6 +132,7 @@ def test_max_steps_is_a_hard_cap() -> None:
     result = AgentHarness(HarnessConfig(max_steps=6)).run(state, DefaultPolicy(), all_noop())
 
     assert result.status is RunStatus.COMPLETED
+    assert result.stopped_reason == "max_steps"
     assert len(result.steps) == 6
     assert result.state.steps_taken == 6
     assert len(result.state.observations) == 4
@@ -130,6 +145,7 @@ def test_time_budget_stops_the_loop_before_the_next_step() -> None:
     result = harness.run(state, DefaultPolicy(), all_noop(), clock=StepClock(step_ms=4_000))
 
     assert result.status is RunStatus.TIMED_OUT
+    assert result.stopped_reason == "time_budget"
     assert len(result.steps) == 1
 
 
@@ -137,6 +153,7 @@ def test_no_observations_completes_without_steps() -> None:
     result = AgentHarness().run(AgentState(lines=()), DefaultPolicy(), all_noop())
 
     assert result.status is RunStatus.COMPLETED
+    assert result.stopped_reason is None
     assert result.steps == ()
     assert result.state.status is RunStatus.COMPLETED
 
@@ -151,6 +168,7 @@ def test_invalid_action_key_is_retried_once() -> None:
     assert step.used_default is False
     assert step.chosen_action == "no_hacer_nada"
     assert step.error is None
+    assert step.overridden is False
     assert result.status is RunStatus.COMPLETED
 
 
@@ -201,11 +219,14 @@ def test_low_confidence_forces_a_question_and_pauses() -> None:
 
     step = result.steps[0]
     assert step.chosen_action == "preguntar"
+    assert step.overridden is True
     assert executor.applied == ["preguntar"]
     assert result.status is RunStatus.WAITING_SHOPPER
+    assert result.stopped_reason == "waiting_shopper"
     assert result.state.pending_question is not None
     assert result.state.pending_question.line_index == 0
     assert "fruta es vago" in result.state.pending_question.prompt
+    assert StepRecord.from_dict(json.loads(json.dumps(step.to_dict()))) == step
 
 
 def test_validation_failure_prevents_apply_and_keeps_the_state() -> None:
@@ -224,6 +245,67 @@ def test_validation_failure_prevents_apply_and_keeps_the_state() -> None:
     assert result.state.lines == state.lines
     assert result.state.observations == ()
     assert result.status is RunStatus.COMPLETED
+
+
+def test_propose_failure_is_recorded_and_leaves_the_state_intact() -> None:
+    executor = RaisingProposeExecutor()
+    executors = all_noop()
+    executors[ActionKind.DEJAR_SIN_COMPRAR] = executor
+    state = AgentState(lines=(LineState(index=0, raw_text="tahini"),), observations=(_missing(),))
+
+    result = AgentHarness().run(state, DefaultPolicy(), executors)
+
+    step = result.steps[0]
+    assert step.chosen_action == "dejar_sin_comprar"
+    assert step.error is not None
+    assert "propose boom" in step.error
+    assert executor.applied == []
+    assert result.state.lines == state.lines
+    assert result.state.observations == ()
+    assert result.state.steps_taken == 1
+    assert result.status is RunStatus.COMPLETED
+
+
+def test_apply_failure_is_recorded_and_leaves_the_state_intact() -> None:
+    executor = RaisingApplyExecutor()
+    executors = all_noop()
+    executors[ActionKind.DEJAR_SIN_COMPRAR] = executor
+    state = AgentState(lines=(LineState(index=0, raw_text="tahini"),), observations=(_missing(),))
+
+    result = AgentHarness().run(state, DefaultPolicy(), executors)
+
+    step = result.steps[0]
+    assert step.chosen_action == "dejar_sin_comprar"
+    assert step.error is not None
+    assert "apply boom" in step.error
+    assert executor.validated == ["dejar_sin_comprar"]
+    assert result.state.lines == state.lines
+    assert result.state.observations == ()
+    assert result.state.steps_taken == 1
+    assert result.status is RunStatus.COMPLETED
+
+
+def test_resume_requires_a_waiting_shopper_run() -> None:
+    state = AgentState(lines=(), status=RunStatus.COMPLETED)
+
+    with pytest.raises(ValueError, match="waiting_shopper"):
+        AgentHarness().resume(state, {"message": "hola"}, DefaultPolicy(), all_noop())
+
+
+def test_resume_respects_the_hard_step_cap() -> None:
+    paused = AgentState(
+        lines=(LineState(index=0, raw_text="fruta"),),
+        observations=(_near_tie(),),
+        steps_taken=6,
+        status=RunStatus.WAITING_SHOPPER,
+    )
+
+    result = AgentHarness().resume(paused, {"message": "sigue"}, DefaultPolicy(), all_noop())
+
+    assert result.status is RunStatus.COMPLETED
+    assert result.stopped_reason == "max_steps"
+    assert result.steps == ()
+    assert result.state.steps_taken == 6
 
 
 def test_step_record_round_trips_through_json() -> None:

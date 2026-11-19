@@ -14,7 +14,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from smart_basket.agent.actions import ActionKind, CandidateAction, valid_actions
-from smart_basket.agent.observations import Observation, ObservationKind, _jsonable
+from smart_basket.agent.observations import Observation, ObservationKind, jsonable
 from smart_basket.agent.state import AgentState, PendingQuestion, RunStatus
 
 
@@ -32,7 +32,7 @@ class PolicyDecision:
         return {
             "action_key": self.action_key,
             "confidence": self.confidence,
-            "probabilities": _jsonable(self.probabilities),
+            "probabilities": jsonable(self.probabilities),
             "raw_response": self.raw_response,
             "model_name": self.model_name,
         }
@@ -42,7 +42,7 @@ class PolicyDecision:
         return cls(
             action_key=str(data["action_key"]),
             confidence=data.get("confidence"),
-            probabilities=dict(data["probabilities"]) if data.get("probabilities") else None,
+            probabilities=_probabilities(data),
             raw_response=data.get("raw_response"),
             model_name=data.get("model_name"),
         )
@@ -174,6 +174,7 @@ class StepRecord:
     latency_ms: float
     error: str | None
     used_default: bool
+    overridden: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -181,14 +182,15 @@ class StepRecord:
             "observation": self.observation.to_dict() if self.observation is not None else None,
             "candidates": [item.to_dict() for item in self.candidates],
             "chosen_action": self.chosen_action,
-            "action_args": _jsonable(self.action_args),
+            "action_args": jsonable(self.action_args),
             "confidence": self.confidence,
-            "probabilities": _jsonable(self.probabilities),
+            "probabilities": jsonable(self.probabilities),
             "retries": self.retries,
             "result": self.result,
             "latency_ms": self.latency_ms,
             "error": self.error,
             "used_default": self.used_default,
+            "overridden": self.overridden,
         }
 
     @classmethod
@@ -203,18 +205,24 @@ class StepRecord:
             chosen_action=data.get("chosen_action"),
             action_args=dict(data.get("action_args") or {}),
             confidence=data.get("confidence"),
-            probabilities=dict(data["probabilities"]) if data.get("probabilities") else None,
+            probabilities=_probabilities(data),
             retries=int(data.get("retries", 0)),
             result=data.get("result"),
             latency_ms=float(data.get("latency_ms", 0.0)),
             error=data.get("error"),
             used_default=bool(data.get("used_default", False)),
+            overridden=bool(data.get("overridden", False)),
         )
 
 
 @dataclass(frozen=True, slots=True)
 class RunResult:
-    """Outcome of one run: the final state, its trace and the limits it hit."""
+    """Outcome of one run: the final state, its trace and the limit that stopped it.
+
+    `stopped_reason` is `"max_steps"` when pending observations remain after the step cap,
+    `"time_budget"` on timeout, `"waiting_shopper"` when the run paused and `None` when it
+    completed normally.
+    """
 
     state: AgentState
     steps: tuple[StepRecord, ...]
@@ -222,6 +230,7 @@ class RunResult:
     total_latency_ms: float
     policy_name: str
     model_name: str | None
+    stopped_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,7 +273,11 @@ class AgentHarness:
 
         `apply_answer` may turn the answer into state changes or new observations. Without it,
         the answer's `message` becomes a `shopper_request` observation so the loop can react.
+        Only a run paused on `waiting_shopper` can be resumed, and `steps_taken` keeps counting
+        towards the hard step cap of ADR 0022.
         """
+        if state.status is not RunStatus.WAITING_SHOPPER:
+            raise ValueError("cannot resume a run that is not waiting_shopper")
         if apply_answer is not None:
             updated = apply_answer(state, answer)
         else:
@@ -298,10 +311,11 @@ class AgentHarness:
         steps: list[StepRecord] = []
         model_name: str | None = None
         status = RunStatus.COMPLETED
+        stopped_reason: str | None = None
 
         while True:
             if state.status is RunStatus.WAITING_SHOPPER:
-                status = RunStatus.WAITING_SHOPPER
+                status, stopped_reason = RunStatus.WAITING_SHOPPER, "waiting_shopper"
                 break
             if state.status is RunStatus.FAILED:
                 status = RunStatus.FAILED
@@ -310,10 +324,10 @@ class AgentHarness:
                 status = RunStatus.COMPLETED
                 break
             if state.steps_taken >= self.config.max_steps:
-                status = RunStatus.COMPLETED
+                status, stopped_reason = RunStatus.COMPLETED, "max_steps"
                 break
             if (clock() - started) * 1000.0 >= self.config.time_budget_ms:
-                status = RunStatus.TIMED_OUT
+                status, stopped_reason = RunStatus.TIMED_OUT, "time_budget"
                 break
 
             step_started = clock()
@@ -325,7 +339,7 @@ class AgentHarness:
             )
             if decision.model_name is not None:
                 model_name = decision.model_name
-            action = self._apply_confidence_override(decision, action, candidates)
+            action, overridden = self._apply_confidence_override(decision, action, candidates)
 
             # Executors work on a state where the handled observation is already consumed.
             working = replace(state, observations=remaining)
@@ -368,6 +382,7 @@ class AgentHarness:
                     latency_ms=(clock() - step_started) * 1000.0,
                     error=error,
                     used_default=used_default,
+                    overridden=overridden,
                 )
             )
 
@@ -378,6 +393,7 @@ class AgentHarness:
             total_latency_ms=(clock() - started) * 1000.0,
             policy_name=policy.name,
             model_name=model_name,
+            stopped_reason=stopped_reason,
         )
 
     def _choose(
@@ -412,12 +428,15 @@ class AgentHarness:
         decision: PolicyDecision,
         action: CandidateAction | None,
         candidates: Sequence[CandidateAction],
-    ) -> CandidateAction | None:
+    ) -> tuple[CandidateAction | None, bool]:
+        """Return the action to run and whether the low-confidence rule replaced the choice."""
         threshold = self.config.low_confidence_threshold
         if threshold is None or decision.confidence is None or decision.confidence >= threshold:
-            return action
+            return action, False
         ask = next((item for item in candidates if item.kind is ActionKind.PREGUNTAR), None)
-        return ask if ask is not None else action
+        if ask is None or ask is action:
+            return action, False
+        return ask, True
 
     def _execute(
         self,
@@ -425,18 +444,36 @@ class AgentHarness:
         state: AgentState,
         action: CandidateAction,
     ) -> tuple[bool, AgentState, str | None, str | None]:
+        # `propose` and `apply` are third-party code: either may raise. A failure must never
+        # corrupt the run, so each phase is guarded and the loop keeps `state` untouched,
+        # recording the error in the step instead of losing the run.
         try:
             proposal = executor.propose(state, action)
+        except Exception as exc:
+            return False, state, None, _describe(exc)
+        try:
             problem = executor.validate(state, proposal)
-            if problem is not None:
-                return False, state, None, f"validation failed: {problem}"
+        except Exception as exc:
+            return False, state, None, _describe(exc)
+        if problem is not None:
+            # The caller already consumed the observation. Dropping it without applying is
+            # safe: the state stays intact, no partial effect happens, and the step records
+            # why, instead of retrying the same rejected observation forever.
+            return False, state, None, f"validation failed: {problem}"
+        try:
             return True, executor.apply(state, proposal), proposal.summary, None
-        except Exception as exc:  # an executor failure must not corrupt the state
+        except Exception as exc:
             return False, state, None, _describe(exc)
 
 
 def _resolve(candidates: Sequence[CandidateAction], key: str) -> CandidateAction | None:
     return next((item for item in candidates if item.key == key), None)
+
+
+def _probabilities(data: Mapping[str, Any]) -> dict[str, float] | None:
+    """Rebuild the optional probability map shared by `PolicyDecision` and `StepRecord`."""
+    raw = data.get("probabilities")
+    return dict(raw) if raw else None
 
 
 def _question_for(action: CandidateAction, observation: Observation) -> PendingQuestion:

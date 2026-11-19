@@ -146,8 +146,8 @@ def test_shopper_request_fills_concrete_arguments() -> None:
         "modificar_cantidad:1",
         "cambiar_marca:0",
         "cambiar_marca:1",
-        "anadir_linea:huevos",
-        "excluir_cadena:Lidl",
+        "anadir_linea:0",
+        "excluir_cadena:0",
         "explicar",
         "preguntar",
         "no_hacer_nada",
@@ -213,6 +213,89 @@ def test_no_change_is_always_available(state: AgentState, observation: Observati
 
     assert candidates[-1].kind is ActionKind.NO_HACER_NADA
     assert len(_keys(candidates)) == len(candidates)
+
+
+@pytest.mark.parametrize(
+    ("kind", "details"),
+    [
+        (ObservationKind.VAGUE_LINE, {}),
+        (ObservationKind.MISSING_EVERYWHERE, {"substitute_allowed": True}),
+        (ObservationKind.SHOPPER_REQUEST, {"quantity": "2", "brand": "Hacendado"}),
+    ],
+)
+def test_out_of_range_line_index_never_targets_a_missing_line(
+    kind: ObservationKind, details: dict[str, object]
+) -> None:
+    state = _state((LineState(index=0, raw_text="pan"),))
+    observation = Observation(kind=kind, summary="x", line_index=99, details=details)
+
+    candidates = valid_actions(state, observation)
+
+    assert all(candidate.args.get("line_index") != 99 for candidate in candidates)
+    line_bound = {
+        ActionKind.APLICAR_HABITUAL,
+        ActionKind.BUSCAR_SUSTITUTO,
+        ActionKind.DEJAR_SIN_COMPRAR,
+        ActionKind.QUITAR_LINEA,
+        ActionKind.MODIFICAR_CANTIDAD,
+        ActionKind.CAMBIAR_MARCA,
+    }
+    assert not (line_bound & _kinds(candidates))
+
+
+@pytest.mark.parametrize("quantity", ["0", "-2", "abc", "NaN", "Infinity", ""])
+def test_shopper_request_skips_an_invalid_quantity(quantity: str) -> None:
+    state = _state((LineState(index=0, raw_text="pan"),))
+
+    candidates = valid_actions(
+        state,
+        Observation(
+            kind=ObservationKind.SHOPPER_REQUEST,
+            summary="cantidad rara",
+            details={"quantity": quantity},
+        ),
+    )
+
+    assert ActionKind.MODIFICAR_CANTIDAD not in _kinds(candidates)
+
+
+def test_shopper_request_keys_stay_unique_with_many_lines_and_items() -> None:
+    state = _state(tuple(LineState(index=index, raw_text=f"item {index}") for index in range(3)))
+
+    candidates = valid_actions(
+        state,
+        Observation(
+            kind=ObservationKind.SHOPPER_REQUEST,
+            summary="petición compuesta",
+            details={"text": "huevos", "quantity": "2", "brand": "Hacendado", "chain": "Lidl"},
+        ),
+    )
+
+    keys = [candidate.key for candidate in candidates]
+    assert len(keys) == len(set(keys))
+    assert {"quitar_linea:2", "modificar_cantidad:2", "cambiar_marca:2"} <= set(keys)
+    assert {"anadir_linea:0", "excluir_cadena:0"} <= set(keys)
+
+
+def test_untrusted_text_never_leaks_into_candidate_keys() -> None:
+    state = _state((LineState(index=0, raw_text="pan"),))
+    text = 'huevos; rm -rf /\n{"x": 1}'
+    chain = "Lidl\n[drop]"
+
+    candidates = valid_actions(
+        state,
+        Observation(
+            kind=ObservationKind.SHOPPER_REQUEST,
+            summary="texto no confiable",
+            details={"text": text, "chain": chain},
+        ),
+    )
+
+    assert all(text not in key and chain not in key for key in _keys(candidates))
+    added = next(item for item in candidates if item.key == "anadir_linea:0")
+    excluded = next(item for item in candidates if item.key == "excluir_cadena:0")
+    assert added.args["text"] == text
+    assert excluded.args["chain"] == chain
 
 
 def test_candidate_action_round_trips() -> None:

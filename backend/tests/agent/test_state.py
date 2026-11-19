@@ -113,6 +113,27 @@ def test_pending_question_round_trips() -> None:
     assert restored == question
 
 
+def test_observation_details_normalize_decimal_on_serialization() -> None:
+    state = AgentState(
+        lines=(),
+        observations=(
+            Observation(
+                kind=ObservationKind.SHOPPER_REQUEST,
+                summary="quiero dos litros y medio",
+                details={"quantity": Decimal("2.50"), "options": (Decimal("1.10"),)},
+            ),
+        ),
+    )
+
+    payload = json.loads(json.dumps(state.to_dict()))
+
+    details = payload["observations"][0]["details"]
+    assert details["quantity"] == "2.50"
+    assert details["options"] == ["1.10"]
+    restored = AgentState.from_dict(payload)
+    assert restored.observations[0].details["quantity"] == "2.50"
+
+
 def test_line_state_without_habit_round_trips() -> None:
     line = LineState(index=4, raw_text="pilas AAA", quantity=Decimal("2"), unit="ud")
 
