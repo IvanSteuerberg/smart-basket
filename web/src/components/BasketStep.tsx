@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   describeError,
   getCanonical,
+  type AgentRunResponse,
   type CanonicalDetail,
   type Product,
   type Recommendation,
@@ -17,6 +18,7 @@ import {
   parseDecimal,
 } from "../format";
 import type { StoredOrigin } from "../storage";
+import { AgentTracePanel } from "./AgentTracePanel";
 import { ChainLogo } from "./ChainLogo";
 import { MapView } from "./MapView";
 import { ProductImage } from "./ProductImage";
@@ -26,6 +28,12 @@ export interface BasketStepProps {
   origin: StoredOrigin | null;
   calculating?: boolean;
   calcError?: string | null;
+  agentRun?: AgentRunResponse | null;
+  agentLoading?: boolean;
+  withoutAgent?: boolean;
+  onToggleWithoutAgent?: (next: boolean) => void;
+  /** Optional interactive controls (e.g. E9 question answers / change request). */
+  agentSlot?: ReactNode;
   onBack: () => void;
   onNewList: () => void;
   onApplyAnyBrand: () => void;
@@ -167,6 +175,11 @@ export function BasketStep({
   origin,
   calculating = false,
   calcError = null,
+  agentRun = null,
+  agentLoading = false,
+  withoutAgent = false,
+  onToggleWithoutAgent,
+  agentSlot,
   onBack,
   onNewList,
   onApplyAnyBrand,
@@ -228,6 +241,18 @@ export function BasketStep({
         <p className="mb-4 rounded-xl border-l-4 border-brand bg-brand-soft/50 p-3 text-sm text-slate-800">
           {recommendation.explanation}
         </p>
+
+        {/* Agent buyer summary, alternatives and collapsible trace */}
+        {(onToggleWithoutAgent || agentRun || agentLoading) && (
+          <AgentTracePanel
+            agentRun={agentRun}
+            loading={agentLoading}
+            withoutAgent={withoutAgent}
+            onToggleWithoutAgent={onToggleWithoutAgent ?? (() => {})}
+          >
+            {agentSlot}
+          </AgentTracePanel>
+        )}
 
         {/* Summary totals */}
         <div className="mb-4 flex items-baseline justify-between gap-4 border-b border-stone-100 pb-3">

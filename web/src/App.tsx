@@ -6,12 +6,17 @@ import {
   interpretText,
   isChoiceRequired,
   requestRecommendation,
+  startAgentRun,
   type Accept,
+  type AgentRunRequest,
+  type AgentRunResponse,
   type CanonicalCard,
   type CatalogSection,
+  type HabitInput,
   type Health,
   type Product,
   type Recommendation,
+  type RecommendationRequest,
 } from "./api";
 import {
   canonicalLine,
@@ -69,6 +74,110 @@ import { ProductPage } from "./components/ProductPage";
 import { SiteHeader } from "./components/SiteHeader";
 
 type Step = "list" | "basket";
+
+/** Derives per-term habit counts from the local browser profile for the agent. */
+function deriveHabitsFromProfile(profile: Profile): Record<string, HabitInput> {
+  const habits: Record<string, HabitInput> = {};
+  const explicitByTerm = new Map<string, { canonicalId: number | null; canonicalName: string }>();
+
+  for (const pref of livePreferences(profile)) {
+    if (pref.kind !== "term_choice" || pref.scope_kind !== "term") continue;
+    const key = pref.scope_key.trim().toLowerCase();
+    if (!key) continue;
+    let canonicalId: number | null = null;
+    let canonicalName = "";
+    if (typeof pref.value === "string") {
+      canonicalName = pref.value.trim();
+    } else if (pref.value !== null && typeof pref.value === "object") {
+      const record = pref.value as Record<string, unknown>;
+      if (typeof record.canonical_id === "number") canonicalId = record.canonical_id;
+      if (typeof record.canonical_name === "string") canonicalName = record.canonical_name.trim();
+      else if (typeof record.name === "string") canonicalName = record.name.trim();
+    }
+    if (canonicalName) {
+      explicitByTerm.set(key, { canonicalId, canonicalName });
+    }
+  }
+
+  const grouped = new Map<
+    string,
+    {
+      term: string;
+      total: number;
+      byCanonical: Map<number, { count: number; label: string }>;
+    }
+  >();
+
+  for (const event of profile.events) {
+    if (event.action === "removed" || event.canonical_id === null) continue;
+    const key = event.term.trim().toLowerCase();
+    if (!key) continue;
+    let bucket = grouped.get(key);
+    if (!bucket) {
+      bucket = { term: event.term.trim(), total: 0, byCanonical: new Map() };
+      grouped.set(key, bucket);
+    }
+    bucket.total += 1;
+    const prev = bucket.byCanonical.get(event.canonical_id);
+    const label =
+      explicitByTerm.get(key)?.canonicalName ??
+      (event.brand ? `${event.term.trim()} (${event.brand})` : event.term.trim());
+    bucket.byCanonical.set(event.canonical_id, {
+      count: (prev?.count ?? 0) + 1,
+      label: prev?.label ?? label,
+    });
+  }
+
+  for (const [key, bucket] of grouped.entries()) {
+    let topId: number | null = null;
+    let topCount = 0;
+    let topLabel = bucket.term;
+    for (const [canonicalId, info] of bucket.byCanonical.entries()) {
+      if (info.count > topCount) {
+        topId = canonicalId;
+        topCount = info.count;
+        topLabel = info.label;
+      }
+    }
+    if (topId !== null && topCount > 0) {
+      habits[key] = {
+        term: bucket.term,
+        canonical_id: topId,
+        canonical_name: topLabel,
+        count: topCount,
+        total: bucket.total,
+      };
+    }
+  }
+
+  for (const [key, pref] of explicitByTerm.entries()) {
+    if (!habits[key]) {
+      habits[key] = {
+        term: key,
+        canonical_id: pref.canonicalId,
+        canonical_name: pref.canonicalName,
+        count: 1,
+        total: 1,
+      };
+    }
+  }
+
+  return habits;
+}
+
+/** Extracts active dietary rule keys from the local browser profile. */
+function deriveDietaryRulesFromProfile(profile: Profile): string[] {
+  const rules: string[] = [];
+  for (const pref of livePreferences(profile)) {
+    if (pref.kind !== "dietary_rule") continue;
+    const rule =
+      typeof pref.value === "string" && pref.value.trim()
+        ? pref.value.trim()
+        : pref.scope_key.trim();
+    if (rule && !rules.includes(rule)) rules.push(rule);
+  }
+  return rules;
+}
 
 function HealthFooter() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -132,7 +241,20 @@ export default function App() {
   const [calculating, setCalculating] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
+  const [agentRun, setAgentRun] = useState<AgentRunResponse | null>(null);
+  const [agentLoading, setAgentLoading] = useState(false);
+  const [withoutAgent, setWithoutAgent] = useState(false);
   const busyRef = useRef(false);
+  const lastRecommendationRequestRef = useRef<RecommendationRequest | null>(null);
+  const baseRecommendationRef = useRef<Recommendation | null>(null);
+  const agentAbortRef = useRef<AbortController | null>(null);
+  const agentSeqRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      agentAbortRef.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -319,6 +441,51 @@ export default function App() {
     setStep("list");
   }
 
+  function cancelAgentRun() {
+    agentSeqRef.current += 1;
+    agentAbortRef.current?.abort();
+    agentAbortRef.current = null;
+    setAgentRun(null);
+    setAgentLoading(false);
+  }
+
+  async function runAgentForPlan(
+    requestPayload: RecommendationRequest,
+    baseResult: Recommendation,
+    useDefaultPolicy: boolean,
+  ) {
+    const seq = agentSeqRef.current + 1;
+    agentSeqRef.current = seq;
+    agentAbortRef.current?.abort();
+    const controller = new AbortController();
+    agentAbortRef.current = controller;
+    setAgentLoading(true);
+    try {
+      await profileLoaded.current.catch(() => undefined);
+      if (controller.signal.aborted || seq !== agentSeqRef.current) return;
+
+      const habits = deriveHabitsFromProfile(profileRef.current);
+      const dietaryRules = deriveDietaryRulesFromProfile(profileRef.current);
+      const body: AgentRunRequest = {
+        request: requestPayload,
+        recommendation_id:
+          baseResult.id !== null && baseResult.id !== undefined ? String(baseResult.id) : null,
+        ...(Object.keys(habits).length > 0 ? { habits } : {}),
+        ...(dietaryRules.length > 0 ? { dietary_rules: dietaryRules } : {}),
+        ...(useDefaultPolicy ? { policy: "default" } : {}),
+      };
+      const run = await startAgentRun(body, controller.signal);
+      if (controller.signal.aborted || seq !== agentSeqRef.current) return;
+      setAgentRun(run);
+    } catch {
+      // Fail gracefully: never break the basket if the agent endpoint is unavailable.
+    } finally {
+      if (seq === agentSeqRef.current) {
+        setAgentLoading(false);
+      }
+    }
+  }
+
   async function executeRecommendation(
     targetItems: DraftItem[],
     targetOrigin: StoredOrigin,
@@ -328,8 +495,9 @@ export default function App() {
     busyRef.current = true;
     setCalculating(true);
     setCalcError(null);
+    cancelAgentRun();
     try {
-      const result = await requestRecommendation({
+      const requestPayload: RecommendationRequest = {
         items: targetItems.map(toRequestItem),
         origin: { lat: targetOrigin.lat, lon: targetOrigin.lon },
         mode: targetOptions.mode,
@@ -338,9 +506,13 @@ export default function App() {
         return_to_origin: targetOptions.returnToOrigin,
         degraded: isDegraded,
         chains: chainFilter,
-      });
+      };
+      const result = await requestRecommendation(requestPayload);
+      lastRecommendationRequestRef.current = requestPayload;
+      baseRecommendationRef.current = result;
       setRecommendation(result);
       setStep("basket");
+      void runAgentForPlan(requestPayload, result, withoutAgent);
     } catch (error) {
       if (isChoiceRequired(error)) {
         const { line_id: lineId, code, message } = error.detail;
@@ -410,6 +582,9 @@ export default function App() {
   }
 
   function handleNewList() {
+    cancelAgentRun();
+    lastRecommendationRequestRef.current = null;
+    baseRecommendationRef.current = null;
     setText("");
     setItems([]);
     setDegraded(false);
@@ -441,6 +616,9 @@ export default function App() {
   function handleCalculateFromCart() {
     const cartItems = draftItemsFromCart(cart);
     if (cartItems.length === 0) return;
+    cancelAgentRun();
+    lastRecommendationRequestRef.current = null;
+    baseRecommendationRef.current = null;
     setText("");
     setItems(cartItems);
     setDegraded(false);
@@ -473,6 +651,19 @@ export default function App() {
     await recalculateWithItems(applyAnyBrand(items));
   }
 
+  function handleToggleWithoutAgent(next: boolean) {
+    setWithoutAgent(next);
+    if (lastRecommendationRequestRef.current && baseRecommendationRef.current) {
+      void runAgentForPlan(
+        lastRecommendationRequestRef.current,
+        baseRecommendationRef.current,
+        next,
+      );
+    }
+  }
+
+  const displayedRecommendation = agentRun?.recommendation ?? recommendation;
+
   const flow = (
     <main className="mx-auto grid max-w-xl gap-4 px-4 pt-4 pb-12 text-slate-900">
       {step === "list" && (
@@ -501,12 +692,16 @@ export default function App() {
         />
       )}
 
-      {step === "basket" && recommendation && (
+      {step === "basket" && displayedRecommendation && (
         <BasketStep
-          recommendation={recommendation}
+          recommendation={displayedRecommendation}
           origin={origin}
           calculating={calculating}
           calcError={calcError}
+          agentRun={agentRun}
+          agentLoading={agentLoading}
+          withoutAgent={withoutAgent}
+          onToggleWithoutAgent={handleToggleWithoutAgent}
           onBack={() => setStep("list")}
           onNewList={handleNewList}
           onApplyAnyBrand={handleApplyAnyBrand}
