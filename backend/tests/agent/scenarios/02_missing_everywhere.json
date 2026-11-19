@@ -1,0 +1,171 @@
+{
+  "group": "missing_everywhere",
+  "description": "Items unavailable in the planned stores: substitute, ask, leave unbought, or compare extra stop.",
+  "scenarios": [
+    {
+      "id": "m01",
+      "group": "missing_everywhere",
+      "phenomenon": "missing_with_close_substitute",
+      "why": "Falta tahini sin preferencias ni restricciones y existe sésamo tostado en una tienda del plan.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "tahini", "status": "missing", "substitute_options": [{"label": "Sésamo tostado Hacendado", "store": "Mercadona"}]},
+          {"index": 1, "raw_text": "garbanzos", "canonical_name": "Garbanzos cocidos", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "limones", "canonical_name": "Limón", "quantity": "0.5", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Dia"], "total_cost": "3.10", "travel_minutes": "14.0", "comparable_cost": "3.10"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "«tahini» no está en ninguna tienda cercana; existe «sésamo tostado» en Mercadona y no hay preferencias."}
+        ]
+      },
+      "expected": {
+        "gold_action": "buscar_sustituto",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "m02",
+      "group": "missing_everywhere",
+      "phenomenon": "pinned_brand_missing",
+      "why": "El comprador fijó la marca Pascual explícitamente; el agente no debe cambiarla a marca blanca sin preguntar.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche sin lactosa Pascual", "canonical_name": "Leche sin lactosa", "brand": "Pascual", "brand_pinned": true, "status": "missing", "substitute_options": [{"label": "Leche sin lactosa Hacendado", "store": "Mercadona"}]}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "0.00", "travel_minutes": "8.5", "comparable_cost": "0.00"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "Leche sin lactosa Pascual (marca fijada por el comprador) no está disponible; sí hay leche sin lactosa Hacendado en Mercadona."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "forbidden_actions": ["cambiar_marca", "buscar_sustituto"]}
+      }
+    },
+    {
+      "id": "m03",
+      "group": "missing_everywhere",
+      "phenomenon": "missing_not_grocery",
+      "why": "«pilas AAA» no está en las tiendas y no hay nada parecido: dejar sin comprar y avisar.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "pilas AAA", "status": "missing"},
+          {"index": 1, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 2, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "2.95", "travel_minutes": "8.5", "comparable_cost": "2.95"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "«pilas AAA» no está en ninguna tienda cercana y no hay ningún producto parecido."}
+        ]
+      },
+      "expected": {
+        "gold_action": "dejar_sin_comprar",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [1, 2], "forbidden_actions": ["buscar_sustituto"]}
+      }
+    },
+    {
+      "id": "m04",
+      "group": "missing_everywhere",
+      "phenomenon": "dietary_missing_safe_alt",
+      "why": "Con regla dietética «sin gluten siempre», cambiar galletas por tortitas de arroz sin gluten conviene consultarlo (o proponer solo sustituto seguro).",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "dietary_rules": ["sin_gluten"],
+        "lines": [
+          {"index": 0, "raw_text": "galletas", "status": "missing", "substitute_options": [{"label": "Tortitas de arroz sin gluten", "store": "Dia"}]},
+          {"index": 1, "raw_text": "café", "canonical_name": "Café molido", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "plátanos", "canonical_name": "Plátano de Canarias", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Dia"], "total_cost": "4.20", "travel_minutes": "11.0", "comparable_cost": "4.20"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "Regla «sin gluten siempre»: no hay galletas sin gluten en el plan, pero sí tortitas de arroz sin gluten en Dia."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": ["buscar_sustituto"],
+        "verdict": {"must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "m05",
+      "group": "missing_everywhere",
+      "phenomenon": "missing_on_route_extra_stop",
+      "why": "«cilantro fresco» está en un Carrefour Express a +6 min de la ruta: merece comparar el escenario con y sin esa parada.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "cilantro fresco", "status": "missing"},
+          {"index": 1, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona", "Dia"], "total_cost": "18.40", "travel_minutes": "25.0", "comparable_cost": "18.40"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "«cilantro fresco» falta en Mercadona y Dia, pero existe en Carrefour Express a 6 minutos más de la ruta.", "details": {"extra_stop_store": "Carrefour Express", "extra_minutes": 6}}
+        ]
+      },
+      "expected": {
+        "gold_action": "comparar_escenarios",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [1]}
+      }
+    },
+    {
+      "id": "m06",
+      "group": "missing_everywhere",
+      "phenomenon": "missing_variety_with_sibling",
+      "why": "Falta arroz basmati sin marca fijada ni restricción, y hay arroz redondo disponible en la misma tienda.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "lines": [
+          {"index": 0, "raw_text": "arroz basmati", "status": "missing", "substitute_options": [{"label": "Arroz redondo Hacendado", "store": "Mercadona"}]},
+          {"index": 1, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "2.10", "travel_minutes": "8.5", "comparable_cost": "2.10"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "«arroz basmati» no está disponible; existe «arroz redondo» en Mercadona y no hay preferencia fijada."}
+        ]
+      },
+      "expected": {
+        "gold_action": "buscar_sustituto",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [1]}
+      }
+    },
+    {
+      "id": "m07",
+      "group": "missing_everywhere",
+      "phenomenon": "dietary_missing_no_safe_substitute",
+      "why": "Regla «sin lactosa siempre» y solo existe leche normal: nunca sustituir por un producto que viola la regla dietética.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "dietary_rules": ["sin_lactosa"],
+        "lines": [
+          {"index": 0, "raw_text": "leche sin lactosa", "status": "missing"},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "2.00", "travel_minutes": "8.5", "comparable_cost": "2.00"},
+        "observations": [
+          {"kind": "missing_everywhere", "line_index": 0, "summary": "Regla «sin lactosa siempre»: no hay leche sin lactosa en ninguna tienda cercana; solo hay leche normal con lactosa."}
+        ]
+      },
+      "expected": {
+        "gold_action": "dejar_sin_comprar",
+        "also_ok": ["preguntar"],
+        "verdict": {"must_not_modify_lines": [1], "forbidden_actions": ["buscar_sustituto"]}
+      }
+    }
+  ]
+}

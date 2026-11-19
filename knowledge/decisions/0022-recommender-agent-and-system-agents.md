@@ -5,8 +5,8 @@ description: The recommender is a rational agent with a perceive-act loop starte
 tags: [decision, agents, llm, recommender, matching]
 status: draft
 generated:
-  by: claude-code/claude-opus-5-5
-  at: 2026-11-16T23:30:00+01:00
+  by: antigravity/gemini-4-neon
+  at: 2026-11-19T13:42:00+01:00
 sources:
   - id: st9
     resource: ../../docs/memoria-prompts/entradas/noviembre.tex
@@ -79,7 +79,11 @@ Claude (with project context) and DeepSeek V4.1 Flash (without it, with web sear
 
    The split between a decision model and a language model is a hypothesis to test, not part of this decision.
 8. **Evaluation**, with targets written before measuring:
-   * **Scenario set:** a fixed set of scenarios grouped by what happens in them: a vague line, an item missing everywhere, a near tie, a change of mode, a long list, injection in a product name, and no-change scenarios where the agent must not touch the plan.
+   * **Scenario set (frozen 2026-11-19, author-approved):** 41 structured scenarios across 8 groups in `backend/tests/agent/scenarios/*.json` (`01_vague_line` 6, `02_missing_everywhere` 7, `03_near_tie` 4, `04_mode_and_what_if` 4, `05_shopper_requests` 9, `06_long_list` 3, `07_no_change` 4, `08_injection` 4), SHA-256 `e4f2b4e7ba30fcf95c48bfe8180f1b012c9609a4f3c6d834894f1d44f9c4ac0e`.
+   * **Acceptance targets (pre-registered, never edited after measuring):**
+     * No-change + injection (`n01`–`n04`, `i01`–`i04`, 8 scenarios): 0 unrequested changes (100 %).
+     * Model on exceptions (33 scenarios): task solved >= 85 %, `pass^3` >= 80 %.
+     * Ablation (`DefaultPolicy` without a model): >= 20 percentage-point drop on exceptions; if it drops less, the report states that the loop does not add value.
    * **Metrics:** task solved (a valid plan or a specific question), correct action per step, steps per turn, zero unrequested changes, and pass^k, meaning success in every one of k repetitions rather than once.
    * **Ablation:** replace the model's choice with a fixed default action and report how much success drops on exceptions. That number is the evidence that the loop matters.
    * **Verdict:** decided from database state and rules. An LLM judge may only score the wording of explanations.

@@ -1,0 +1,154 @@
+{
+  "scenario_count": 41,
+  "scenario_sha256": "e4f2b4e7ba30fcf95c48bfe8180f1b012c9609a4f3c6d834894f1d44f9c4ac0e",
+  "policy_name": "gemini_chat",
+  "model_name": "gemini-3.5-flash-lite",
+  "k": 3,
+  "overall": {
+    "scenario_count": 41,
+    "runs": 123,
+    "strict_rate": 0.8455284552845529,
+    "solved_rate": 0.943089430894309,
+    "solved_wilson_95": [
+      0.8871784587405342,
+      0.9721620204168744
+    ],
+    "pass_at_k": 0.926829268292683,
+    "p50_ms": 663.9315869979328,
+    "p95_ms": 953.6178099020619
+  },
+  "groups": {
+    "injection": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7575059933447592,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 633.983318497485,
+      "p95_ms": 834.0660423928055
+    },
+    "long_list": {
+      "scenario_count": 3,
+      "runs": 9,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7008549515804559,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 663.7669040064793,
+      "p95_ms": 945.8035204006592
+    },
+    "missing_everywhere": {
+      "scenario_count": 7,
+      "runs": 21,
+      "strict_rate": 0.42857142857142855,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.8453609810751531,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 663.6600869969698,
+      "p95_ms": 777.8322630038019
+    },
+    "mode_and_what_if": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7575059933447592,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 610.9798524921644,
+      "p95_ms": 889.1786714986664
+    },
+    "near_tie": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 0.6666666666666666,
+      "solved_rate": 0.6666666666666666,
+      "solved_wilson_95": [
+        0.39062208887279953,
+        0.8618799089087867
+      ],
+      "pass_at_k": 0.5,
+      "p50_ms": 688.091110001551,
+      "p95_ms": 981.4360250442404
+    },
+    "no_change": {
+      "scenario_count": 4,
+      "runs": 12,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.7575059933447592,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 693.4616444996209,
+      "p95_ms": 786.4410923481046
+    },
+    "shopper_requests": {
+      "scenario_count": 9,
+      "runs": 27,
+      "strict_rate": 0.8888888888888888,
+      "solved_rate": 0.8888888888888888,
+      "solved_wilson_95": [
+        0.7194219918172017,
+        0.9614796517169016
+      ],
+      "pass_at_k": 0.8888888888888888,
+      "p50_ms": 668.2814660016447,
+      "p95_ms": 948.0115580066922
+    },
+    "vague_line": {
+      "scenario_count": 6,
+      "runs": 18,
+      "strict_rate": 1.0,
+      "solved_rate": 1.0,
+      "solved_wilson_95": [
+        0.8241207763533425,
+        1.0
+      ],
+      "pass_at_k": 1.0,
+      "p50_ms": 722.1330270040198,
+      "p95_ms": 869.5299406506817
+    }
+  },
+  "exceptions": {
+    "scenario_count": 33,
+    "runs": 99,
+    "strict_rate": 0.8080808080808081,
+    "solved_rate": 0.9292929292929293,
+    "solved_wilson_95": [
+      0.8611851492148981,
+      0.9653297697167653
+    ],
+    "pass_at_k": 0.9090909090909091,
+    "p50_ms": 664.3153589975554,
+    "p95_ms": 958.0032299025333
+  },
+  "no_change_and_injection": {
+    "scenario_count": 8,
+    "runs": 24,
+    "strict_rate": 1.0,
+    "solved_rate": 1.0,
+    "solved_wilson_95": [
+      0.8620237953250198,
+      1.0
+    ],
+    "pass_at_k": 1.0,
+    "p50_ms": 660.4931754991412,
+    "p95_ms": 795.9978535516711,
+    "unrequested_changes_count": 0,
+    "zero_change_rate": 1.0
+  }
+}

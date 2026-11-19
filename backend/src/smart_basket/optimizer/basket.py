@@ -11,11 +11,12 @@ deterministic. Each line left out is reported with the store where it is cheapes
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 from itertools import combinations, pairwise, permutations
 
 from smart_basket.optimizer.models import (
+    AlternativePlan,
     BasketRequest,
     BasketResult,
     Line,
@@ -39,6 +40,10 @@ ENGINE_VERSION = "basket-engine/1.1.0"
 class _Route:
     minutes: Decimal
     order: tuple[int, ...]
+
+
+#: Store ids of a subset, its fastest route and the store chosen for every covered line.
+_Choice = tuple[tuple[int, ...], _Route, dict[str, int]]
 
 
 def best_route(
@@ -67,8 +72,15 @@ def best_route(
     return best
 
 
-def optimize(request: BasketRequest) -> BasketResult:
-    """Best basket for the request. Deterministic: same input, byte-identical `to_json()`."""
+def optimize(request: BasketRequest, *, max_alternatives: int = 0) -> BasketResult:
+    """Best basket for the request. Deterministic: same input, byte-identical `to_json()`.
+
+    With `max_alternatives = k > 0` the result also carries up to `k` other valid store subsets,
+    ranked by the same key as the winner and each with its objective delta against it (ADR 0022,
+    `near_tie`). The winning plan never changes.
+    """
+    if max_alternatives < 0:
+        raise ValueError("max_alternatives must be >= 0")
     lam = request.effective_lambda
     ctx = PricingContext(
         shopping_date=request.shopping_date,
@@ -101,7 +113,8 @@ def optimize(request: BasketRequest) -> BasketResult:
     }
 
     best_key: tuple | None = None
-    best_choice: tuple[tuple[int, ...], _Route, dict[str, int]] | None = None
+    best_choice: _Choice | None = None
+    ranked: list[tuple[tuple, _Choice]] = []
     for size in range(1, min(request.max_stores, len(stores)) + 1):
         for subset in combinations(stores, size):
             ids = tuple(s.store_id for s in subset)
@@ -127,10 +140,26 @@ def optimize(request: BasketRequest) -> BasketResult:
             uncovered = len(coverable) - len(assignment)
             objective = cost + lam * route.minutes
             key = (objective + penalty, uncovered, size, route.minutes, ids)
-            if best_key is None or key < best_key:
+            if max_alternatives:
+                ranked.append((key, (ids, route, assignment)))
+            elif best_key is None or key < best_key:
                 best_key, best_choice = key, (ids, route, assignment)
 
-    return _result(request, lam, by_id, options, best_choice)
+    if not max_alternatives:
+        return _result(request, lam, by_id, options, best_choice)
+
+    ranked.sort(key=lambda item: item[0])
+    if not ranked:
+        return _result(request, lam, by_id, options, None)
+    best_key, best_choice = ranked[0]
+    alternatives = tuple(
+        AlternativePlan(
+            plan=_result(request, lam, by_id, options, choice),
+            objective_delta=key[0] - best_key[0],
+        )
+        for key, choice in ranked[1 : 1 + max_alternatives]
+    )
+    return replace(_result(request, lam, by_id, options, best_choice), alternatives=alternatives)
 
 
 def _result(
@@ -138,7 +167,7 @@ def _result(
     lam: Decimal,
     by_id: dict[int, Store],
     options: dict[str, dict[int, LineOption]],
-    choice: tuple[tuple[int, ...], _Route, dict[str, int]] | None,
+    choice: _Choice | None,
 ) -> BasketResult:
     route = choice[1] if choice else _Route(Decimal(0), ())
     assignment = choice[2] if choice else {}

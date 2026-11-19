@@ -6,6 +6,7 @@ Decisions 0002 (layer 3), 0007 (point 6), 0010 and 0013; requirements FR-09, FR-
 from smart_basket.optimizer.basket import ENGINE_VERSION, best_route, optimize
 from smart_basket.optimizer.models import (
     LAMBDA_PRESETS,
+    AlternativePlan,
     BaseUnit,
     BasketRequest,
     BasketResult,
@@ -36,6 +37,7 @@ from smart_basket.optimizer.pricing import PricedLine, PricingContext, effective
 __all__ = [
     "ENGINE_VERSION",
     "LAMBDA_PRESETS",
+    "AlternativePlan",
     "BaseUnit",
     "BasketRequest",
     "BasketResult",

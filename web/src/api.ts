@@ -305,6 +305,100 @@ export interface FlexSavings {
   lines: { line_id: number; savings: Decimal }[];
 }
 
+export interface AgentObservation {
+  kind: string;
+  summary: string;
+  line_index?: number | null;
+  details?: Record<string, unknown>;
+}
+
+export interface AgentCandidate {
+  key: string;
+  kind: string;
+  label: string;
+  args?: Record<string, unknown>;
+}
+
+export interface AgentStepResult {
+  summary?: string | null;
+  overridden?: boolean;
+}
+
+export interface AgentStep {
+  step_number: number;
+  observation: AgentObservation | null;
+  candidates: AgentCandidate[];
+  chosen_action: string;
+  action_args: Record<string, unknown>;
+  confidence: number | null;
+  probabilities: Record<string, number> | null;
+  retries: number;
+  used_default: boolean;
+  result: AgentStepResult;
+  latency_ms: number;
+  error: string | null;
+}
+
+export interface AgentPendingOption {
+  label: string;
+  canonical_id?: number;
+  [k: string]: unknown;
+}
+
+export interface AgentPendingQuestion {
+  line_index?: number | null;
+  prompt: string;
+  options?: AgentPendingOption[];
+}
+
+export type AgentRunStatus =
+  | "running"
+  | "waiting_shopper"
+  | "completed"
+  | "failed"
+  | "timed_out";
+
+export interface AgentRunResponse {
+  run_id: string;
+  recommendation_id: string | null;
+  status: AgentRunStatus;
+  policy_name: string;
+  model_name: string | null;
+  steps_count: number;
+  total_latency_ms: number;
+  buyer_summary: string | null;
+  pending_question: AgentPendingQuestion | null;
+  alternatives_shown: Array<Record<string, unknown>>;
+  mode: string;
+  excluded_chains: string[];
+  recommendation: Recommendation | null;
+  steps: AgentStep[];
+}
+
+export interface HabitInput {
+  term: string;
+  canonical_id?: number | null;
+  canonical_name: string;
+  count: number;
+  total: number;
+}
+
+export interface AgentRunRequest {
+  request: RecommendationRequest;
+  recommendation_id?: string | null;
+  shopper_message?: string | null;
+  habits?: Record<string, HabitInput>;
+  dietary_rules?: string[];
+  policy?: string | null;
+}
+
+export interface AgentAnswerRequest {
+  option_index?: number | null;
+  choice_label?: string | null;
+  canonical_id?: number | null;
+  message?: string | null;
+}
+
 /**
  * `detail` of a 422 when a generic line needs the user to choose first: `VAGUE_LINE` when the
  * category is too vague to buy, `EXACT_ONLY` when only a concrete product can be bought (shades).
@@ -471,4 +565,33 @@ export function requestRecommendation(
     body: JSON.stringify(body),
     signal,
   });
+}
+
+export function startAgentRun(
+  body: AgentRunRequest,
+  signal?: AbortSignal,
+): Promise<AgentRunResponse> {
+  return request<AgentRunResponse>("/api/agent/runs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+export function answerAgentRun(
+  runId: string,
+  body: AgentAnswerRequest,
+  signal?: AbortSignal,
+): Promise<AgentRunResponse> {
+  return request<AgentRunResponse>(`/api/agent/runs/${encodeURIComponent(runId)}/answer`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+export function getAgentRun(runId: string, signal?: AbortSignal): Promise<AgentRunResponse> {
+  return request<AgentRunResponse>(`/api/agent/runs/${encodeURIComponent(runId)}`, { signal });
 }

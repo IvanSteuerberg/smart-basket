@@ -387,6 +387,18 @@ class MissingLine:
 
 
 @dataclass(frozen=True, slots=True)
+class AlternativePlan:
+    """Another store subset the optimizer found, with how much worse it ranks than the winner.
+
+    Feeds the `near_tie` detector of the recommender agent (ADR 0022).
+    """
+
+    plan: BasketResult
+    #: (plan objective + its penalty) - (winner objective + winner penalty); always >= 0.
+    objective_delta: Decimal
+
+
+@dataclass(frozen=True, slots=True)
 class BasketResult:
     engine_version: str
     stores: tuple[StorePurchase, ...]
@@ -400,6 +412,8 @@ class BasketResult:
     max_stores: int
     return_to_origin: bool
     missing: tuple[MissingLine, ...]
+    #: Up to `max_alternatives` other valid store subsets, best ranked first (ADR 0022).
+    alternatives: tuple[AlternativePlan, ...] = ()
 
     @property
     def visiting_order(self) -> tuple[int, ...]:

@@ -1,0 +1,147 @@
+{
+  "group": "vague_line",
+  "description": "Ambiguous or broad product terms, with strong, weak, or absent shopper habits.",
+  "scenarios": [
+    {
+      "id": "v01",
+      "group": "vague_line",
+      "phenomenon": "vague_no_habit",
+      "why": "Sin historial previo para «algo para la cena», el agente no debe adivinar y debe preguntar.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"},
+          {"index": 1, "raw_text": "algo para la cena", "status": "vague", "candidate_options": [{"label": "Pechuga de pollo"}, {"label": "Tortilla fresca"}, {"label": "Ensalada preparada"}]},
+          {"index": 2, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "3.05", "travel_minutes": "8.5", "comparable_cost": "3.05"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 1, "summary": "«algo para la cena» es un término vago sin elección anterior en el perfil."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "must_not_modify_lines": [0, 2]}
+      }
+    },
+    {
+      "id": "v02",
+      "group": "vague_line",
+      "phenomenon": "vague_strong_habit",
+      "why": "9 de las últimas 10 veces eligió plátanos para «fruta»: hábito claro, se aplica sin molestar.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "fruta", "status": "vague", "habit": {"term": "fruta", "canonical_id": 10, "canonical_name": "Plátano de Canarias", "count": 9, "total": 10}, "candidate_options": [{"label": "Plátano de Canarias"}, {"label": "Manzana golden"}, {"label": "Naranja de mesa"}]},
+          {"index": 1, "raw_text": "yogures naturales", "canonical_name": "Yogur natural", "quantity": "4", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "café", "canonical_name": "Café molido natural", "quantity": "1", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "4.80", "travel_minutes": "8.5", "comparable_cost": "4.80"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 0, "summary": "«fruta» es un término vago; el perfil indica que 9 de las últimas 10 veces eligió Plátano de Canarias."}
+        ]
+      },
+      "expected": {
+        "gold_action": "aplicar_habitual",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "v03",
+      "group": "vague_line",
+      "phenomenon": "vague_weak_habit",
+      "why": "El historial de «fruta» está repartido entre 6 frutas distintas (1 vez cada una): no hay hábito dominante, debe preguntar.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "fruta", "status": "vague", "habit": {"term": "fruta", "canonical_id": 10, "canonical_name": "Manzana golden", "count": 1, "total": 6}, "candidate_options": [{"label": "Manzana golden"}, {"label": "Plátano de Canarias"}, {"label": "Naranja"}]},
+          {"index": 1, "raw_text": "pan", "canonical_name": "Pan de pueblo", "quantity": "1", "unit": "ud", "status": "ok"},
+          {"index": 2, "raw_text": "huevos", "canonical_name": "Huevos frescos", "quantity": "12", "unit": "ud", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "4.10", "travel_minutes": "8.5", "comparable_cost": "4.10"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 0, "summary": "«fruta» es un término vago; en las últimas 6 compras eligió 6 frutas distintas (1 vez cada una)."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "must_not_modify_lines": [1, 2]}
+      }
+    },
+    {
+      "id": "v04",
+      "group": "vague_line",
+      "phenomenon": "vague_meat_cut",
+      "why": "«pollo» tiene cortes no intercambiables (pechuga, muslo, alitas, entero) y sin hábito hay que preguntar.",
+      "state": {
+        "mode": "walk",
+        "priority": "savings",
+        "lines": [
+          {"index": 0, "raw_text": "pollo", "status": "vague", "candidate_options": [{"label": "Pechuga de pollo"}, {"label": "Muslo de pollo"}, {"label": "Alitas de pollo"}, {"label": "Pollo entero"}]},
+          {"index": 1, "raw_text": "arroz", "canonical_name": "Arroz redondo", "quantity": "1", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "1.00", "travel_minutes": "8.5", "comparable_cost": "1.00"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 0, "summary": "«pollo» es ambiguo entre varios cortes (pechuga, muslo, alitas, entero) y no hay hábito registrado."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "must_not_modify_lines": [1]}
+      }
+    },
+    {
+      "id": "v05",
+      "group": "vague_line",
+      "phenomenon": "vague_strong_habit_dairy",
+      "why": "8 de las últimas 10 veces eligió yogur natural sin azúcar para «yogur»: hábito sólido.",
+      "state": {
+        "mode": "walk",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "yogur", "status": "vague", "habit": {"term": "yogur", "canonical_id": 22, "canonical_name": "Yogur natural", "count": 8, "total": 10}, "candidate_options": [{"label": "Yogur natural"}, {"label": "Yogur griego"}, {"label": "Yogur sabor fresa"}]},
+          {"index": 1, "raw_text": "leche", "canonical_name": "Leche semidesnatada", "quantity": "1", "unit": "l", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "2.15", "travel_minutes": "8.5", "comparable_cost": "2.15"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 0, "summary": "«yogur» tiene varias variedades; 8 de las últimas 10 veces el comprador eligió Yogur natural."}
+        ]
+      },
+      "expected": {
+        "gold_action": "aplicar_habitual",
+        "also_ok": [],
+        "verdict": {"expected_status": "completed", "must_not_modify_lines": [1]}
+      }
+    },
+    {
+      "id": "v06",
+      "group": "vague_line",
+      "phenomenon": "vague_split_habit",
+      "why": "Historial empatado (3 veces cerdo, 3 veces mixta) para «carne picada»: no hay hábito claro, preguntar.",
+      "state": {
+        "mode": "car",
+        "priority": "balanced",
+        "lines": [
+          {"index": 0, "raw_text": "carne picada", "status": "vague", "habit": {"term": "carne picada", "canonical_id": 31, "canonical_name": "Carne picada de cerdo", "count": 3, "total": 6}, "candidate_options": [{"label": "Carne picada de cerdo"}, {"label": "Carne picada mixta"}]},
+          {"index": 1, "raw_text": "espaguetis", "canonical_name": "Espaguetis", "quantity": "0.5", "unit": "kg", "status": "ok"}
+        ],
+        "plan": {"store_names": ["Mercadona"], "total_cost": "1.20", "travel_minutes": "6.0", "comparable_cost": "1.20"},
+        "observations": [
+          {"kind": "vague_line", "line_index": 0, "summary": "«carne picada» es ambiguo; en las últimas 6 compras eligió 3 veces cerdo y 3 veces mixta."}
+        ]
+      },
+      "expected": {
+        "gold_action": "preguntar",
+        "also_ok": [],
+        "verdict": {"expected_status": "waiting_shopper", "must_ask": true, "must_not_modify_lines": [1]}
+      }
+    }
+  ]
+}

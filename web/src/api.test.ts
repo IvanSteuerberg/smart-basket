@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  answerAgentRun,
   ApiError,
   geocode,
+  getAgentRun,
   interpretText,
   isChoiceRequired,
   requestRecommendation,
   searchProducts,
+  startAgentRun,
+  type AgentRunRequest,
+  type AgentRunResponse,
   type RecommendationRequest,
 } from "./api";
 
@@ -115,5 +120,180 @@ describe("API errors", () => {
     fetchMock.mockResolvedValue(new Response("oops", { status: 500 }));
 
     await expect(searchProducts("pan")).rejects.toThrow("HTTP 500");
+  });
+});
+
+function sampleAgentRunResponse(overrides: Partial<AgentRunResponse> = {}): AgentRunResponse {
+  return {
+    run_id: "01948a00-0000-7000-8000-000000000001",
+    recommendation_id: "rec-1",
+    status: "completed",
+    policy_name: "gemini_decisions",
+    model_name: "gemini-decision-1",
+    steps_count: 1,
+    total_latency_ms: 142,
+    buyer_summary: "He elegido plátanos como sueles comprar.",
+    pending_question: null,
+    alternatives_shown: [],
+    mode: "walk",
+    excluded_chains: [],
+    recommendation: null,
+    steps: [
+      {
+        step_number: 1,
+        observation: {
+          kind: "vague_line",
+          summary: "«fruta» es demasiado amplio.",
+          line_index: 0,
+        },
+        candidates: [
+          { key: "aplicar_habitual:0", kind: "aplicar_habitual", label: "Usar Plátanos" },
+          { key: "preguntar:0", kind: "preguntar", label: "Preguntar al comprador" },
+        ],
+        chosen_action: "aplicar_habitual:0",
+        action_args: { line_index: 0 },
+        confidence: 0.91,
+        probabilities: { "aplicar_habitual:0": 0.91, "preguntar:0": 0.09 },
+        retries: 0,
+        used_default: false,
+        result: { summary: "Sustituido por Plátanos." },
+        latency_ms: 142,
+        error: null,
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("agent API client", () => {
+  it("starts an agent run via POST /api/agent/runs", async () => {
+    const payload = sampleAgentRunResponse();
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    const requestBody: AgentRunRequest = {
+      request: {
+        items: [],
+        origin: { lat: 42.5987, lon: -5.5671 },
+        mode: "walk",
+        max_stores: 2,
+        priority_mode: "balanced",
+        return_to_origin: true,
+        degraded: false,
+      },
+      recommendation_id: "rec-1",
+      habits: {
+        fruta: {
+          term: "fruta",
+          canonical_id: 12,
+          canonical_name: "Plátanos",
+          count: 4,
+          total: 5,
+        },
+      },
+      policy: "default",
+    };
+
+    const result = await startAgentRun(requestBody);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify(requestBody));
+    expect(result).toEqual(payload);
+  });
+
+  it("answers a paused agent run via POST /api/agent/runs/:id/answer", async () => {
+    const payload = sampleAgentRunResponse({ status: "completed", pending_question: null });
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    const result = await answerAgentRun("run/1", {
+      option_index: 0,
+      choice_label: "Plátanos",
+      canonical_id: 12,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run%2F1/answer");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(
+      JSON.stringify({ option_index: 0, choice_label: "Plátanos", canonical_id: 12 }),
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it("answers the pending question with the chosen option and its canonical id", async () => {
+    const payload = sampleAgentRunResponse({ status: "completed", pending_question: null });
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    await answerAgentRun("run-1", {
+      option_index: 1,
+      choice_label: "Leche entera",
+      canonical_id: null,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run-1/answer");
+    expect(init.body).toBe(
+      JSON.stringify({ option_index: 1, choice_label: "Leche entera", canonical_id: null }),
+    );
+  });
+
+  it("answers a pending question that offers no options with free text", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+
+    await answerAgentRun("run-2", { message: "Prefiero plátanos" });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run-2/answer");
+    expect(init.body).toBe(JSON.stringify({ message: "Prefiero plátanos" }));
+  });
+
+  it("requests a change with a free-text shopper message", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+
+    const requestBody: AgentRunRequest = {
+      request: {
+        items: [],
+        origin: { lat: 42.5987, lon: -5.5671 },
+        mode: "walk",
+        max_stores: 2,
+        priority_mode: "balanced",
+        return_to_origin: true,
+        degraded: false,
+      },
+      recommendation_id: "rec-1",
+      shopper_message: "¿y si voy en coche?",
+    };
+
+    await startAgentRun(requestBody);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify(requestBody));
+    const sent = JSON.parse(init.body as string) as AgentRunRequest;
+    expect(sent.shopper_message).toBe("¿y si voy en coche?");
+  });
+
+  it("fetches an existing agent run via GET /api/agent/runs/:id", async () => {
+    const payload = sampleAgentRunResponse();
+    fetchMock.mockResolvedValue(jsonResponse(payload));
+
+    const result = await getAgentRun("run-42");
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run-42");
+    expect(init.method).toBeUndefined();
+    expect(result).toEqual(payload);
+  });
+
+  it("propagates ApiError when an agent endpoint returns an error", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ detail: "Ejecución no encontrada" }, 404));
+
+    await expect(getAgentRun("missing-run")).rejects.toMatchObject({
+      name: "ApiError",
+      message: "Ejecución no encontrada",
+      status: 404,
+    });
   });
 });
