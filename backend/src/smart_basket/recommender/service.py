@@ -162,6 +162,9 @@ class RecommendationQuery:
     payload: dict[str, Any]
     #: Chain codes to consider; empty means every chain.
     chains: tuple[str, ...] = ()
+    #: Other valid plans the optimizer may return next to the winner (ADR 0022, `near_tie`).
+    #: Zero keeps the result byte-identical to the pre-alternatives pipeline.
+    max_alternatives: int = 0
 
 
 def recommend(
@@ -172,6 +175,23 @@ def recommend(
     settings: Settings,
 ) -> RecommendationResponse:
     """Run the pipeline and store the recommendation; returns the response body."""
+    response, _ = recommend_with_basket(session, query, routing, today, settings)
+    return response
+
+
+def recommend_with_basket(
+    session: Session,
+    query: RecommendationQuery,
+    routing: RoutingEngine,
+    today: date,
+    settings: Settings,
+) -> tuple[RecommendationResponse, BasketResult]:
+    """Run the pipeline and return both the response body and the optimizer result.
+
+    The agent (ADR 0022) needs `BasketResult.alternatives` and the objective figures, which the
+    HTTP response does not expose. This helper runs exactly the same pipeline as `recommend`,
+    including persistence, so callers that only need the response keep using `recommend`.
+    """
     categories = load_categories(
         session, {item.category_key for item in query.items if item.category_key is not None}
     )
@@ -239,7 +259,7 @@ def recommend(
         degraded=query.degraded,
     )
     _persist(session, recommendation_id, query, basket, data_as_of, response)
-    return response
+    return response, basket
 
 
 def _reject_vague_lines(query: RecommendationQuery, categories: Mapping[str, CategoryInfo]) -> None:
@@ -282,7 +302,7 @@ def _flex_savings(
     flexible_entries = build_catalog(
         session, flexible_items, categories, {c.zone_id for c in candidates}
     )
-    flexible = _optimize(query, flexible_entries, candidates, travel, today)
+    flexible = _optimize(query, flexible_entries, candidates, travel, today, max_alternatives=0)
     total = basket.total_cost - flexible.total_cost
     if total <= 0:
         return None
@@ -317,8 +337,15 @@ def _optimize(
     candidates: list[CandidateStore],
     travel: TravelTimes,
     today: date,
+    *,
+    max_alternatives: int | None = None,
 ) -> BasketResult:
-    """Build the optimizer input and run it; a rejected input is a client-side error."""
+    """Build the optimizer input and run it; a rejected input is a client-side error.
+
+    `max_alternatives` defaults to the query's own value; callers that must stay on the single
+    winning plan (flex savings) pass zero explicitly.
+    """
+    alternatives = query.max_alternatives if max_alternatives is None else max_alternatives
     try:
         request = BasketRequest(
             lines=tuple(entry.line for entry in entries if entry.line is not None),
@@ -329,7 +356,7 @@ def _optimize(
             priority_mode=query.priority_mode,
             return_to_origin=query.return_to_origin,
         )
-        return optimize(request)
+        return optimize(request, max_alternatives=alternatives)
     except ValueError as exc:
         raise BasketCalculationError(str(exc)) from exc
 
