@@ -244,10 +244,38 @@ class HarnessConfig:
 
 
 class AgentHarness:
-    """Runs the perceive-act loop of a `Policy`, enforcing every limit of ADR 0022."""
+    """Runs the perceive-act loop of a `Policy`, enforcing every limit of ADR 0022.
 
-    def __init__(self, config: HarnessConfig | None = None) -> None:
+    The loop is agent-agnostic. It only needs the state to expose `observations`,
+    `steps_taken` and `status` (and to support `dataclasses.replace`), and the candidates to
+    expose `key`, `kind`, `args`, `label` and `to_dict()`. The four keyword parameters let a
+    second agent reuse the exact same loop with its own vocabulary:
+
+    * `candidate_generator` lists the valid candidates (defaults to `valid_actions`);
+    * `fallback_policy` is the degradation mode after repeated failures (defaults to
+      `DefaultPolicy`);
+    * `low_confidence_action` is the kind the loop forces when the confidence is too low
+      (defaults to `ActionKind.PREGUNTAR`); `None` disables the override;
+    * `pause_action` is the kind that pauses the run into `waiting_shopper` (defaults to
+      `ActionKind.PREGUNTAR`); `None` disables pausing, as the offline catalog agent needs.
+    """
+
+    def __init__(
+        self,
+        config: HarnessConfig | None = None,
+        *,
+        candidate_generator: Callable[[Any, Any], Sequence[Any]] | None = None,
+        fallback_policy: Any | None = None,
+        low_confidence_action: Any | None = ActionKind.PREGUNTAR,
+        pause_action: Any | None = ActionKind.PREGUNTAR,
+    ) -> None:
         self.config = config if config is not None else HarnessConfig()
+        self.candidate_generator = (
+            candidate_generator if candidate_generator is not None else valid_actions
+        )
+        self.fallback_policy = fallback_policy if fallback_policy is not None else DefaultPolicy()
+        self.low_confidence_action = low_confidence_action
+        self.pause_action = pause_action
 
     def run(
         self,
@@ -333,7 +361,7 @@ class AgentHarness:
             step_started = clock()
             observation = state.observations[0]
             remaining = state.observations[1:]
-            candidates = valid_actions(state, observation)
+            candidates = self.candidate_generator(state, observation)
             decision, action, retries, used_default, error = self._choose(
                 policy, state, observation, candidates
             )
@@ -361,7 +389,12 @@ class AgentHarness:
             step_number = state.steps_taken + 1
             state = replace(new_state if applied else working, steps_taken=step_number)
 
-            if applied and action is not None and action.kind is ActionKind.PREGUNTAR:
+            if (
+                applied
+                and action is not None
+                and self.pause_action is not None
+                and action.kind == self.pause_action
+            ):
                 state = replace(
                     state,
                     pending_question=state.pending_question or _question_for(action, observation),
@@ -417,7 +450,7 @@ class AgentHarness:
                 last_error = _describe(exc)
                 if attempts > self.config.max_retries:
                     break
-        fallback = DefaultPolicy().choose(state, observation, candidates)
+        fallback = self.fallback_policy.choose(state, observation, candidates)
         action = _resolve(candidates, fallback.action_key)
         if action is None and candidates:
             action = candidates[0]
@@ -431,9 +464,14 @@ class AgentHarness:
     ) -> tuple[CandidateAction | None, bool]:
         """Return the action to run and whether the low-confidence rule replaced the choice."""
         threshold = self.config.low_confidence_threshold
-        if threshold is None or decision.confidence is None or decision.confidence >= threshold:
+        if (
+            threshold is None
+            or decision.confidence is None
+            or decision.confidence >= threshold
+            or self.low_confidence_action is None
+        ):
             return action, False
-        ask = next((item for item in candidates if item.kind is ActionKind.PREGUNTAR), None)
+        ask = next((item for item in candidates if item.kind == self.low_confidence_action), None)
         if ask is None or ask is action:
             return action, False
         return ask, True
