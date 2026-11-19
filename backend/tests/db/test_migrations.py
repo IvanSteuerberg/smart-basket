@@ -96,6 +96,7 @@ def test_upgrade_creates_both_schemas(conn):
         "public.match_review",
         "public.agent_run",
         "public.agent_step",
+        "public.catalog_leaf_proposal",
         "bi.dim_date",
         "bi.dim_product",
         "bi.fact_price_category_daily",
@@ -285,7 +286,7 @@ def test_category_seed_columns_downgrade_and_upgrade(engine):
     with engine.connect() as c:
         columns = set(c.execute(text(columns_sql)).scalars())
         assert {"key", "base_unit", "default_quantity", "forms", "is_vague"} <= columns
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_category_seed_columns_downgrade_and_upgrade_with_rows(engine):
@@ -334,7 +335,7 @@ def test_brand_seed_columns_downgrade_and_upgrade(engine):
     assert row.match_name is True
     assert row.is_private_label is False
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_product_image_column_downgrade_and_upgrade(engine):
@@ -348,7 +349,7 @@ def test_product_image_column_downgrade_and_upgrade(engine):
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         assert "image_url" in set(c.execute(text(columns_sql)).scalars())
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_category_options_column_downgrade_and_upgrade(engine):
@@ -360,7 +361,7 @@ def test_category_options_column_downgrade_and_upgrade(engine):
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         assert "options" in set(c.execute(text(columns_sql)).scalars())
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_category_exact_only_column_downgrade_and_upgrade(engine):
@@ -372,7 +373,7 @@ def test_category_exact_only_column_downgrade_and_upgrade(engine):
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         assert "exact_only" in set(c.execute(text(columns_sql)).scalars())
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_agent_trace_tables_downgrade_and_upgrade(engine):
@@ -387,7 +388,7 @@ def test_agent_trace_tables_downgrade_and_upgrade(engine):
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         assert set(c.execute(text(tables_sql)).scalars()) == {"agent_run", "agent_step"}
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_bi_agent_views_downgrade_and_upgrade(engine):
@@ -410,7 +411,51 @@ def test_bi_agent_views_downgrade_and_upgrade(engine):
     command.upgrade(cfg, "head")
     with engine.connect() as c:
         assert set(c.execute(text(views_sql)).scalars()) == {"v_agent_run", "v_agent_step"}
+        assert scalar(c, "select version_num from alembic_version") == "0010"
+
+
+def test_catalog_agent_pgvector_downgrade_and_upgrade(engine):
+    cfg = alembic_config(URL)
+    table_sql = (
+        "select table_name from information_schema.tables where table_schema = 'public' "
+        "and table_name = 'catalog_leaf_proposal'"
+    )
+    index_sql = (
+        "select indexname from pg_indexes where schemaname = 'public' "
+        "and indexname in ('canonical_product_embedding_hnsw_idx', "
+        "'chain_product_embedding_hnsw_idx', 'catalog_leaf_proposal_status_idx')"
+    )
+    embedding_type_sql = (
+        "select format_type(atttypid, atttypmod) from pg_attribute "
+        "where attrelid = cast(:t as regclass) and attname = 'embedding'"
+    )
+    expected_indexes = {
+        "canonical_product_embedding_hnsw_idx",
+        "chain_product_embedding_hnsw_idx",
+        "catalog_leaf_proposal_status_idx",
+    }
+
+    with engine.connect() as c:
+        assert set(c.execute(text(table_sql)).scalars()) == {"catalog_leaf_proposal"}
+        assert set(c.execute(text(index_sql)).scalars()) == expected_indexes
+        for table in ("canonical_product", "chain_product"):
+            assert scalar(c, embedding_type_sql, t=table) == "vector(768)"
+
+    command.downgrade(cfg, "0009")
+    with engine.connect() as c:
+        assert set(c.execute(text(table_sql)).scalars()) == set()
+        assert set(c.execute(text(index_sql)).scalars()) == set()
+        for table in ("canonical_product", "chain_product"):
+            assert scalar(c, embedding_type_sql, t=table) == "vector"
         assert scalar(c, "select version_num from alembic_version") == "0009"
+
+    command.upgrade(cfg, "0010")
+    with engine.connect() as c:
+        assert set(c.execute(text(table_sql)).scalars()) == {"catalog_leaf_proposal"}
+        assert set(c.execute(text(index_sql)).scalars()) == expected_indexes
+        for table in ("canonical_product", "chain_product"):
+            assert scalar(c, embedding_type_sql, t=table) == "vector(768)"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
 
 
 def test_downgrade_and_upgrade_again(engine):
@@ -421,4 +466,4 @@ def test_downgrade_and_upgrade_again(engine):
         assert scalar(c, "select to_regnamespace('bi') is null")
     command.upgrade(cfg, "head")
     with engine.connect() as c:
-        assert scalar(c, "select version_num from alembic_version") == "0009"
+        assert scalar(c, "select version_num from alembic_version") == "0010"
