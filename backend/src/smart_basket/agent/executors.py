@@ -519,6 +519,7 @@ class _RecommenderEngine:
         self._items: dict[int, Item] = dict(enumerate(base_query.items))
         self._next = (max(self._items) + 1) if self._items else 0
         self._excluded: list[str] = []
+        self.last_recommendation: RecommendationResponse | None = None
 
     def reoptimize(self, state: AgentState) -> AgentState:
         return self._reoptimize(state)
@@ -634,7 +635,7 @@ class _RecommenderEngine:
     def compare(self, state: AgentState, mode: str) -> tuple[AgentState, dict[str, Any]]:
         query, _ = self._query_for(state, mode=mode, max_alternatives=0)
         response, basket = recommend_with_basket(
-            self.session, query, self.routing, self.today, self.settings
+            self.session, query, self.routing, self.today, self.settings, persist=False
         )
         shown = {
             "mode": mode,
@@ -740,7 +741,7 @@ class _RecommenderEngine:
         query, positions = self._query_for(state, mode=mode, items=items, excluded=excluded)
         try:
             response, basket = recommend_with_basket(
-                self.session, query, self.routing, self.today, self.settings
+                self.session, query, self.routing, self.today, self.settings, persist=False
             )
         except ChoiceRequired as exc:
             index = positions.get(exc.line_id)
@@ -748,6 +749,7 @@ class _RecommenderEngine:
                 raise
             vague = _update(state, index, status="vague")
             return self._reoptimize(vague, mode=mode, items=items, excluded=excluded)
+        self.last_recommendation = response
         return self._state_from_result(state, query, response, basket, positions)
 
     def _query_for(
@@ -755,7 +757,7 @@ class _RecommenderEngine:
         state: AgentState,
         *,
         mode: str | None = None,
-        max_alternatives: int = 2,
+        max_alternatives: int = 3,
         items: dict[int, Item] | None = None,
         excluded: list[str] | None = None,
     ) -> tuple[RecommendationQuery, dict[int, int]]:
@@ -960,6 +962,18 @@ class _RecommenderEngine:
 
 
 # -- shared helpers -------------------------------------------------------
+
+
+def last_recommendation(
+    executors: Mapping[ActionKind, ActionExecutor],
+) -> RecommendationResponse | None:
+    """Return the latest `RecommendationResponse` produced by any re-optimization, if any."""
+    for executor in executors.values():
+        engine = getattr(executor, "engine", None)
+        response = getattr(engine, "last_recommendation", None)
+        if isinstance(response, RecommendationResponse):
+            return response
+    return None
 
 
 def _line_at(state: AgentState, index: int | None) -> LineState | None:

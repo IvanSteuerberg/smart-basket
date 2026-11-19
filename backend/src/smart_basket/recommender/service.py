@@ -185,12 +185,14 @@ def recommend_with_basket(
     routing: RoutingEngine,
     today: date,
     settings: Settings,
+    *,
+    persist: bool = True,
 ) -> tuple[RecommendationResponse, BasketResult]:
     """Run the pipeline and return both the response body and the optimizer result.
 
     The agent (ADR 0022) needs `BasketResult.alternatives` and the objective figures, which the
-    HTTP response does not expose. This helper runs exactly the same pipeline as `recommend`,
-    including persistence, so callers that only need the response keep using `recommend`.
+    HTTP response does not expose. Pass `persist=False` for internal agent comparisons and
+    re-optimizations so they do not inflate the `recommendation` BI table.
     """
     categories = load_categories(
         session, {item.category_key for item in query.items if item.category_key is not None}
@@ -258,7 +260,8 @@ def recommend_with_basket(
         explanation=explain(basket, names_by_id, texts, extra, addresses_by_id),
         degraded=query.degraded,
     )
-    _persist(session, recommendation_id, query, basket, data_as_of, response)
+    if persist:
+        _persist(session, recommendation_id, query, basket, data_as_of, response)
     return response, basket
 
 

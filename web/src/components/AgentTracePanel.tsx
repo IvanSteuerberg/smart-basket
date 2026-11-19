@@ -62,7 +62,8 @@ function parseAlternativePlan(alt: Record<string, unknown>): {
 }
 
 function StepCard({ step }: { step: AgentStep }) {
-  const observationLabel = OBSERVATION_LABELS[step.observation.kind] ?? step.observation.kind;
+  const observationKind = step.observation?.kind ?? "paso";
+  const observationLabel = OBSERVATION_LABELS[observationKind] ?? observationKind;
 
   return (
     <li className="rounded-xl border border-stone-200 bg-stone-50/60 p-3">
@@ -89,7 +90,9 @@ function StepCard({ step }: { step: AgentStep }) {
         </div>
       </div>
 
-      <p className="mt-1.5 text-xs text-slate-700">{step.observation.summary}</p>
+      {step.observation?.summary && (
+        <p className="mt-1.5 text-xs text-slate-700">{step.observation.summary}</p>
+      )}
 
       {step.candidates.length > 0 && (
         <ul className="mt-2 flex flex-col gap-1.5" aria-label="Opciones evaluadas">

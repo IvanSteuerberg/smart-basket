@@ -326,7 +326,7 @@ export interface AgentStepResult {
 
 export interface AgentStep {
   step_number: number;
-  observation: AgentObservation;
+  observation: AgentObservation | null;
   candidates: AgentCandidate[];
   chosen_action: string;
   action_args: Record<string, unknown>;

@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.agent.core import AgentHarness, HarnessConfig, Policy, StepRecord
 from smart_basket.agent.detector import state_from_recommendation
-from smart_basket.agent.executors import build_recommender_executors
+from smart_basket.agent.executors import build_recommender_executors, last_recommendation
 from smart_basket.agent.observations import jsonable
 from smart_basket.agent.policies import policy_from_settings
 from smart_basket.agent.state import AgentState, LineHabit, RunStatus
@@ -431,10 +431,22 @@ def create_agent_run(
         if body.policy is not None
         else injected_policy
     )
+    if body.recommendation_id is not None:
+        exists = session.execute(
+            text("select 1 from recommendation where id = :id"),
+            {"id": body.recommendation_id},
+        ).scalar_one_or_none()
+        if exists is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="Recomendación no encontrada.",
+            )
     query = _query_from_request(body.request)
     vague_lines: tuple[dict[str, Any], ...] = ()
     try:
-        response, basket = recommend_with_basket(session, query, routing, today, settings)
+        response, basket = recommend_with_basket(
+            session, query, routing, today, settings, persist=False
+        )
     except ChoiceRequired as exc:
         # The preprocessor needs the shopper to narrow a vague line first: surface it so the
         # agent can ask, instead of failing the whole run with a 422.
@@ -472,14 +484,18 @@ def create_agent_run(
     initial = _plan_key(state)
     executors = build_recommender_executors(session, routing, query, today=today, settings=settings)
     result = AgentHarness(_harness_config(settings)).run(state, policy, executors)
-    # A step may have changed the plan; only a stale-free response is returned as the basket.
-    recommendation = response if _plan_key(result.state) == initial else None
+    recomputed = last_recommendation(executors)
+    # Prefer the fresh recommendation from re-optimization; otherwise return the initial one
+    # only if the plan did not change.
+    recommendation = (
+        recomputed
+        if recomputed is not None
+        else (response if _plan_key(result.state) == initial else None)
+    )
     recommendation_data = (
         _recommendation_payload(recommendation) if recommendation is not None else None
     )
-    recommendation_id = body.recommendation_id or (
-        UUID(response.id) if response is not None else None
-    )
+    recommendation_id = body.recommendation_id
     run_id = create_run(
         session,
         agent_name=AGENT_NAME,
@@ -560,12 +576,19 @@ def answer_agent_run(
         if message is not None:
             answer["message"] = message
 
+    initial = _plan_key(state)
     result = AgentHarness(_harness_config(settings)).resume(state, answer, policy, executors)
-    recommendation_data = stored.get("_recommendation")
+    recomputed = last_recommendation(executors)
+    if recomputed is not None:
+        recommendation_data: dict[str, Any] | None = _recommendation_payload(recomputed)
+    elif _plan_key(result.state) == initial and isinstance(stored.get("_recommendation"), dict):
+        recommendation_data = stored.get("_recommendation")
+    else:
+        recommendation_data = None
     state_json = _state_payload(
         result.state,
         query_payload if result.status is RunStatus.WAITING_SHOPPER else None,
-        recommendation_data if isinstance(recommendation_data, dict) else None,
+        recommendation_data,
     )
     update_run(
         session,
