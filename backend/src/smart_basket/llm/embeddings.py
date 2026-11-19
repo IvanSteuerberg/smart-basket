@@ -7,6 +7,8 @@ receive private shopper data.
 
 from __future__ import annotations
 
+import contextlib
+import time
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -18,6 +20,7 @@ from smart_basket.llm.base import LLMError
 API = "https://generativelanguage.googleapis.com/v1beta"
 #: Gemini's batch endpoint accepts at most 100 requests per call.
 BATCH_SIZE = 100
+DEFAULT_RETRY_DELAYS = (5.0, 15.0, 30.0, 60.0)
 
 
 class EmbeddingProvider(Protocol):
@@ -39,11 +42,13 @@ class GeminiEmbeddingProvider:
         dimensions: int = 768,
         timeout: float = 30.0,
         client: httpx.Client | None = None,
+        retry_delays: tuple[float, ...] = DEFAULT_RETRY_DELAYS,
     ) -> None:
         self.model = model
         self.dimensions = dimensions
         self._api_key = api_key
         self._client = client or httpx.Client(timeout=timeout)
+        self._retry_delays = retry_delays
 
     def _embed_batch(self, chunk: Sequence[str]) -> list[list[float]]:
         body = {
@@ -59,7 +64,7 @@ class GeminiEmbeddingProvider:
         }
         url = f"{API}/models/{self.model}:batchEmbedContents"
         try:
-            response = self._client.post(url, json=body, headers={"x-goog-api-key": self._api_key})
+            response = self._post_with_retry(url, body)
             response.raise_for_status()
             vectors = [
                 [float(value) for value in embedding["values"]]
@@ -73,6 +78,20 @@ class GeminiEmbeddingProvider:
                 f"(expected {len(chunk)} of {self.dimensions})"
             )
         return vectors
+
+    def _post_with_retry(self, url: str, body: dict[str, object]) -> httpx.Response:
+        headers = {"x-goog-api-key": self._api_key}
+        for attempt in range(len(self._retry_delays) + 1):
+            response = self._client.post(url, json=body, headers=headers)
+            if response.status_code != 429 or attempt >= len(self._retry_delays):
+                return response
+            delay = self._retry_delays[attempt]
+            retry_after = response.headers.get("Retry-After")
+            if retry_after:
+                with contextlib.suppress(ValueError):
+                    delay = max(delay, float(retry_after))
+            time.sleep(delay)
+        return response  # pragma: no cover
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
