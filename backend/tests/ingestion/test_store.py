@@ -36,6 +36,8 @@ pytestmark = [pytest.mark.db, pytest.mark.skipif(not URL, reason="TEST_DATABASE_
 T1 = datetime(2026, 1, 1, 10, tzinfo=UTC)
 T2 = datetime(2026, 1, 2, 10, tzinfo=UTC)
 T3 = datetime(2026, 1, 3, 10, tzinfo=UTC)
+T1_7 = datetime(2026, 1, 8, 10, tzinfo=UTC)
+T1_25 = datetime(2026, 1, 26, 10, tzinfo=UTC)
 
 CATEGORIES = (
     CategoryObservation(code="112", name="Aceite, vinagre y sal", parent_code=None),
@@ -137,6 +139,31 @@ def product(
         price=D(price),
         price_per_unit=D(price_per_unit or price),
         image_url=image_url,
+    )
+
+
+def flyer_product(
+    sku: str,
+    name: str,
+    *,
+    price: str,
+    regular_price: str | None = None,
+    is_temporary: bool = False,
+) -> ProductObservation:
+    """A flyer-borne product with its regular (pre-offer) price and temporality."""
+    return ProductObservation(
+        sku=sku,
+        name=name,
+        packaging=None,
+        url=f"https://example.test/flyer/{sku}",
+        category_code="420",
+        base_quantity=None,
+        base_unit=None,
+        pack_count=1,
+        price=D(price),
+        price_per_unit=None,
+        regular_price=None if regular_price is None else D(regular_price),
+        is_temporary=is_temporary,
     )
 
 
@@ -713,3 +740,88 @@ def test_adapter_without_zone_kind_looks_the_zone_up_as_a_warehouse(db, tmp_path
 
     with pytest.raises(IngestSetupError, match="warehouse zone '24001' of chain 'dia'"):
         ingest_catalog(adapter, "24001", data_dir=tmp_path, now=T1, database_url=db.url)
+
+
+def test_controlled_staples_retention_reverts_the_price_then_expires(db, tmp_path):
+    # Option B of decision 0006: a flyer staple not seen again keeps selling at its recorded
+    # reference price while the 21-day TTL holds; a temporary item drops out immediately.
+    _, zone_id = seed_zone(db, chain="lidl", kind="chain", code="es")
+
+    class FlyerAdapter(FakeAdapter):
+        zone_kind = "chain"
+        retention_policy = "controlled_staples"
+
+    staple = flyer_product(
+        "lidl-tomate", "Tomate frito con cebolla Baresa", price="2.59", regular_price="3.48"
+    )
+    turron = flyer_product(
+        "lidl-turron", "Turrón Deluxe", price="3.99", regular_price="4.99", is_temporary=True
+    )
+
+    def state(sku: str):
+        return rows(
+            db,
+            "select p.is_active, z.is_available from chain_product p "
+            "join chain_product_zone z on z.chain_product_id = p.id "
+            "where p.chain_sku = :sku and z.zone_id = :zone",
+            sku=sku,
+            zone=zone_id,
+        )[0]
+
+    def fly(observations, now):
+        return ingest_catalog(
+            FlyerAdapter(observations, chain_code="lidl"),
+            "es",
+            data_dir=tmp_path,
+            now=now,
+            database_url=db.url,
+        )
+
+    first = fly((*CATEGORIES, staple, turron), T1)
+    assert first.status == "succeeded"
+    # The offer landed as a flyer promotion remembering its regular price; the temporary
+    # item never gets one, so nothing can keep it alive after its flyer is gone.
+    reference = scalar(
+        db,
+        "select pr.reference_price from promotion pr "
+        "join promotion_target pt on pt.promotion_id = pr.id "
+        "join chain_product p on p.id = pt.chain_product_id where p.chain_sku = 'lidl-tomate'",
+    )
+    assert reference == D("3.48")
+    assert (
+        scalar(
+            db,
+            "select count(*) from promotion pr "
+            "join promotion_target pt on pt.promotion_id = pr.id "
+            "join chain_product p on p.id = pt.chain_product_id where p.chain_sku = 'lidl-turron'",
+        )
+        == 0
+    )
+
+    # Seven days later the flyer rotated: neither item is in the new one, but the run is
+    # still complete because flyer catalogs rotate by design.
+    second = fly((*CATEGORIES, product("900", "9.00")), T1_7)
+    assert second.status == "succeeded"
+
+    staple_state = state("lidl-tomate")
+    assert (staple_state.is_active, staple_state.is_available) == (True, True)
+    current = scalar(
+        db,
+        "select c.price from price_current c "
+        "join chain_product p on p.id = c.chain_product_id where p.chain_sku = 'lidl-tomate'",
+    )
+    assert current == D("3.48")
+    history = rows(
+        db,
+        "select h.price, h.valid_from, h.valid_to from price_history h "
+        "join chain_product p on p.id = h.chain_product_id where p.chain_sku = 'lidl-tomate'",
+    )
+    assert [(row.price, row.valid_from, row.valid_to) for row in history] == [(D("2.59"), T1, T1_7)]
+    turron_state = state("lidl-turron")
+    assert (turron_state.is_active, turron_state.is_available) == (False, False)
+
+    # Twenty-five days after its last sighting the staple is past the 21-day TTL and leaves.
+    third = fly((*CATEGORIES, product("900", "9.00")), T1_25)
+    assert third.status == "succeeded"
+    staple_state = state("lidl-tomate")
+    assert (staple_state.is_active, staple_state.is_available) == (False, False)
