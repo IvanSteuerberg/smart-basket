@@ -28,7 +28,7 @@ USER root
 COPY --from=uv /uv /usr/local/bin/uv
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends xvfb \
+  && apt-get install -y --no-install-recommends xvfb libatomic1 \
   && uv pip install --python /app/.venv/bin/python --no-cache playwright \
   && /app/.venv/bin/playwright install --with-deps chromium \
   && rm -rf /var/lib/apt/lists/* \
