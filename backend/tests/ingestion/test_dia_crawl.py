@@ -209,19 +209,25 @@ def test_pagination_continues_past_a_page_with_only_out_of_stock_products():
 
 
 CURO_PATH = "/api/v1/plp-insight/initial_analytics/quesos/curado/c/L2007"
+PLP_CURO_PATH = "/api/v1/plp-back/reduced/quesos/curado/c/L2007"
 
 
 def test_real_dict_keyed_payload_walks_path_based_plp_urls():
-    first_page = {
-        **real_menu_payload(),
-        "page_product_analytics": {
-            "192": real_product("192", "cerveza clasica dia ramblers 33 cl", "0.32"),
-        },
+    plp_page = {
+        "plp_items": [
+            {
+                "object_id": "263675",
+                "display_name": "Queso curado Dia 250 g",
+                "prices": {"price": 2.84, "price_per_unit": 11.36, "measure_unit": "KILO"},
+                "url": "/quesos/curado/p/263675",
+            }
+        ]
     }
     transport = FakeDiaTransport(
         {
-            (CURO_PATH, "L2007", 1): (200, first_page),
-            (CURO_PATH, "L2007", 2): (200, {"page_product_analytics": {}}),
+            (CURO_PATH, "L2007", 1): (200, real_menu_payload()),
+            (PLP_CURO_PATH, "L2007", 1): (200, plp_page),
+            (PLP_CURO_PATH, "L2007", 2): (200, {"plp_items": []}),
         }
     )
 
@@ -233,12 +239,12 @@ def test_real_dict_keyed_payload_walks_path_based_plp_urls():
         ("L101", "quesos", None),
         ("L2007", "curado", "L101"),
     }
-    assert {entry.sku for entry in result.products} == {"192"}
-    assert str(result.products[0].price) == "0.32"
+    assert {entry.sku for entry in result.products} == {"263675"}
+    assert str(result.products[0].price) == "2.84"
     assert transport.calls == [
         f"{CURO_PATH}?navigation=L2007&page=1",
-        f"{CURO_PATH}?navigation=L2007&page=1",
-        f"{CURO_PATH}?navigation=L2007&page=2",
+        f"{PLP_CURO_PATH}?navigation=L2007&page=1",
+        f"{PLP_CURO_PATH}?navigation=L2007&page=2",
     ]
     assert [raw.url for raw in result.raw] == transport.calls
 
