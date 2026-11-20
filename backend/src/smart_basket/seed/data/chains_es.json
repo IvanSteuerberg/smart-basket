@@ -92,6 +92,28 @@
    "code": "eleclerc",
    "name": "E.Leclerc",
    "zones": []
+  },
+  {
+   "code": "froiz",
+   "name": "Froiz",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
+  },
+  {
+   "code": "elcorteingles",
+   "name": "El Corte Inglés",
+   "zones": [
+    {
+     "kind": "postal_code",
+     "code": "24001",
+     "name": "León 24001"
+    }
+   ]
   }
  ]
 }
