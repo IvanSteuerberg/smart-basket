@@ -23,9 +23,12 @@ from smart_basket.agent.catalog_executors import (
     run_catalog_agent,
     undo_leaf_proposal,
 )
+from smart_basket.agent.catalog_policies import LLMVerifiedCatalogPolicy
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
+from smart_basket.llm.base import provider_from_settings
 from smart_basket.llm.embeddings import embedding_provider_from_settings
+from smart_basket.llm.gemini import GeminiProvider
 from smart_basket.matching.embeddings import embed_missing_canonicals, embed_missing_products
 
 
@@ -59,6 +62,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--top-k", type=int, default=5, help="canonicals offered per product")
     run.add_argument("--limit", type=int, default=None, help="maximum products to process")
+    run.add_argument(
+        "--policy",
+        choices=("threshold", "llm"),
+        default="threshold",
+        help="threshold: calibrated cosine; llm: a model verifies the top-k candidates",
+    )
+    run.add_argument(
+        "--model",
+        default="gemini-3.5-flash-lite",
+        help="Gemini model of `--policy llm` (settings decide the Ollama model)",
+    )
     run.add_argument("--output", type=Path, default=None, help="write the JSON summary")
 
     undo = commands.add_parser("undo-leaf", help="reverse an applied leaf proposal")
@@ -100,6 +114,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             _write_json(args.output, summary)
         _print_calibration(summary)
     elif args.command == "run":
+        policy = _llm_policy(args.model) if args.policy == "llm" else None
         with session_scope() as session:
             summary = run_catalog_agent(
                 session,
@@ -107,6 +122,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 tau_high=args.tau_high,
                 top_k=args.top_k,
                 limit=args.limit,
+                policy=policy,
             )
         printable = {**summary, "run_id": str(summary["run_id"])}
         if args.output is not None:
@@ -136,6 +152,31 @@ def main(argv: Sequence[str] | None = None) -> int:
             _write_json(args.output, sample)
         print(f"{args.chain}: {len(sample)} products sampled for audit")
     return 0
+
+
+def _llm_policy(model: str) -> LLMVerifiedCatalogPolicy:
+    """The verifier's provider: Gemini with `--model` when available, or local Ollama.
+
+    When `GEMINI_API_KEY` is configured and `--model` names a Gemini model (or
+    `LLM_PROVIDER=gemini`), Gemini is used with the requested `--model`. Otherwise, if
+    `LLM_PROVIDER=ollama`, the local Ollama provider is used.
+    """
+    settings = get_settings()
+    if settings.gemini_api_key and (
+        settings.llm_provider == "gemini" or model.startswith("gemini")
+    ):
+        gemini = GeminiProvider(
+            settings.gemini_api_key, model, timeout=settings.llm_timeout_seconds
+        )
+        return LLMVerifiedCatalogPolicy(gemini, model_name=model)
+    if settings.llm_provider == "ollama":
+        provider = provider_from_settings(settings)
+        if provider is not None:
+            return LLMVerifiedCatalogPolicy(provider)
+    raise SystemExit(
+        "--policy llm needs a configured provider: set GEMINI_API_KEY "
+        "(LLM_PROVIDER=gemini) or run a local Ollama (LLM_PROVIDER=ollama)"
+    )
 
 
 def _write_json(path: Path, data: Any) -> None:

@@ -87,6 +87,8 @@
   {
    "key": "entera",
    "name": "entera",
+   "canonical": true,
+   "plain": true,
    "forms": [
     "entera"
    ]
