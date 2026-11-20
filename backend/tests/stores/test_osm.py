@@ -62,6 +62,14 @@ def make_client(handler) -> OverpassClient:
         ({"brand": "Carrefour Market"}, "carrefour"),
         ({"brand": "Gadis"}, "gadis"),
         ({"name": "Claudio"}, "gadis"),
+        ({"brand": "Froiz"}, "froiz"),
+        ({"brand": "Supermercados Froiz"}, "froiz"),
+        ({"brand": "Hiper Froiz"}, "froiz"),
+        ({"brand": "El Corte Inglés"}, "elcorteingles"),
+        ({"name": "El Corte Inglés"}, "elcorteingles"),
+        ({"brand": "Supercor"}, "elcorteingles"),
+        ({"brand": "Supercor Exprés"}, "elcorteingles"),
+        ({"brand": "Hipercor"}, "elcorteingles"),
         ({"brand": "Aldi"}, "aldi"),
     ],
 )
@@ -105,6 +113,10 @@ def test_the_brand_variant_names_the_format():
     assert store_format({"brand": "Carrefour Express", "shop": "supermarket"}) == "Express"
     assert store_format({"brand": "Carrefour Market", "shop": "supermarket"}) == "Market"
     assert store_format({"brand": "DIA&Go", "shop": "supermarket"}) == "Dia&Go"
+    assert store_format({"brand": "Hiper Froiz", "shop": "supermarket"}) == "Hiper Froiz"
+    assert store_format({"brand": "Supercor", "shop": "supermarket"}) == "Supercor"
+    assert store_format({"brand": "Supercor Exprés", "shop": "supermarket"}) == "Supercor Exprés"
+    assert store_format({"brand": "Hipercor", "shop": "supermarket"}) == "Hipercor"
     assert store_format({"brand": "Mercadona", "shop": "supermarket"}) == "supermarket"
     assert store_format({"brand": "Mercadona"}) is None
 
@@ -221,6 +233,55 @@ def test_the_chain_name_replaces_a_missing_osm_name():
     assert parse_elements([node])[0].name == "E.Leclerc"
 
 
+def test_froiz_and_corte_ingles_names_replace_a_missing_osm_name():
+    froiz = {
+        "type": "node",
+        "id": 10,
+        "lat": 42.6,
+        "lon": -5.57,
+        "tags": {"shop": "supermarket", "brand": "Froiz"},
+    }
+    corte_ingles = {
+        "type": "node",
+        "id": 11,
+        "lat": 42.6,
+        "lon": -5.57,
+        "tags": {"shop": "supermarket", "brand": "Supercor"},
+    }
+
+    assert parse_elements([froiz])[0].name == "Froiz"
+    assert parse_elements([corte_ingles])[0].name == "El Corte Inglés"
+
+
+def test_an_el_corte_ingles_department_store_is_a_store():
+    # The León El Corte Inglés (way/26956135, C/ Fray Luis de León 29) is a department store.
+    way = {
+        "type": "way",
+        "id": 26956135,
+        "center": {"lat": 42.6, "lon": -5.57},
+        "tags": {"shop": "department_store", "building": "retail", "name": "El Corte Inglés"},
+    }
+
+    (observation,) = parse_elements([way])
+
+    assert observation.osm_id == "way/26956135"
+    assert observation.chain_code == "elcorteingles"
+    assert observation.name == "El Corte Inglés"
+    assert observation.format == "department_store"
+
+
+def test_a_department_store_of_another_brand_is_not_imported():
+    other = {
+        "type": "node",
+        "id": 12,
+        "lat": 42.6,
+        "lon": -5.57,
+        "tags": {"shop": "department_store", "brand": "Eroski"},
+    }
+
+    assert parse_elements([other]) == ()
+
+
 def test_the_bbox_parses():
     assert (BBOX.south, BBOX.west, BBOX.north, BBOX.east) == (42.56, -5.62, 42.63, -5.52)
 
@@ -245,6 +306,10 @@ def test_the_query_asks_for_supermarkets_and_chain_named_buildings_inside_the_bb
     assert 'nwr["shop"~"^(supermarket|hypermarket)$"](42.56,-5.62,42.63,-5.52)' in query
     assert 'nwr["building"]["name"~' in query
     assert "merc[aá]dona" in query
+    assert "froiz" in query
+    assert "corte ingl[eé]s" in query
+    assert "supercor" in query
+    assert "hipercor" in query
     # The three statements are one union, so `out` prints all of them, not only the last.
     union = query[query.index("(\n") : query.index(");\nout")]
     assert union.count("nwr[") == 3
