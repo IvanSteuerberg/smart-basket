@@ -86,3 +86,18 @@ To guarantee production quality across every single SKU (not only a sample), we 
 * **Initial exhaustive pass (`55/55` batches, `5,438` products):** **75 / 5,438 (`1.38 %`)** hard negatives detected (matching Audit 2's 1.20 % sample estimate) plus 11 additional deterministic flags (**81** unique products total).
 * **Repair & re-verification:** all 81 products were repaired using the auditor's exact reason (creating 51 new canonicals/variants, all embedded in `pgvector`) and re-audited blindly by DeepSeek V4.1 Flash, returning **`0 / 81` (`[]`)** remaining hard negatives — achieving **0 / 5,438 (`0.00 %`) unresolved hard negatives at 100.0 % coverage**.
 * **Productionized for future chains:** `attributes_compatible` (enforced in `_DbAssignCanonical.validate`), Dia private-label sub-brands in `brands_es.json`, and `smart-basket-catalog-agent expand --chain <chain>` (`catalog_expand.py`) are now first-class parts of the Catalog Agent (`1,732` backend `--db` tests passing).
+
+# Multi-Chain Scale-Out Across León: Alimerka, Gadis & Lupa (I16, 2026-11-20)
+
+Using the productionized `attributes_compatible` + `LLMVerifiedCatalogPolicy` (`top_k=8`) + `expand` pipeline with zero manual hand-mapping, we onboarded three more León supermarkets (`AlimerkaAdapter`, `GadisAdapter`, `LupaAdapter`, `1,741` backend `--db` tests passing) and audited each with an independent 250-product blind sample judged by **DeepSeek V4.1 Flash** (stored in `%TEMP%`, outside the repo per NFR-07):
+
+| Chain | León stores | Products | Classified | Pass-1 existing | `expand` (leaves / variants) | Strict accuracy (n=250) | Wilson 95 % CI | Hard negatives | Wilson 95 % CI |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | --- | ---: | --- |
+| **Gadis** (`24001`, HTTP REST) | 1 | 10,732 | **100.0 %** | 8,518 (79.4 %) | 2,214 (326 / 909) | **94.00 %** | `[90.34 %, 96.33 %]` | **2.00 %** (5/250) | `[0.86 %, 4.60 %]` |
+| **Lupa** (`24001`, browser fetch) | 3 | 8,479 | **100.0 %** | 6,625 (78.1 %) | 1,854 (210 / 902) | **97.60 %** | `[94.86 %, 98.90 %]` | **0.40 %** (1/250) | `[0.07 %, 2.23 %]` |
+| **Alimerka** (`24001`, HTTP HTML) | 13 | 7,308 | **100.0 %** | 5,835 (79.8 %) | 1,473 (367 / 537) | **94.40 %** | `[90.82 %, 96.64 %]` | **0.40 %** (1/250) | `[0.07 %, 2.23 %]` |
+| **Dia** (`24001`, browser JSON) | 11 | 5,438 | **100.0 %** | 4,232 (77.8 %) | 1,206 (176 / 236) | **94.00 %** (p1) | `[90.34 %, 96.33 %]` | **0.00 %** (0/5,438 post-repair) | — |
+| **Mercadona** (`3683`, HTTP REST) | 5 | 4,307 | **100.0 %** | — | — | **95.60 %** (I12) | — | **2.70 %** (I12) | — |
+| **Total León** | **33** | **36,264** | **100.0 %** | — | — | **All ≥ 94 %** | **All lower bounds > 90 %** | **All ≤ 2.7 %** | — |
+
+* **Cross-chain competition:** **651** canonicals are now present in **all 5 chains simultaneously**, **1,059** in ≥ 4 chains, and **2,020** in ≥ 2 chains. Live `/api/recommendations` verified optimal multi-chain splits across all 5 chains in León.

@@ -7,9 +7,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from smart_basket.config import Settings, get_settings
+from smart_basket.ingestion.alimerka import AlimerkaAdapter
 from smart_basket.ingestion.backfill import backfill_images
 from smart_basket.ingestion.base import ChainAdapter, collect
 from smart_basket.ingestion.dia import DiaAdapter
+from smart_basket.ingestion.gadis import GadisAdapter
+from smart_basket.ingestion.lupa import LupaAdapter
 from smart_basket.ingestion.mercadona import MercadonaAdapter
 from smart_basket.ingestion.store import IngestSetupError, ingest_catalog, log_ingest_summary
 
@@ -33,6 +36,18 @@ ADAPTERS: dict[str, ChainEntry] = {
     "dia": ChainEntry(
         adapter=DiaAdapter,
         zones=lambda settings: settings.dia_zone_codes,
+    ),
+    "gadis": ChainEntry(
+        adapter=GadisAdapter,
+        zones=lambda settings: settings.gadis_zone_codes,
+    ),
+    "alimerka": ChainEntry(
+        adapter=AlimerkaAdapter,
+        zones=lambda settings: settings.alimerka_zone_codes,
+    ),
+    "lupa": ChainEntry(
+        adapter=LupaAdapter,
+        zones=lambda settings: settings.lupa_zone_codes,
     ),
 }
 

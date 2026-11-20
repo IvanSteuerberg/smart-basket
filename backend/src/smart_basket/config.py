@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     match_decisions_file: Path | None = None
     mercadona_warehouses: str = "3683"
     dia_zones: str = "24001"
+    gadis_zones: str = "24001"
+    alimerka_zones: str = "24001"
+    lupa_zones: str = "24001"
     ingest_delay_seconds: float = 1.5
 
     @field_validator("match_decisions_file", mode="before")
@@ -98,6 +101,21 @@ class Settings(BaseSettings):
     def dia_zone_codes(self) -> list[str]:
         """The configured Dia postal codes, without blanks left by the comma list."""
         return [code.strip() for code in self.dia_zones.split(",") if code.strip()]
+
+    @property
+    def gadis_zone_codes(self) -> list[str]:
+        """The configured Gadis postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.gadis_zones.split(",") if code.strip()]
+
+    @property
+    def alimerka_zone_codes(self) -> list[str]:
+        """The configured Alimerka postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.alimerka_zones.split(",") if code.strip()]
+
+    @property
+    def lupa_zone_codes(self) -> list[str]:
+        """The configured Lupa postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.lupa_zones.split(",") if code.strip()]
 
 
 @lru_cache
