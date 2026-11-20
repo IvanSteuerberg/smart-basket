@@ -32,6 +32,7 @@ from smart_basket.agent.catalog_executors import (
     run_catalog_agent,
     undo_leaf_proposal,
 )
+from smart_basket.agent.catalog_policies import LLMVerifiedCatalogPolicy
 from smart_basket.db.migrate import alembic_config
 from smart_basket.matching.embeddings import (
     EMBEDDING_DIMENSIONS,
@@ -64,6 +65,24 @@ class FakeEmbeddingProvider:
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         return [list(self._table[text]) for text in texts]
+
+
+class FakeCatalogVerifier:
+    """Deterministic `LLMProvider` for the catalog verifier: always picks the first candidate."""
+
+    name = "fake"
+    model = "fake-verifier"
+
+    def __init__(self, answer: str = "asignar_canonico:0") -> None:
+        self.answer = answer
+        self.calls = 0
+
+    def generate_json(self, system: str, user: str, schema: dict[str, object]) -> dict[str, object]:
+        self.calls += 1
+        return {"action_key": self.answer}
+
+    def generate_text(self, prompt: str) -> str:  # pragma: no cover - unused by the policy
+        return ""
 
 
 @dataclass
@@ -400,6 +419,45 @@ def test_assign_canonical_refuses_ean_and_embedding(db):
     }
 
 
+def test_assign_canonical_rejects_an_incompatible_variant_even_at_high_confidence(db):
+    world = db
+    plain = add_canonical(world, "leche", "Leche semidesnatada", embedding=vector(1, 0, 0))
+    lactose_free = add_canonical(
+        world,
+        "leche",
+        "Leche semidesnatada sin lactosa",
+        variant_key="sin_lactosa",
+        embedding=vector(1, 0, 0),
+    )
+    product = add_product(
+        world,
+        "L1",
+        "Leche semidesnatada sin lactosa Dia 1 l",
+        chain_category="lacteos",
+        embedding=vector(1, 0, 0),
+    )
+
+    problem = validate_action(
+        world,
+        CatalogActionKind.ASIGNAR_CANONICO,
+        {"product_id": product, "canonical_id": plain, "confidence": 0.99},
+    )
+
+    assert problem is not None
+    assert "variante" in problem
+    accepted = validate_action(
+        world,
+        CatalogActionKind.ASIGNAR_CANONICO,
+        {"product_id": product, "canonical_id": lactose_free, "confidence": 0.99},
+    )
+    assert accepted is None
+    canonical = world.session.execute(
+        text("select canonical_id from chain_product where id = :product"),
+        {"product": product},
+    ).scalar_one()
+    assert canonical is None
+
+
 def test_propose_new_leaf_creates_category_and_undo_reverts_it(db):
     world = db
     tahini = [
@@ -666,6 +724,66 @@ def test_run_catalog_agent_persists_its_trace(db):
     assert run.steps[-1].chosen_action.startswith(CatalogActionKind.PROPONER_HOJA_NUEVA.value)
 
 
+def test_run_catalog_agent_never_assigns_across_variants(db):
+    world = db
+    add_canonical(world, "leche", "Leche semidesnatada", embedding=vector(1, 0, 0))
+    product = add_product(
+        world,
+        "L1",
+        "Leche semidesnatada sin lactosa Dia 1 l",
+        chain_category="lacteos",
+        embedding=vector(1, 0, 0),
+    )
+
+    summary = run_catalog_agent(world.session, tau_high=0.5, top_k=5)
+
+    assert summary["assigned"] == 0
+    assert summary["sent_to_review"] == 1
+    canonical = world.session.execute(
+        text("select canonical_id from chain_product where id = :product"),
+        {"product": product},
+    ).scalar_one()
+    assert canonical is None
+
+
+def test_run_catalog_agent_applies_a_low_cosine_match_verified_by_the_model(db):
+    world = db
+    canonical = add_canonical(
+        world,
+        "leche",
+        "Leche semidesnatada sin lactosa",
+        variant_key="sin_lactosa",
+        embedding=vector(1, 0, 0),
+    )
+    product = add_product(
+        world,
+        "L1",
+        "Leche semidesnatada sin lactosa Dia 1 l",
+        chain_category="lacteos",
+        embedding=vector(1, 0.88),
+    )
+    verifier = FakeCatalogVerifier("asignar_canonico:0")
+
+    summary = run_catalog_agent(
+        world.session,
+        top_k=5,
+        policy=LLMVerifiedCatalogPolicy(verifier, model_name="fake-verifier"),
+    )
+
+    assert verifier.calls == 1
+    assert summary["assigned"] == 1
+    row = (
+        world.session.execute(
+            text("select canonical_id, match_confidence from chain_product where id = :product"),
+            {"product": product},
+        )
+        .mappings()
+        .one()
+    )
+    assert row["canonical_id"] == canonical
+    assert row["match_confidence"] == pytest.approx(1 / math.sqrt(1 + 0.88**2), abs=1e-4)
+
+
 def test_calibrate_thresholds_and_export_audit_sample(db):
     world = db
     alpha = add_canonical(world, "platano", "Alfa", embedding=vector(1, 0, 0))
@@ -734,6 +852,16 @@ def test_cli_parses_every_subcommand():
     for argv in cases:
         args = parser.parse_args(argv)
         assert args.command == argv[0]
+
+
+def test_cli_parses_the_verifier_policy():
+    parser = build_parser()
+
+    llm = parser.parse_args(["run", "--policy", "llm", "--model", "gemini-3.5-flash-lite"])
+
+    assert llm.policy == "llm"
+    assert llm.model == "gemini-3.5-flash-lite"
+    assert parser.parse_args(["run"]).policy == "threshold"
 
 
 def _literal(embedding: Sequence[float]) -> str:

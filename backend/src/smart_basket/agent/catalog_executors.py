@@ -40,10 +40,16 @@ from smart_basket.agent.catalog_agent import (
     CatalogState,
     build_catalog_harness,
 )
+from smart_basket.agent.catalog_policies import (
+    LLM_MIN_AUTO_CONFIDENCE,
+    LLMVerifiedCatalogPolicy,
+    variants_compatible,
+)
 from smart_basket.agent.core import (
     ActionExecutor,
     HarnessConfig,
     NoOpExecutor,
+    Policy,
     PolicyDecision,
     Proposal,
     RunResult,
@@ -131,12 +137,20 @@ def run_catalog_agent(
     tau_high: float = DEFAULT_TAU_HIGH,
     top_k: int = DEFAULT_TOP_K,
     limit: int | None = None,
+    policy: Policy | None = None,
+    min_auto_confidence: float = 0.85,
 ) -> dict[str, Any]:
     """Run the catalog agent over unmatched embedded products and persist its trace.
 
     Each product becomes an observation with the nearest canonicals as candidates; each cluster
-    of at least three unmatched products becomes a leaf candidate. The run, its steps and its
-    final state are stored in `agent_run`/`agent_step` with `agent_name = "catalog"`.
+    of at least three unmatched products becomes a leaf candidate. Candidates whose variant is
+    incompatible with the product are dropped before any policy sees them (ADR 0024), so neither
+    the threshold nor the model can propose a sibling-variant assignment. The run, its steps and
+    its final state are stored in `agent_run`/`agent_step` with `agent_name = "catalog"`.
+
+    `policy` defaults to `ThresholdCatalogPolicy(tau_high=...)`; a model-verified policy lowers
+    the autonomous floor to `LLM_MIN_AUTO_CONFIDENCE`, because the model, not the cosine alone,
+    vouches for the match.
     """
     rows = _load_unmatched_products(session, chain_code=chain_code, limit=limit)
     observations = [
@@ -146,14 +160,17 @@ def run_catalog_agent(
             product_id=row["id"],
             details={
                 "product_name": row["name"],
+                "category_name": row["category_name"],
                 "candidate_canonicals": [
                     {
                         "canonical_id": match.canonical_id,
                         "canonical_name": match.name,
                         "category_key": match.category_key,
+                        "variant_key": match.variant_key,
                         "confidence": _clamp_similarity(match.similarity),
                     }
                     for match in nearest_canonicals(session, row["embedding"], top_k=top_k)
+                    if variants_compatible(row["name"], match.variant_key)
                 ],
             },
         )
@@ -162,20 +179,24 @@ def run_catalog_agent(
     observed = {row["id"] for row in rows}
     observations.extend(_cluster_observations(session, chain_code=chain_code, observed=observed))
 
-    policy = ThresholdCatalogPolicy(tau_high=tau_high)
+    chosen_policy = policy if policy is not None else ThresholdCatalogPolicy(tau_high=tau_high)
+    floor = tau_high if policy is None else min_auto_confidence
+    if isinstance(chosen_policy, LLMVerifiedCatalogPolicy):
+        floor = min(floor, LLM_MIN_AUTO_CONFIDENCE)
     state = CatalogState(observations=tuple(observations))
     run_id = trace.create_run(
         session,
         agent_name=CATALOG_AGENT_NAME,
-        policy_name=policy.name,
+        policy_name=chosen_policy.name,
         state_json=state.to_dict(),
     )
-    executors = build_db_catalog_executors(session, run_id=run_id, min_auto_confidence=tau_high)
+    executors = build_db_catalog_executors(session, run_id=run_id, min_auto_confidence=floor)
+    step_budget_ms = 10_000 if isinstance(chosen_policy, LLMVerifiedCatalogPolicy) else 1_000
     config = HarnessConfig(
         max_steps=max(6, len(observations)),
-        time_budget_ms=max(60_000, 1_000 * max(1, len(observations))),
+        time_budget_ms=max(60_000, step_budget_ms * max(1, len(observations))),
     )
-    result = build_catalog_harness(config).run(state, policy, executors)
+    result = build_catalog_harness(config).run(state, chosen_policy, executors)
     _persist_trace(session, run_id, result)
     return {
         "run_id": run_id,
@@ -409,7 +430,7 @@ class _DbAssignCanonical:
                 f"{self.min_auto_confidence:.2f}"
             )
         row = self.session.execute(
-            text("select id, match_method from chain_product where id = :product"),
+            text("select id, name, match_method from chain_product where id = :product"),
             {"product": payload["product_id"]},
         ).one_or_none()
         if row is None:
@@ -420,11 +441,19 @@ class _DbAssignCanonical:
                 f"{row.match_method!r}"
             )
         canonical = self.session.execute(
-            text("select id from canonical_product where id = :canonical and merged_into is null"),
+            text(
+                "select id, name, variant_key from canonical_product "
+                "where id = :canonical and merged_into is null"
+            ),
             {"canonical": payload["canonical_id"]},
-        ).scalar_one_or_none()
+        ).one_or_none()
         if canonical is None:
             return f"canonical {payload['canonical_id']} does not exist"
+        if not variants_compatible(row.name, canonical.variant_key):
+            return (
+                f"la variante del producto «{row.name}» no es compatible con la del canónico "
+                f"«{canonical.name}» ({canonical.variant_key or 'sin variante'})"
+            )
         return None
 
     def apply(self, state: CatalogState, proposal: Proposal) -> CatalogState:
