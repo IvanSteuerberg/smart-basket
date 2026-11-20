@@ -155,22 +155,28 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 def _llm_policy(model: str) -> LLMVerifiedCatalogPolicy:
-    """The verifier's provider: the configured one, or Gemini with `--model` when it is Gemini.
+    """The verifier's provider: Gemini with `--model` when available, or local Ollama.
 
-    `LLM_PROVIDER=ollama` keeps its configured model (the local runtime owns it). A Gemini
-    provider is rebuilt so `--model` chooses the verifier model of this run.
+    When `GEMINI_API_KEY` is configured and `--model` names a Gemini model (or
+    `LLM_PROVIDER=gemini`), Gemini is used with the requested `--model`. Otherwise, if
+    `LLM_PROVIDER=ollama`, the local Ollama provider is used.
     """
     settings = get_settings()
-    provider = provider_from_settings(settings)
-    if provider is not None and provider.name != "gemini":
-        return LLMVerifiedCatalogPolicy(provider)
-    if not settings.gemini_api_key:
-        raise SystemExit(
-            "--policy llm needs a configured provider: set GEMINI_API_KEY "
-            "(LLM_PROVIDER=gemini) or run a local Ollama (LLM_PROVIDER=ollama)"
+    if settings.gemini_api_key and (
+        settings.llm_provider == "gemini" or model.startswith("gemini")
+    ):
+        gemini = GeminiProvider(
+            settings.gemini_api_key, model, timeout=settings.llm_timeout_seconds
         )
-    gemini = GeminiProvider(settings.gemini_api_key, model, timeout=settings.llm_timeout_seconds)
-    return LLMVerifiedCatalogPolicy(gemini, model_name=model)
+        return LLMVerifiedCatalogPolicy(gemini, model_name=model)
+    if settings.llm_provider == "ollama":
+        provider = provider_from_settings(settings)
+        if provider is not None:
+            return LLMVerifiedCatalogPolicy(provider)
+    raise SystemExit(
+        "--policy llm needs a configured provider: set GEMINI_API_KEY "
+        "(LLM_PROVIDER=gemini) or run a local Ollama (LLM_PROVIDER=ollama)"
+    )
 
 
 def _write_json(path: Path, data: Any) -> None:

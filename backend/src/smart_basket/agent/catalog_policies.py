@@ -57,6 +57,37 @@ _FLAVOUR_KEYS = frozenset(
     {"fresa", "vainilla", "limon", "pina", "melocoton", "naranja", "chocolate"}
 )
 
+#: Product families where a trailing fruit/flavour noun ("Yogur fresa", "Batido vainilla")
+#: denotes a flavour variant rather than the primary ingredient ("Naranjas 2 kg",
+#: "Zumo de naranja", "Tableta de chocolate").
+_FLAVOUR_CARRIERS = frozenset(
+    {
+        "agua",
+        "barrita",
+        "batido",
+        "bebida",
+        "bifidus",
+        "bizcocho",
+        "caramelo",
+        "chicle",
+        "flan",
+        "galleta",
+        "gelatina",
+        "helado",
+        "infusion",
+        "kefir",
+        "leche",
+        "magdalena",
+        "natilla",
+        "petit",
+        "postre",
+        "proteina",
+        "refresco",
+        "te",
+        "yogur",
+    }
+)
+
 #: Cosine floor under which a model-verified assignment is not applied (ADR 0024: the verified
 #: matches of interest sit between 0.72 and 0.87, below the raw `tau_high`).
 LLM_MIN_AUTO_CONFIDENCE = 0.60
@@ -151,11 +182,15 @@ def variants_compatible(product_name: str, canonical_variant_key: str | None) ->
 def _product_variants(product_name: str) -> frozenset[str]:
     preprocessor = _preprocessor()
     keys = set(name_match(preprocessor, product_name).variant_keys)
+    if any(key.startswith(f"{FLAVOUR}:") for key in keys):
+        return frozenset(keys)
     _, without_brand, _ = preprocessor.find_brand(tokenize(product_name))
     tokens = [token.key for token in without_brand]
-    keys.update(
-        f"{FLAVOUR}:{key}" for form, key in _vocabulary().flavours if _contains(tokens, form)
-    )
+    if len(tokens) >= 2 and any(same_word(tokens[0], carrier) for carrier in _FLAVOUR_CARRIERS):
+        trailing = tokens[1:]
+        keys.update(
+            f"{FLAVOUR}:{key}" for form, key in _vocabulary().flavours if _contains(trailing, form)
+        )
     return frozenset(keys)
 
 
@@ -193,10 +228,12 @@ class LLMVerifiedCatalogPolicy:
         provider: LLMProvider,
         model_name: str | None = None,
         *,
+        min_auto_confidence: float = LLM_MIN_AUTO_CONFIDENCE,
         retry_delays: tuple[float, ...] = DEFAULT_RETRY_DELAYS,
     ) -> None:
         self.provider = provider
         self.model_name = model_name or getattr(provider, "model", None) or provider.name
+        self.min_auto_confidence = min_auto_confidence
         self.retry_delays = tuple(retry_delays)
 
     def choose(
@@ -208,13 +245,21 @@ class LLMVerifiedCatalogPolicy:
         if observation.kind is CatalogObservationKind.CLUSTER_CANDIDATE:
             return self._choose_cluster(candidates)
         assignable = [
-            item for item in candidates if item.kind is CatalogActionKind.ASIGNAR_CANONICO
+            item
+            for item in candidates
+            if item.kind is CatalogActionKind.ASIGNAR_CANONICO
+            and float(item.args.get("confidence") or 0.0) >= self.min_auto_confidence
         ]
         if not assignable:
             return self._choose_without_assignment(candidates)
-        answer = self._verify(observation, candidates)
+        eligible = [
+            item
+            for item in candidates
+            if item.kind is not CatalogActionKind.ASIGNAR_CANONICO or item in assignable
+        ]
+        answer = self._verify(observation, eligible)
         key = answer.get("action_key")
-        chosen = next((item for item in candidates if item.key == key), None)
+        chosen = next((item for item in eligible if item.key == key), None)
         if chosen is None:
             raise LLMError(f"catalog verifier returned an unknown action_key {key!r}")
         confidence = 0.95 if chosen.kind is CatalogActionKind.ASIGNAR_CANONICO else 1.0

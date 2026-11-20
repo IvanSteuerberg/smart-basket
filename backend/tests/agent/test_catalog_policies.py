@@ -128,6 +128,13 @@ def _observation() -> CatalogObservation:
         ("Leche semidesnatada Dia 1 l", "", True),
         ("Leche desnatada Dia 1 l", "semidesnatada", False),
         ("Leche desnatada Dia 1 l", "desnatada", True),
+        ("Leche entera Dia 1 l", "desnatada", False),
+        ("Leche entera Dia 1 l", "semidesnatada", False),
+        ("Leche entera Dia 1 l", "entera", True),
+        ("Naranjas malla 2 kg", "", True),
+        ("Zumo de naranja Dia 1 l", "", True),
+        ("Tableta de chocolate negro Dia 100 g", "", True),
+        ("Yogur sabor fresa y plátano Dia 4x125g", "sabor:fresa y platano", True),
         ("Atún en aceite de oliva", "en_aceite_girasol", False),
     ],
 )
@@ -135,6 +142,30 @@ def test_variants_compatible_guards_sibling_variants(
     product_name: str, canonical_key: str, expected: bool
 ):
     assert variants_compatible(product_name, canonical_key) is expected
+
+
+def test_the_policy_skips_llm_when_all_candidates_are_below_floor():
+    provider = FakeVerifier("asignar_canonico:0")
+    policy = LLMVerifiedCatalogPolicy(provider, model_name="gemini-3.5-flash-lite")
+    low_candidates = (
+        CatalogCandidate(
+            key="asignar_canonico:0",
+            kind=CatalogActionKind.ASIGNAR_CANONICO,
+            args={"product_id": 1, "canonical_id": 10, "canonical_name": "X", "confidence": 0.55},
+            label="Asignar",
+        ),
+        CatalogCandidate(
+            key="enviar_a_revision",
+            kind=CatalogActionKind.ENVIAR_A_REVISION,
+            args={"product_id": 1, "reason": "low"},
+            label="Enviar a revisión",
+        ),
+    )
+
+    decision = policy.choose(CatalogState(), _observation(), low_candidates)
+
+    assert decision.action_key == "enviar_a_revision"
+    assert provider.calls == []
 
 
 def test_the_policy_sends_a_spanish_prompt_with_a_closed_enum():

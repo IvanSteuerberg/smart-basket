@@ -152,6 +152,12 @@ def run_catalog_agent(
     the autonomous floor to `LLM_MIN_AUTO_CONFIDENCE`, because the model, not the cosine alone,
     vouches for the match.
     """
+    chosen_policy = policy if policy is not None else ThresholdCatalogPolicy(tau_high=tau_high)
+    floor = tau_high if policy is None else min_auto_confidence
+    is_llm_policy = isinstance(chosen_policy, LLMVerifiedCatalogPolicy)
+    if is_llm_policy:
+        floor = min(floor, LLM_MIN_AUTO_CONFIDENCE)
+
     rows = _load_unmatched_products(session, chain_code=chain_code, limit=limit)
     observations = [
         CatalogObservation(
@@ -171,6 +177,7 @@ def run_catalog_agent(
                     }
                     for match in nearest_canonicals(session, row["embedding"], top_k=top_k)
                     if variants_compatible(row["name"], match.variant_key)
+                    and (not is_llm_policy or _clamp_similarity(match.similarity) >= floor)
                 ],
             },
         )
@@ -179,10 +186,6 @@ def run_catalog_agent(
     observed = {row["id"] for row in rows}
     observations.extend(_cluster_observations(session, chain_code=chain_code, observed=observed))
 
-    chosen_policy = policy if policy is not None else ThresholdCatalogPolicy(tau_high=tau_high)
-    floor = tau_high if policy is None else min_auto_confidence
-    if isinstance(chosen_policy, LLMVerifiedCatalogPolicy):
-        floor = min(floor, LLM_MIN_AUTO_CONFIDENCE)
     state = CatalogState(observations=tuple(observations))
     run_id = trace.create_run(
         session,
@@ -191,9 +194,10 @@ def run_catalog_agent(
         state_json=state.to_dict(),
     )
     executors = build_db_catalog_executors(session, run_id=run_id, min_auto_confidence=floor)
-    step_budget_ms = 10_000 if isinstance(chosen_policy, LLMVerifiedCatalogPolicy) else 1_000
+    step_budget_ms = 10_000 if is_llm_policy else 1_000
     config = HarnessConfig(
         max_steps=max(6, len(observations)),
+        max_retries=0 if is_llm_policy else 2,
         time_budget_ms=max(60_000, step_budget_ms * max(1, len(observations))),
     )
     result = build_catalog_harness(config).run(state, chosen_policy, executors)
