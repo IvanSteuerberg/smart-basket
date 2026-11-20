@@ -8,6 +8,7 @@ x-backend: &backend
   image: smart-basket-backend:${SMART_BASKET_TAG:-dev}
   build:
     context: ./backend
+    target: runtime
   restart: unless-stopped
   environment: &backend-env
     DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-smart_basket}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:-smart_basket}
@@ -80,7 +81,12 @@ services:
 
   worker:
     <<: *backend
-    command: ["smart-basket-worker"]
+    image: smart-basket-worker:${SMART_BASKET_TAG:-dev}
+    build:
+      context: ./backend
+      target: worker
+    shm_size: "1gb"
+    command: ["with-xvfb", "smart-basket-worker"]
     healthcheck:
       disable: true
     depends_on:

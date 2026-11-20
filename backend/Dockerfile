@@ -10,7 +10,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
 
-FROM python:3.15.2-slim-trixie
+FROM python:3.15.2-slim-trixie AS runtime
 RUN useradd --system --uid 10001 --home-dir /app smartbasket && mkdir -p /data && chown smartbasket /data
 COPY --from=build /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
@@ -20,3 +20,22 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4)"]
 CMD ["smart-basket-api"]
+
+# Worker image adds Playwright + Chromium + Xvfb so chains requiring a real headed browser
+# (e.g. Dia, ADR 0006/0024) run 100% inside Docker without bloating `api` or `migrate`.
+FROM runtime AS worker
+USER root
+COPY --from=uv /uv /usr/local/bin/uv
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends xvfb xauth libatomic1 \
+  && uv pip install --python /app/.venv/bin/python --no-cache playwright \
+  && /app/.venv/bin/playwright install --with-deps chromium \
+  && rm -rf /var/lib/apt/lists/* \
+  && chown -R smartbasket:smartbasket /ms-playwright
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix \
+  && printf '#!/bin/sh\nset -e\nXvfb :99 -screen 0 1280x720x24 -nolisten tcp >/dev/null 2>&1 &\nXPID=$!\ntrap "kill $XPID 2>/dev/null || true" EXIT INT TERM\nsleep 1\nexport DISPLAY=:99\n"$@"\n' > /usr/local/bin/with-xvfb \
+  && chmod +x /usr/local/bin/with-xvfb
+ENV XDG_CONFIG_HOME=/tmp/.config XDG_CACHE_HOME=/tmp/.cache
+USER smartbasket
+CMD ["with-xvfb", "smart-basket-worker"]

@@ -27,6 +27,7 @@ from smart_basket.ingestion.base import (
 
 BASE_URL = "https://www.dia.es"
 API_ROOT = "/api/v1/plp-insight/initial_analytics"
+PLP_API_ROOT = "/api/v1/plp-back/reduced"
 #: Any product listing of the site carries the whole `menu_analytics` tree; `L1_todo` 404s.
 BOOTSTRAP_URL = f"{API_ROOT}/quesos/curado/c/L2007?navigation=L2007&page=1"
 IMAGE_URL = "https://www.dia.es/product_images/{sku}/{sku}_ISO_0_ES.jpg?imwidth=384"
@@ -104,14 +105,14 @@ _SET_POSTAL_CODE_JS = """
 async (cp) => {
   const url = '/api/v1/common-aggregator/save-shipping-address'
     + '?new_postal_code=' + encodeURIComponent(cp) + '&skip_dry_run=true';
-  const r = await fetch(url, { method: 'PUT' });
+  const r = await fetch(url, { method: 'PUT', signal: AbortSignal.timeout(30000) });
   return r.status;
 }
 """
 
 _FETCH_JSON_JS = """
 async (u) => {
-  const r = await fetch(u);
+  const r = await fetch(u, { signal: AbortSignal.timeout(30000) });
   return [r.status, await r.text()];
 }
 """
@@ -337,7 +338,7 @@ def _raw_skus(payload: Mapping[str, Any]) -> list[str]:
 
 def _plp_url(navigation: str, page: int, path: str | None = None) -> str:
     query = urlencode({"navigation": navigation, "page": page})
-    base = f"{API_ROOT}{path}" if path else API_ROOT
+    base = f"{PLP_API_ROOT}{path}" if path else API_ROOT
     return f"{base}?{query}"
 
 
@@ -552,6 +553,10 @@ def _normalized_size(raw_quantity: str, raw_unit: str) -> tuple[Decimal | None, 
 
 
 def _product_rows(payload: Mapping[str, Any]) -> Iterator[Mapping[str, Any]]:
+    plp_items = payload.get("plp_items")
+    if isinstance(plp_items, list):
+        yield from (row for row in plp_items if isinstance(row, Mapping))
+        return
     analytics = payload.get("page_product_analytics")
     rows: object = None
     if isinstance(analytics, Mapping):
