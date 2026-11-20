@@ -23,6 +23,7 @@ from smart_basket.agent.catalog_executors import (
     run_catalog_agent,
     undo_leaf_proposal,
 )
+from smart_basket.agent.catalog_expand import expand_catalog_taxonomy
 from smart_basket.agent.catalog_policies import LLMVerifiedCatalogPolicy
 from smart_basket.config import get_settings
 from smart_basket.db import session_scope
@@ -60,7 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--tau-high", type=float, default=0.88, help="similarity that assigns without review"
     )
-    run.add_argument("--top-k", type=int, default=5, help="canonicals offered per product")
+    run.add_argument("--top-k", type=int, default=8, help="canonicals offered per product")
     run.add_argument("--limit", type=int, default=None, help="maximum products to process")
     run.add_argument(
         "--policy",
@@ -77,6 +78,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     undo = commands.add_parser("undo-leaf", help="reverse an applied leaf proposal")
     undo.add_argument("proposal_id", type=int, help="catalog_leaf_proposal id")
+
+    expand = commands.add_parser(
+        "expand", help="create missing variants and reversible leaves for remaining unmatched items"
+    )
+    expand.add_argument("--chain", default=None, help="only process products of this chain")
+    expand.add_argument(
+        "--model",
+        default="gemini-3.5-flash-lite",
+        help="Gemini model for taxonomy expansion (settings decide the Ollama model)",
+    )
+    expand.add_argument("--workers", type=int, default=8, help="concurrent LLM workers")
 
     audit = commands.add_parser("audit-sample", help="blind deterministic audit sample")
     audit.add_argument("--chain", required=True, help="chain code to sample")
@@ -142,6 +154,23 @@ def main(argv: Sequence[str] | None = None) -> int:
             f"proposal {summary['proposal_id']}: {summary['status']}, "
             f"products cleared {summary['products_cleared']}, "
             f"reviews queued {summary['reviews_queued']}"
+        )
+    elif args.command == "expand":
+        policy = _llm_policy(args.model)
+
+        def _factory():
+            return _llm_policy(args.model).provider
+
+        with session_scope() as session:
+            summary = expand_catalog_taxonomy(
+                session,
+                _factory,
+                chain_code=args.chain,
+                max_workers=args.workers,
+            )
+        print(
+            f"expand ({policy.model_name}): assigned {summary['assigned']}, "
+            f"new leaves {summary['new_leaves']}, new variants {summary['new_variants']}"
         )
     elif args.command == "audit-sample":
         with session_scope() as session:

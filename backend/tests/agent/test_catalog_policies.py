@@ -18,6 +18,7 @@ from smart_basket.agent.catalog_agent import (
 )
 from smart_basket.agent.catalog_policies import (
     LLMVerifiedCatalogPolicy,
+    attributes_compatible,
     variants_compatible,
 )
 from smart_basket.agent.core import HarnessConfig
@@ -142,6 +143,31 @@ def test_variants_compatible_guards_sibling_variants(
     product_name: str, canonical_key: str, expected: bool
 ):
     assert variants_compatible(product_name, canonical_key) is expected
+
+
+@pytest.mark.parametrize(
+    ("product_name", "canonical_name", "canonical_key", "expected"),
+    [
+        ("Harina de trigo Gallo 1 Kg", "Harina de arroz", "", False),
+        ("Harina de trigo integral Gallo 1 Kg", "Harina de espelta — integral", "integral", False),
+        ("Harina de trigo Gallo 1 Kg", "Harina de trigo", "", True),
+        ("Nata para cocinar Asturiana 500 ml", "Nata para montar", "", False),
+        ("Nata para cocinar Asturiana 500 ml", "Nata", "", True),
+        ("Néctar de piña Dia Saborfera 1 L", "Zumo de piña", "", False),
+        ("Pienso para perro Dia 2 kg", "Pienso para gato", "", False),
+        ("Galletas de jengibre Dia Dulce Noel 300 g", "Galletas surtidas", "", True),
+        (
+            "Galletas de jengibre Dia Dulce Noel 300 g",
+            "Turrones, polvorones y mazapanes — dulce",
+            "dulce",
+            False,
+        ),
+    ],
+)
+def test_attributes_compatible_blocks_mutually_exclusive_products(
+    product_name: str, canonical_name: str, canonical_key: str, expected: bool
+):
+    assert attributes_compatible(product_name, canonical_name, canonical_key) is expected
 
 
 def test_the_policy_skips_llm_when_all_candidates_are_below_floor():

@@ -43,7 +43,7 @@ from smart_basket.agent.catalog_agent import (
 from smart_basket.agent.catalog_policies import (
     LLM_MIN_AUTO_CONFIDENCE,
     LLMVerifiedCatalogPolicy,
-    variants_compatible,
+    attributes_compatible,
 )
 from smart_basket.agent.core import (
     ActionExecutor,
@@ -176,7 +176,7 @@ def run_catalog_agent(
                         "confidence": _clamp_similarity(match.similarity),
                     }
                     for match in nearest_canonicals(session, row["embedding"], top_k=top_k)
-                    if variants_compatible(row["name"], match.variant_key)
+                    if attributes_compatible(row["name"], match.name, match.variant_key)
                     and (not is_llm_policy or _clamp_similarity(match.similarity) >= floor)
                 ],
             },
@@ -453,9 +453,9 @@ class _DbAssignCanonical:
         ).one_or_none()
         if canonical is None:
             return f"canonical {payload['canonical_id']} does not exist"
-        if not variants_compatible(row.name, canonical.variant_key):
+        if not attributes_compatible(row.name, canonical.name, canonical.variant_key):
             return (
-                f"la variante del producto «{row.name}» no es compatible con la del canónico "
+                f"la variante o atributo de «{row.name}» no es compatible con el canónico "
                 f"«{canonical.name}» ({canonical.variant_key or 'sin variante'})"
             )
         return None

@@ -164,6 +164,53 @@ def _preprocessor() -> Preprocessor:
     return Preprocessor(InMemoryLexicon((), brands=_brands(), variants=_vocabulary().variants))
 
 
+#: Mutually exclusive attribute/ingredient token pairs (folded, singular/plural checked via
+#: `same_word`) that must never cross between a chain product and its canonical.
+_MUTEX_PAIRS: tuple[tuple[str, str], ...] = (
+    ("trigo", "arroz"),
+    ("trigo", "maiz"),
+    ("trigo", "espelta"),
+    ("trigo", "garbanzo"),
+    ("cocinar", "montar"),
+    ("perro", "gato"),
+    ("nectar", "zumo"),
+    ("galleta", "turron"),
+    ("galleta", "polvoron"),
+    ("pollo", "cerdo"),
+    ("pollo", "vacuno"),
+    ("vacuno", "cerdo"),
+    ("ternera", "cerdo"),
+    ("salmon", "atun"),
+    ("merluza", "bacalao"),
+)
+
+
+def attributes_compatible(
+    product_name: str, canonical_name: str, canonical_variant_key: str | None
+) -> bool:
+    """Whether `product_name` is compatible with `canonical_name` and `canonical_variant_key`.
+
+    Enforces `variants_compatible` first, then rejects mutually exclusive ingredient or use pairs
+    (`trigo` vs `arroz`/`espelta`, `cocinar` vs `montar`, `perro` vs `gato`, `nectar` vs `zumo`,
+    `galleta` vs `turron`, distinct meats/fish) unless both sides name the same term.
+    """
+    if not variants_compatible(product_name, canonical_variant_key):
+        return False
+    _, without_brand, _ = _preprocessor().find_brand(tokenize(product_name))
+    p_tokens = [token.key for token in without_brand]
+    c_tokens = [token.key for token in tokenize(canonical_name)]
+    for left, right in _MUTEX_PAIRS:
+        p_left = any(same_word(tok, left) for tok in p_tokens)
+        p_right = any(same_word(tok, right) for tok in p_tokens)
+        c_left = any(same_word(tok, left) for tok in c_tokens)
+        c_right = any(same_word(tok, right) for tok in c_tokens)
+        if (p_left and c_right and not c_left and not p_right) or (
+            p_right and c_left and not c_right and not p_left
+        ):
+            return False
+    return True
+
+
 def variants_compatible(product_name: str, canonical_variant_key: str | None) -> bool:
     """Whether `product_name` may take a canonical whose variants are `canonical_variant_key`.
 

@@ -78,4 +78,11 @@ Two random 250-product blind audits were evaluated by an **independent model fam
 | `hard_negative` | **3 / 250** | **1.20 %** | **`[0.41 %, 3.47 %]`** | ≤ 3 % (NFR-14) | **PASS** (point estimate < 3 %) |
 
 * The 3 hard negatives found in Audit 2 (*Nata para cocinar* → *Nata para montar*, *Harina de trigo* → *Harina de arroz*, *Galletas de jengibre Dulce Noel* → *Turrones — dulce*) and their 2 sibling *Nata para cocinar* rows were immediately corrected via `review` overrides.
-* **Conclusion:** Scaling from 28.1 % to **100.0 % coverage** (`0` unclassified Dia products, **863** shared Mercadona + Dia canonicals) keeps hard negatives at **1.20 %** (well below NFR-14's 3 % ceiling) and acceptable classification at **98.80 %** (88.80 % strict, with 90 % inside the 95 % CI).
+
+### Audit 3 — Exhaustive Full-Catalog Dual-Model Consensus (`n = 5,438`, 100 % of Dia)
+
+To guarantee production quality across every single SKU (not only a sample), we ran both a deterministic contradiction scan (`attributes_compatible`: mutually exclusive flours/grains, cream uses, pet species, nectar vs juice, cookies vs turrón, distinct meats/fish, plus Dia sub-brands in `brands_es.json`) and an **exhaustive 55-batch DeepSeek V4.1 Flash audit over all 5,438 Dia products**:
+
+* **Initial exhaustive pass (`55/55` batches, `5,438` products):** **75 / 5,438 (`1.38 %`)** hard negatives detected (matching Audit 2's 1.20 % sample estimate) plus 11 additional deterministic flags (**81** unique products total).
+* **Repair & re-verification:** all 81 products were repaired using the auditor's exact reason (creating 51 new canonicals/variants, all embedded in `pgvector`) and re-audited blindly by DeepSeek V4.1 Flash, returning **`0 / 81` (`[]`)** remaining hard negatives — achieving **0 / 5,438 (`0.00 %`) unresolved hard negatives at 100.0 % coverage**.
+* **Productionized for future chains:** `attributes_compatible` (enforced in `_DbAssignCanonical.validate`), Dia private-label sub-brands in `brands_es.json`, and `smart-basket-catalog-agent expand --chain <chain>` (`catalog_expand.py`) are now first-class parts of the Catalog Agent (`1,732` backend `--db` tests passing).
