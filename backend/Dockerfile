@@ -33,5 +33,6 @@ RUN apt-get update \
   && /app/.venv/bin/playwright install --with-deps chromium \
   && rm -rf /var/lib/apt/lists/* \
   && chown -R smartbasket:smartbasket /ms-playwright
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
 USER smartbasket
 CMD ["xvfb-run", "-a", "smart-basket-worker"]

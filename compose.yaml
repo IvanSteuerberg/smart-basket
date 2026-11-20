@@ -85,6 +85,7 @@ services:
     build:
       context: ./backend
       target: worker
+    shm_size: "1gb"
     command: ["xvfb-run", "-a", "smart-basket-worker"]
     healthcheck:
       disable: true
