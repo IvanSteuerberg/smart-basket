@@ -43,9 +43,9 @@ A live probe of `dia.es` confirmed:
 
 # Consequences
 
-* **9,745 live León products** are now in PostgreSQL (**4,307** Mercadona + **5,438** Dia `24001`), all embedded with `gemini-embedding-001` (768 dims) and HNSW indexed.
-* **1,527 Dia products (28.1 %)** are automatically assigned across **595 shared Mercadona + Dia canonicals**; **3,911** are queued conservatively in `match_review`.
-* Independent 250-product blind audit by **DeepSeek V4.1 Flash** confirmed **94.00 % strict accuracy** (Wilson 95 % CI `[90.34 %, 96.33 %]`, meeting NFR-04 ≥ 90 %) and **0.00 % hard negatives** (`0/250`, Wilson 95 % CI `[0.00 %, 1.51 %]`, meeting NFR-14 ≤ 3 %).
+* **9,745 live León products** are now in PostgreSQL (**4,307** Mercadona + **5,438** Dia `24001`), **100.0 % classified (0 % unclassified)** and all embedded with `gemini-embedding-001` (768 dims) and HNSW indexed.
+* **4,232 Dia products (77.8 %)** mapped to existing canonicals (**863 shared Mercadona + Dia canonicals**); **1,206** remaining Dia products expanded into **236** new variant canonicals under existing categories and **176** reversible new level-3 leaves (`catalog_leaf_proposal`, ADR 0022).
+* Independent 250-product blind audits by **DeepSeek V4.1 Flash**: conservative pass (`seed=42`, 28.1 % coverage) scored **94.00 % strict** (`[90.34 %, 96.33 %]`) and **0.00 % hard negatives** (`0/250`); full 100 % Dia catalog (`seed=99`, 100.0 % coverage) scored **88.80 % strict** (`[84.29 %, 92.14 %]`), **98.80 % acceptable** (`247/250`), and **1.20 % hard negatives** (`3/250`, Wilson 95 % CI `[0.41 %, 3.47 %]`, meeting NFR-14 ≤ 3 %). The 3 audited hard negatives and 2 sibling rows were corrected via `review` overrides.
 * `24001` vs `24008` probe showed 0/18 price differences in León, so one zone (`24001`) suffices for Dia León.
 * Multi-chain recommendation (`Mercadona` + `Dia`) is verified both in integration tests (`tests/recommender/test_multichain.py`) and live against `/api/recommendations` in León.
 

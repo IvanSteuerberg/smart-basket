@@ -63,7 +63,7 @@ from smart_basket.matching.embeddings import (
 #: Selective-classification threshold: above it an assignment is applied without review.
 DEFAULT_TAU_HIGH = 0.88
 #: Canonicals offered to the agent and stored as review suggestions.
-DEFAULT_TOP_K = 5
+DEFAULT_TOP_K = 8
 #: The catalog agent's name in `agent_run` and `agent_step`.
 CATALOG_AGENT_NAME = "catalog"
 
