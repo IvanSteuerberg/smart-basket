@@ -13,7 +13,8 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from sqlalchemy import text
@@ -39,6 +40,51 @@ MIN_SEEN_SHARE = 0.5
 
 # A `running` row this old belongs to a process that died and will never close it.
 ABANDONED_RUN_AFTER = timedelta(hours=6)
+
+# Option B of decision 0006: a flyer staple not seen for this long stops being retained.
+STAPLE_RETENTION_TTL = timedelta(days=21)
+
+# Private-label staples of the flyer chains (Lidl's own brands and a few shared names): only
+# these are worth retaining once their flyer is gone, because the regular price is what the
+# product will cost in every future flyer.
+STAPLE_PRIVATE_LABEL_BRANDS = frozenset(
+    {
+        "milbona",
+        "bellarom",
+        "baresa",
+        "alesto",
+        "chef select",
+        "kania",
+        "combino",
+        "formil",
+        "cien",
+        "w5",
+        "solevita",
+        "freeway",
+        "crownfield",
+        "campo largo",
+        "nixe",
+        "pikok",
+        "gelatelli",
+        "sondey",
+        "trattoria alfredo",
+        "marca guia",
+        "marca guía",
+        "eco+",
+    }
+)
+
+
+def is_retendable_staple_name(name: str) -> bool:
+    """Whether a flyer product is a private-label staple worth retaining (Option B, 0006).
+
+    Seasonal and limited-edition items (`deluxe`, `artículo limitado`) are excluded: they never
+    come back at their flyer price, so retaining them would freeze a stale offer forever.
+    """
+    low = name.casefold()
+    if "deluxe" in low or "artículo limitado" in low or "articulo limitado" in low:
+        return False
+    return any(brand in low for brand in STAPLE_PRIVATE_LABEL_BRANDS)
 
 
 class IngestSetupError(RuntimeError):
@@ -70,6 +116,7 @@ def ingest_catalog(
 ) -> IngestSummary:
     """Crawl one zone with `adapter` and persist the result, closing the `ingest_run`."""
     zone_kind = getattr(adapter, "zone_kind", "warehouse")
+    retention_policy = getattr(adapter, "retention_policy", "live_sync")
     started_at = datetime.now(UTC)
     with session_scope(database_url) as session:
         chain_id = _lookup_chain(session, adapter.chain_code)
@@ -101,6 +148,7 @@ def ingest_catalog(
                 result=result,
                 data_dir=data_dir,
                 observation_time=observation_time,
+                retention_policy=retention_policy,
             )
     except BaseException as exc:  # an interrupted persistence must still close the run
         _close_failed_run(
@@ -260,6 +308,7 @@ def _persist(
     result: CrawlResult,
     data_dir: Path,
     observation_time: datetime,
+    retention_policy: str = "live_sync",
 ) -> tuple[int, list[dict[str, str]], FinalStatus]:
     """Write the crawl in one transaction: prices changed, errors and the final status."""
     _lock_zone(session, zone_id)
@@ -289,6 +338,26 @@ def _persist(
             run_id=run_id,
             observation_time=observation_time,
         )
+        if retention_policy == "controlled_staples":
+            if (
+                product.regular_price is not None
+                and product.regular_price > product.price
+                and not product.is_temporary
+                and is_retendable_staple_name(product.name)
+            ):
+                _record_flyer_reference_promotion(
+                    session,
+                    chain_id=chain_id,
+                    zone_id=zone_id,
+                    product_id=product_id,
+                    product=product,
+                    run_id=run_id,
+                    observation_time=observation_time,
+                )
+            elif product.is_temporary or product.regular_price is None:
+                # The product no longer travels with a regular price (or is temporary), so an
+                # older flyer reference must not be used to revert its price later on.
+                _delete_flyer_promotions(session, chain_id=chain_id, product_id=product_id)
 
     for raw in result.raw:
         _store_raw_response(
@@ -304,7 +373,18 @@ def _persist(
     status = result.status
     if result.complete or (result.status == "succeeded" and not result.products):
         available = _available_count(session, chain_id=chain_id, zone_id=zone_id)
-        if result.complete and len(result.products) >= available * MIN_SEEN_SHARE:
+        if result.complete and retention_policy == "controlled_staples":
+            # Weekly flyers rotate their products by design, so the seen-share cutoff does not
+            # apply: unseen staples keep selling at their recorded reference price while the
+            # 21-day TTL holds, and everything else is marked unavailable (Option B, 0006).
+            prices_changed += _apply_controlled_staple_retention(
+                session,
+                chain_id=chain_id,
+                zone_id=zone_id,
+                run_id=run_id,
+                observation_time=observation_time,
+            )
+        elif result.complete and len(result.products) >= available * MIN_SEEN_SHARE:
             _mark_unavailable(
                 session, chain_id=chain_id, zone_id=zone_id, observation_time=observation_time
             )
@@ -562,3 +642,177 @@ def _mark_unavailable(
         ),
         {"chain": chain_id},
     )
+
+
+def _flyer_date(value: str | None) -> date | None:
+    """Parse a flyer date like `2026-11-16` (ISO or ISO datetime prefix); None when invalid."""
+    if not value:
+        return None
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _record_flyer_reference_promotion(
+    session: Session,
+    *,
+    chain_id: int,
+    zone_id: int,
+    product_id: int,
+    product: ProductObservation,
+    run_id: int,
+    observation_time: datetime,
+) -> None:
+    """Store the flyer offer with its regular price, so a later run can revert to it.
+
+    The promotion is `applied_in_price` (the offer price is the observed price) and carries
+    the pre-offer `reference_price` that the retention reads back when the flyer rotates.
+    """
+    v_from = _flyer_date(product.valid_from) or observation_time.date()
+    v_until = _flyer_date(product.valid_until)
+    if v_until is None or v_until < v_from:
+        v_until = v_from + timedelta(days=7)
+    promotion_id = session.execute(
+        text(
+            "insert into promotion (chain_id, kind, promo_price, reference_price, "
+            "applied_in_price, valid, source, source_ref, run_id) "
+            "values (:chain, 'promo_price', :promo_price, :reference_price, true, "
+            "daterange(:v_from, :v_until, '[]'), 'flyer', :source_ref, :run) returning id"
+        ),
+        {
+            "chain": chain_id,
+            "promo_price": product.price,
+            "reference_price": product.regular_price,
+            "v_from": v_from,
+            "v_until": v_until,
+            "source_ref": product.sku,
+            "run": run_id,
+        },
+    ).scalar_one()
+    session.execute(
+        text(
+            "insert into promotion_target (promotion_id, chain_product_id) "
+            "values (:promotion, :product)"
+        ),
+        {"promotion": promotion_id, "product": product_id},
+    )
+    session.execute(
+        text("insert into promotion_zone (promotion_id, zone_id) values (:promotion, :zone)"),
+        {"promotion": promotion_id, "zone": zone_id},
+    )
+
+
+def _delete_flyer_promotions(session: Session, *, chain_id: int, product_id: int) -> None:
+    """Drop the flyer promotions of one product, targets and zones cascading along."""
+    session.execute(
+        text(
+            "delete from promotion p where p.chain_id = :chain and p.source = 'flyer' "
+            "and exists (select 1 from promotion_target pt "
+            "where pt.promotion_id = p.id and pt.chain_product_id = :product)"
+        ),
+        {"chain": chain_id, "product": product_id},
+    )
+
+
+def _apply_controlled_staple_retention(
+    session: Session,
+    *,
+    chain_id: int,
+    zone_id: int,
+    run_id: int,
+    observation_time: datetime,
+) -> int:
+    """Keep unseen flyer staples available at their reference price; drop everything else.
+
+    A product the run did not see keeps selling while its last sighting is within the 21-day
+    TTL and its latest flyer promotion recorded a reference price, and only if it is a
+    private-label staple: `price_current` reverts to the reference price, closing the offer
+    interval in `price_history`. `last_seen` is never bumped, so the TTL clock keeps ticking
+    from the real last sighting. Anything else (expired, temporary, non-staple or without a
+    reference price) is marked unavailable, and products with no available zone are
+    deactivated. Returns how many prices the retention changed.
+    """
+    rows = session.execute(
+        text(
+            "select p.id, p.chain_sku as sku, p.name, p.packaging, p.url, p.image_url, "
+            "p.base_quantity, p.base_unit, p.pack_count, z.last_seen, "
+            "(select pr.reference_price from promotion pr "
+            "join promotion_target pt on pt.promotion_id = pr.id "
+            "join promotion_zone pz on pz.promotion_id = pr.id "
+            "where pt.chain_product_id = p.id and pz.zone_id = :zone "
+            "and pr.source = 'flyer' and pr.reference_price is not null "
+            "order by pr.id desc limit 1) as reference_price "
+            "from chain_product p "
+            "join chain_product_zone z on z.chain_product_id = p.id "
+            "where p.chain_id = :chain and z.zone_id = :zone "
+            "and z.is_available and z.last_seen < :observed"
+        ),
+        {"chain": chain_id, "zone": zone_id, "observed": observation_time},
+    ).all()
+    prices_changed = 0
+    for row in rows:
+        (
+            product_id,
+            sku,
+            name,
+            packaging,
+            url,
+            image_url,
+            base_quantity,
+            base_unit,
+            pack_count,
+            last_seen,
+            reference_price,
+        ) = row
+        within_ttl = (observation_time - last_seen) <= STAPLE_RETENTION_TTL
+        if within_ttl and reference_price is not None and is_retendable_staple_name(name):
+            # Keep it available at the recorded regular price; the TTL clock keeps ticking
+            # because `last_seen` is not refreshed here.
+            reg_ppu: Decimal | None = None
+            if (
+                base_quantity is not None
+                and base_unit is not None
+                and base_quantity * pack_count > 0
+            ):
+                reg_ppu = (reference_price / (base_quantity * pack_count)).quantize(
+                    Decimal("0.0001"), rounding=ROUND_HALF_UP
+                )
+            prices_changed += _update_price(
+                session,
+                product_id=product_id,
+                zone_id=zone_id,
+                product=ProductObservation(
+                    sku=sku,
+                    name=name,
+                    packaging=packaging,
+                    url=url,
+                    category_code="",
+                    base_quantity=base_quantity,
+                    base_unit=base_unit,
+                    pack_count=pack_count,
+                    price=reference_price,
+                    price_per_unit=reg_ppu,
+                    image_url=image_url,
+                ),
+                run_id=run_id,
+                observation_time=observation_time,
+            )
+        else:
+            session.execute(
+                text(
+                    "update chain_product_zone set is_available = false "
+                    "where chain_product_id = :product and zone_id = :zone"
+                ),
+                {"product": product_id, "zone": zone_id},
+            )
+    session.execute(
+        text(
+            "update chain_product p set is_active = false "
+            "where p.chain_id = :chain and p.is_active and not exists ("
+            "select 1 from chain_product_zone z "
+            "where z.chain_product_id = p.id and z.is_available)"
+        ),
+        {"chain": chain_id},
+    )
+    return prices_changed
