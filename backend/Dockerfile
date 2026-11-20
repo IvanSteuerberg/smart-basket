@@ -33,6 +33,9 @@ RUN apt-get update \
   && /app/.venv/bin/playwright install --with-deps chromium \
   && rm -rf /var/lib/apt/lists/* \
   && chown -R smartbasket:smartbasket /ms-playwright
-RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix
+RUN mkdir -p /tmp/.X11-unix && chmod 1777 /tmp/.X11-unix \
+  && printf '#!/bin/sh\nset -e\nXvfb :99 -screen 0 1280x720x24 -nolisten tcp >/dev/null 2>&1 &\nXPID=$!\ntrap "kill $XPID 2>/dev/null || true" EXIT INT TERM\nsleep 1\nexport DISPLAY=:99\n"$@"\n' > /usr/local/bin/with-xvfb \
+  && chmod +x /usr/local/bin/with-xvfb
+ENV XDG_CONFIG_HOME=/tmp/.config XDG_CACHE_HOME=/tmp/.cache
 USER smartbasket
-CMD ["xvfb-run", "-a", "smart-basket-worker"]
+CMD ["with-xvfb", "smart-basket-worker"]
