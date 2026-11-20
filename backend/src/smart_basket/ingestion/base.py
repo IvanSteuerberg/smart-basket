@@ -78,7 +78,13 @@ class CrawlResult:
 
 
 class ChainAdapter(Protocol):
-    """One adapter per chain (NFR-12): crawls a zone and yields what it observes."""
+    """One adapter per chain (NFR-12): crawls a zone and yields what it observes.
+
+    An adapter may also declare `zone_kind`, the `zone.kind` its zone codes refer to (for
+    example `warehouse` for Mercadona or `postal_code` for Dia). It stays optional so adapters
+    and test fakes written before it keep working: the store reads it with `getattr` and falls
+    back to `warehouse`.
+    """
 
     chain_code: str
 

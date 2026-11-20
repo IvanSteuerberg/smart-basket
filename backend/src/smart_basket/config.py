@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     agent_time_budget_ms: int = 10_000
     agent_fewshot: bool = False
 
+    #: Embeddings for public catalog text (ADR 0022).
+    embedding_provider: str = "gemini"
+    embedding_model: str = "gemini-embedding-001"
+    embedding_dimensions: int = 768
+
     valhalla_url: str = "http://routing:8002"
     routing_timeout_seconds: float = 10.0
 
@@ -49,6 +54,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     match_decisions_file: Path | None = None
     mercadona_warehouses: str = "3683"
+    dia_zones: str = "24001"
     ingest_delay_seconds: float = 1.5
 
     @field_validator("match_decisions_file", mode="before")
@@ -87,6 +93,11 @@ class Settings(BaseSettings):
     def mercadona_warehouse_codes(self) -> list[str]:
         """The configured warehouse codes, without blanks left by the comma list."""
         return [code.strip() for code in self.mercadona_warehouses.split(",") if code.strip()]
+
+    @property
+    def dia_zone_codes(self) -> list[str]:
+        """The configured Dia postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.dia_zones.split(",") if code.strip()]
 
 
 @lru_cache
