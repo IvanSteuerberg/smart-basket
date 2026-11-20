@@ -45,6 +45,10 @@ CATALOG_EXPAND_SYSTEM_ES = (
     "Pon un `leaf_name` genérico, limpio y en español SIN marca ni peso/formato. Agrupa "
     "productos equivalentes de esta lista bajo el MISMO `leaf_name` exacto. Elige "
     "`parent_group_id` obligatoriamente de la lista de grupos nivel 2.\n"
+    "3. Devuelve `variant_key` limpio en minúsculas con `|` como separador (p.ej. `sin_azucar`, "
+    "`sabor:pollo`, `sabor:ahumado`) o `''` si no hay variante. NUNCA incluyas marcas comerciales "
+    "(Oscar Mayer, Haribo, Gallina Blanca, Halls, Heinz...) ni envases (bolsa, blister) dentro de "
+    "`variant_key`, ni repitas un sabor que ya aparece en el nombre de la categoría.\n"
     "Responde SOLO con el JSON pedido."
 )
 
@@ -177,6 +181,7 @@ def expand_catalog_taxonomy(
                         "mode": "new_leaf",
                         "leaf_name": _clean_leaf_name(entry.get("leaf_name") or l2),
                         "parent_group_id": parent,
+                        "variant_key": entry.get("variant_key") or "",
                     }
         return decisions
 
@@ -230,7 +235,13 @@ def _persist_expansions(
             "leaf_name": _clean_leaf_name(item["section_l2"] or "Producto vario"),
             "parent_group_id": fallback_group_id,
         }
-        vk = "|".join(sorted(_product_variants(item["name"])))
+        raw_vk = dec.get("variant_key")
+        if isinstance(raw_vk, str):
+            vk = "|".join(sorted({p.strip().lower() for p in raw_vk.split("|") if p.strip()}))
+        else:
+            vk = "|".join(
+                sorted(k for k in _product_variants(item["name"]) if not k.startswith("sabor:"))
+            )
         unit = item["base_unit"] or "ud"
 
         if dec["mode"] == "existing_category_variant":
@@ -376,6 +387,7 @@ def _expand_schema() -> dict[str, Any]:
                         "existing_category_id": {"type": "integer"},
                         "leaf_name": {"type": "string"},
                         "parent_group_id": {"type": "integer"},
+                        "variant_key": {"type": "string"},
                     },
                     "required": ["product_id", "mode", "parent_group_id"],
                 },
