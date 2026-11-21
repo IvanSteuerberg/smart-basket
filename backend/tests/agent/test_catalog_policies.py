@@ -16,6 +16,7 @@ from smart_basket.agent.catalog_agent import (
     build_catalog_harness,
     build_pure_catalog_executors,
 )
+from smart_basket.agent.catalog_expand import _clean_leaf_name, _clean_variant_key
 from smart_basket.agent.catalog_policies import (
     LLMVerifiedCatalogPolicy,
     attributes_compatible,
@@ -162,12 +163,77 @@ def test_variants_compatible_guards_sibling_variants(
             "dulce",
             False,
         ),
+        (
+            "Atún claro en aceite oliva pack 8 CALVO",
+            "Bonito — en aceite de oliva",
+            "en_aceite_oliva",
+            False,
+        ),
+        (
+            "Vino tinto crianza DOCa Rioja GLORIOSO",
+            "Vino tinto reserva",
+            "",
+            False,
+        ),
+        (
+            "Vino tinto reserva DO Ribera del Duero MATARROMERA",
+            "Vino tinto gran reserva",
+            "",
+            False,
+        ),
+        (
+            "Jamón cocido ElPozo Bienstar reducido en sal 120 g",
+            "Jamón cocido — sin sal",
+            "sin_sal",
+            False,
+        ),
+        (
+            "Bebida de soja sin azúcar ALPRO 1 l",
+            "Bebida de avena — sin azúcar",
+            "sin_azucar",
+            False,
+        ),
+        (
+            "Fregona Microfibra en tiras azul",
+            "Estropajos y bayetas",
+            "",
+            False,
+        ),
+        (
+            "Miel Alteza de flores tapón 0% antigoteo 500 g",
+            "Miel",
+            "",
+            True,
+        ),
     ],
 )
 def test_attributes_compatible_blocks_mutually_exclusive_products(
     product_name: str, canonical_name: str, canonical_key: str, expected: bool
 ):
     assert attributes_compatible(product_name, canonical_name, canonical_key) is expected
+
+
+def test_clean_leaf_and_variant_key_reject_generic_sections_and_brands():
+    assert (
+        _clean_leaf_name(
+            "Alimentación General general",
+            fallback_product_name="Tarta vegetal de atún EL CORTE INGLES",
+        )
+        == "Tarta vegetal de atún"
+    )
+    assert (
+        _clean_leaf_name(
+            "FOLLETO ALIMENTACIÓN 23/11",
+            fallback_product_name="Matrimonio Boquerón Anchoa 120 g",
+        )
+        == "Matrimonio boquerón anchoa"
+    )
+    assert (
+        _clean_leaf_name("Yogur con bolitas y cereales (YogoMix)") == "Yogur con bolitas y cereales"
+    )
+    assert _clean_variant_key("nenuco|fresa") == "fresa"
+    assert _clean_variant_key("red_label") == ""
+    assert _clean_variant_key("sabor:cookie_chips_ahoy|sin_azucar") == "sin_azucar"
 
 
 def test_the_policy_skips_llm_when_all_candidates_are_below_floor():

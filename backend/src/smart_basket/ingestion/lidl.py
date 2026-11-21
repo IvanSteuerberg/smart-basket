@@ -246,7 +246,7 @@ class LidlAdapter:
         seen_skus: set[str] = set()
         for slug in slugs:
             flyer_url = f"{BASE_WEB_URL}/l/folletos/{slug}"
-            api_url = f"{FLYER_API_URL}?slug={slug}"
+            api_url = f"{FLYER_API_URL}?flyer_identifier={slug}&region_id=0&region_code=0"
             try:
                 flyer_response = self._fetcher.get(api_url)
             except FetchError as exc:

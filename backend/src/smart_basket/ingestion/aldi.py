@@ -285,11 +285,11 @@ class AldiAdapter:
     ) -> Iterator[Observation]:
         page = 0
         while True:
-            url = f"{ALGOLIA_QUERY_URL}?category={_slug(category_label)}&page={page}"
+            archive_url = f"{ALGOLIA_QUERY_URL}?category={_slug(category_label)}&page={page}"
             self._pause()
             try:
                 resp = self._client.post(
-                    url,
+                    ALGOLIA_QUERY_URL,
                     json={
                         "query": "",
                         "page": page,
@@ -299,15 +299,15 @@ class AldiAdapter:
                     },
                 )
             except httpx.HTTPError as exc:
-                yield CrawlError(url=url, error=str(exc))
+                yield CrawlError(url=archive_url, error=str(exc))
                 return
-            yield RawResponse(url, resp.status_code, resp.content)
+            yield RawResponse(archive_url, resp.status_code, resp.content)
             if resp.status_code != 200:
-                yield CrawlError(url=url, error=f"HTTP {resp.status_code}")
+                yield CrawlError(url=archive_url, error=f"HTTP {resp.status_code}")
                 return
             payload = _json(resp.content)
             if payload is None:
-                yield CrawlError(url=url, error="invalid JSON")
+                yield CrawlError(url=archive_url, error="invalid JSON")
                 return
             for product in parse_aldi_products(
                 payload,

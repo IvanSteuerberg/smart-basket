@@ -27,6 +27,9 @@ __pycache__/
 # Datos descargados por el scraping (no versionar volcados)
 /data/
 /backend/data/
+/experiments/supervised-unlock/profiles/
+/experiments/supervised-unlock/samples/
+/experiments/supervised-unlock/.venv/
 
 # Configuración local de herramientas
 .claude/settings.local.json

@@ -57,7 +57,7 @@ async (u) => {
 
 _TOTAL_PAGES_RE = re.compile(r'data-lr-plp-total-pages="(\d+)"')
 _ITEM_SPLIT_RE = re.compile(
-    r'<div[^>]*class="[^"]*\bartwork\s+product\b[^"]*"[^>]*>', re.IGNORECASE
+    r'(?=<div[^>]*class="[^"]*\bfood-product-preview-responsive__image_block\b)', re.IGNORECASE
 )
 _LINK_RE = re.compile(
     r'<a[^>]*class="[^"]*food-product-preview-responsive__description[^"]*"[^>]*'
@@ -70,7 +70,7 @@ _BV_ID_RE = re.compile(r'data-bv-product-id="([^"_]+)')
 _PRODUCT_ID_RE = re.compile(r'data-product-id="([^"]+)"')
 _EURO = r"(?:€|&euro;)"
 _PRICE_RE = re.compile(
-    r'<div[^>]*class="[^"]*food-prices__price(?:--sale)?[^"]*"[^>]*>'
+    r'<div[^>]*class="[^"]*food-prices__(?:offer|price(?!\s*--original)(?:--sale)?)\b[^"]*"[^>]*>'
     rf"\s*([0-9]+(?:[.,][0-9]{{1,2}})?)\s*{_EURO}"
 )
 _PRICE_FALLBACK_RE = re.compile(

@@ -29,8 +29,14 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from smart_basket.agent.catalog_executors import nearest_canonicals
-from smart_basket.agent.catalog_policies import DEFAULT_RETRY_DELAYS, _product_variants
+from smart_basket.agent.catalog_policies import (
+    DEFAULT_RETRY_DELAYS,
+    _preprocessor,
+    _product_variants,
+    mutex_compatible,
+)
 from smart_basket.llm.base import LLMError, LLMProvider
+from smart_basket.preprocessor.text import fold, tokenize
 
 CATALOG_EXPAND_SYSTEM_ES = (
     "Eres el agente de catálogo de Smart Basket (supermercados en España). "
@@ -105,58 +111,74 @@ def expand_catalog_taxonomy(
     if not unmatched:
         return {"assigned": 0, "new_leaves": 0, "new_variants": 0}
 
+    all_leaf_rows = session.execute(
+        text(
+            "select c.id, c.key, c.name, c.base_unit, p.name as parent_name "
+            "from category c left join category p on p.id = c.parent_id "
+            "where c.level = 3"
+        )
+    ).mappings()
+    leaf_by_key: dict[str, dict[str, Any]] = {}
+    leaf_by_id: dict[int, dict[str, Any]] = {}
+    for r in all_leaf_rows:
+        d = dict(r)
+        leaf_by_key[d["key"]] = d
+        leaf_by_id[int(d["id"])] = d
+
     by_cat: dict[tuple[Any, str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in unmatched:
+        item = dict(row)
+        near_keys: list[str] = []
+        if item["embedding"] is not None:
+            for match in nearest_canonicals(session, item["embedding"], top_k=4):
+                if match.category_key not in near_keys and match.category_key in leaf_by_key:
+                    near_keys.append(match.category_key)
+        item["near_keys"] = near_keys
         bucket_key = (
             row["chain_category_id"],
             row["section_l1"] or "",
             row["section_l2"] or "sin categoría",
         )
-        by_cat[bucket_key].append(dict(row))
+        by_cat[bucket_key].append(item)
 
     buckets = []
     for (_, l1, l2), items in by_cat.items():
-        keys: list[str] = []
-        seen_keys: set[str] = set()
-        for item in items:
-            if item["embedding"] is None:
-                continue
-            for match in nearest_canonicals(session, item["embedding"], top_k=3):
-                if match.category_key not in seen_keys:
-                    seen_keys.add(match.category_key)
-                    keys.append(match.category_key)
-        existing_cats = []
-        if keys:
-            rows = session.execute(
-                text(
-                    "select c.id, c.key, c.name, c.base_unit, p.name as parent_name "
-                    "from category c left join category p on p.id = c.parent_id "
-                    "where c.key = any(:keys)"
-                ),
-                {"keys": keys[:12]},
-            ).mappings()
-            existing_cats = [dict(r) for r in rows]
-        buckets.append((l1, l2, items, existing_cats))
+        buckets.append((l1, l2, items))
 
     def _classify_bucket(
-        bucket: tuple[str, str, list[dict[str, Any]], list[dict[str, Any]]],
+        bucket: tuple[str, str, list[dict[str, Any]]],
     ) -> dict[int, dict[str, Any]]:
-        l1, l2, items, existing_cats = bucket
+        l1, l2, items = bucket
         provider = provider_factory()
-        ex_ids = {int(c["id"]) for c in existing_cats}
-        ex_text = (
-            "\n".join(
-                f"  {c['id']}: {c['name']} (grupo: {c['parent_name']})" for c in existing_cats
-            )
-            or "  (ninguna)"
-        )
         decisions: dict[int, dict[str, Any]] = {}
         for start in range(0, len(items), chunk_size):
             chunk = items[start : start + chunk_size]
+            chunk_keys: list[str] = []
+            seen_ck: set[str] = set()
+            for it in chunk:
+                for ck in it.get("near_keys", ()):
+                    if ck not in seen_ck:
+                        seen_ck.add(ck)
+                        chunk_keys.append(ck)
+            chunk_cats = [leaf_by_key[ck] for ck in chunk_keys[:32] if ck in leaf_by_key]
+            ex_text = (
+                "\n".join(
+                    f"  {c['id']}: {c['name']} (grupo: {c['parent_name']})" for c in chunk_cats
+                )
+                or "  (ninguna)"
+            )
             prod_lines = []
             for it in chunk:
                 vk = "|".join(sorted(_product_variants(it["name"]))) or "ninguna"
-                prod_lines.append(f"  - id={it['id']}: {it['name']} [variantes_detectadas={vk}]")
+                near_hint = ", ".join(
+                    f"{leaf_by_key[ck]['id']}:{leaf_by_key[ck]['name']}"
+                    for ck in it.get("near_keys", ())[:3]
+                    if ck in leaf_by_key
+                )
+                hint_suffix = f" [cercanas={near_hint}]" if near_hint else ""
+                prod_lines.append(
+                    f"  - id={it['id']}: {it['name']} [variantes_detectadas={vk}]{hint_suffix}"
+                )
             user_prompt = (
                 f"SECCIÓN DE CADENA: {l1} > {l2}\n\n"
                 f"CATEGORÍAS HOJA EXISTENTES MÁS CERCANAS:\n{ex_text}\n\n"
@@ -165,13 +187,23 @@ def expand_catalog_taxonomy(
             )
             schema = _expand_schema()
             response = _generate_with_retry(provider, user_prompt, schema, retry_delays)
+            by_pid = {int(it["id"]): it for it in chunk}
             for entry in (response or {}).get("items", ()):
                 pid = int(entry["product_id"])
-                if (
-                    entry.get("mode") == "existing_category_variant"
-                    and int(entry.get("existing_category_id") or 0) in ex_ids
-                ):
-                    decisions[pid] = entry
+                prod_item = by_pid.get(pid)
+                pname = prod_item["name"] if prod_item else ""
+                ex_id = int(entry.get("existing_category_id") or 0)
+                if entry.get("mode") == "existing_category_variant" and ex_id in leaf_by_id:
+                    decisions[pid] = {
+                        "product_id": pid,
+                        "mode": "existing_category_variant",
+                        "existing_category_id": ex_id,
+                        "leaf_name": _clean_leaf_name(
+                            entry.get("leaf_name"), fallback_product_name=pname
+                        ),
+                        "parent_group_id": int(entry.get("parent_group_id") or group_ids[0]),
+                        "variant_key": _clean_variant_key(entry.get("variant_key") or ""),
+                    }
                 else:
                     parent = int(entry.get("parent_group_id") or 0)
                     if parent not in group_ids:
@@ -179,9 +211,11 @@ def expand_catalog_taxonomy(
                     decisions[pid] = {
                         "product_id": pid,
                         "mode": "new_leaf",
-                        "leaf_name": _clean_leaf_name(entry.get("leaf_name") or l2),
+                        "leaf_name": _clean_leaf_name(
+                            entry.get("leaf_name"), fallback_product_name=pname
+                        ),
                         "parent_group_id": parent,
-                        "variant_key": entry.get("variant_key") or "",
+                        "variant_key": _clean_variant_key(entry.get("variant_key") or ""),
                     }
         return decisions
 
@@ -198,24 +232,49 @@ def expand_catalog_taxonomy(
     return _persist_expansions(session, unmatched, all_decisions, group_ids[0])
 
 
+_LEAF_CONNECTORS = frozenset(
+    {"a", "al", "con", "de", "del", "e", "el", "en", "la", "las", "los", "para", "por", "y"}
+)
+
+
+def _singularize_token(token: str) -> str:
+    if len(token) > 4 and token.endswith("es") and token[-3] not in "aeiou":
+        return token[:-2]
+    if len(token) > 3 and token.endswith("s") and not token.endswith(("ss", "is", "us")):
+        return token[:-1]
+    return token
+
+
+def _norm_leaf_key(name: str) -> str:
+    tokens = sorted(
+        {
+            _singularize_token(t.key)
+            for t in tokenize(name)
+            if t.kind == "word" and t.key not in _LEAF_CONNECTORS
+        }
+    )
+    return " ".join(tokens)
+
+
 def _persist_expansions(
     session: Session,
     unmatched: list[Any],
     decisions: dict[int, dict[str, Any]],
     fallback_group_id: int,
 ) -> dict[str, int]:
-    leaf_cache: dict[tuple[int | None, str], tuple[int, str, str]] = {}
+    leaf_cache: dict[tuple[int | None, str], tuple[int, str, str, str]] = {}
+    global_leaf_by_norm: dict[str, tuple[int, str, str, str]] = {}
     for row in session.execute(
         text(
-            "select id, parent_id, lower(name) as lname, key, base_unit "
-            "from category where level = 3"
+            "select id, parent_id, name, lower(name) as lname, key, base_unit "
+            "from category where level = 3 order by id asc"
         )
     ).mappings():
-        leaf_cache[(row["parent_id"], row["lname"])] = (
-            int(row["id"]),
-            row["key"],
-            row["base_unit"],
-        )
+        entry = (int(row["id"]), row["key"], row["name"], row["base_unit"])
+        leaf_cache[(row["parent_id"], row["lname"])] = entry
+        norm = _norm_leaf_key(row["name"])
+        if norm and norm not in global_leaf_by_norm:
+            global_leaf_by_norm[norm] = entry
 
     existing_keys = set(session.execute(text("select key from category")).scalars())
     cat_info = {
@@ -232,28 +291,44 @@ def _persist_expansions(
         pid = int(item["id"])
         dec = decisions.get(pid) or {
             "mode": "new_leaf",
-            "leaf_name": _clean_leaf_name(item["section_l2"] or "Producto vario"),
+            "leaf_name": _clean_leaf_name(None, fallback_product_name=item["name"]),
             "parent_group_id": fallback_group_id,
         }
         raw_vk = dec.get("variant_key")
         if isinstance(raw_vk, str):
-            vk = "|".join(sorted({p.strip().lower() for p in raw_vk.split("|") if p.strip()}))
+            vk = _clean_variant_key(raw_vk)
         else:
-            vk = "|".join(
-                sorted(k for k in _product_variants(item["name"]) if not k.startswith("sabor:"))
+            vk = _clean_variant_key(
+                "|".join(
+                    sorted(k for k in _product_variants(item["name"]) if not k.startswith("sabor:"))
+                )
             )
         unit = item["base_unit"] or "ud"
 
-        if dec["mode"] == "existing_category_variant":
-            cat_id = int(dec["existing_category_id"])
-            cat_key, cat_name, cat_unit = cat_info[cat_id]
-        else:
-            parent_id = int(dec["parent_group_id"])
-            lname = _clean_leaf_name(dec["leaf_name"])
+        use_existing = False
+        if (
+            dec["mode"] == "existing_category_variant"
+            and int(dec.get("existing_category_id") or 0) in cat_info
+        ):
+            cand_id = int(dec["existing_category_id"])
+            cand_key, cand_name, cand_unit = cat_info[cand_id]
+            if (
+                not _GENERIC_SECTION_PATTERNS.match(cand_name)
+                and not _has_leaf_defect(cand_name)
+                and mutex_compatible(item["name"], cand_name, vk)
+            ):
+                use_existing = True
+                cat_id, cat_key, cat_name, cat_unit = cand_id, cand_key, cand_name, cand_unit
+
+        if not use_existing:
+            parent_id = int(dec.get("parent_group_id") or fallback_group_id)
+            lname = _clean_leaf_name(dec.get("leaf_name"), fallback_product_name=item["name"])
             cache_key = (parent_id, lname.lower())
+            norm_key = _norm_leaf_key(lname)
             if cache_key in leaf_cache:
-                cat_id, cat_key, cat_unit = leaf_cache[cache_key]
-                cat_name = lname
+                cat_id, cat_key, cat_name, cat_unit = leaf_cache[cache_key]
+            elif norm_key and norm_key in global_leaf_by_norm:
+                cat_id, cat_key, cat_name, cat_unit = global_leaf_by_norm[norm_key]
             else:
                 cat_key = _unique_key(existing_keys, _slugify(lname))
                 existing_keys.add(cat_key)
@@ -282,7 +357,10 @@ def _persist_expansions(
                     ),
                     {"cat": cat_id, "parent": parent_id},
                 )
-                leaf_cache[cache_key] = (cat_id, cat_key, cat_unit)
+                entry = (cat_id, cat_key, lname, cat_unit)
+                leaf_cache[cache_key] = entry
+                if norm_key and norm_key not in global_leaf_by_norm:
+                    global_leaf_by_norm[norm_key] = entry
                 cat_info[cat_id] = (cat_key, lname, cat_unit)
                 cat_name = lname
                 new_leaves += 1
@@ -290,8 +368,9 @@ def _persist_expansions(
 
         can_id = session.execute(
             text(
-                "select id from canonical_product "
-                "where category_id = :cat and variant_key = :vk and merged_into is null limit 1"
+                "select coalesce(merged_into, id) from canonical_product "
+                "where category_id = :cat and variant_key = :vk "
+                "order by (merged_into is null) desc, id asc limit 1"
             ),
             {"cat": cat_id, "vk": vk},
         ).scalar_one_or_none()
@@ -301,7 +380,10 @@ def _persist_expansions(
                 session.execute(
                     text(
                         "insert into canonical_product (category_id, name, variant_key, base_unit) "
-                        "values (:cat, :name, :vk, :unit) returning id"
+                        "values (:cat, :name, :vk, :unit) "
+                        "on conflict (category_id, name, variant_key) do update "
+                        "set base_unit = canonical_product.base_unit "
+                        "returning coalesce(merged_into, id)"
                     ),
                     {"cat": cat_id, "name": can_name, "vk": vk, "unit": cat_unit},
                 ).scalar_one()
@@ -412,9 +494,208 @@ def _unique_key(existing: set[str], base: str) -> str:
     return key
 
 
-def _clean_leaf_name(name: str) -> str:
-    cleaned = " ".join(str(name).strip().split())
-    return (cleaned[0].upper() + cleaned[1:]) if cleaned else "Producto vario"
+_GENERIC_SECTION_PATTERNS = re.compile(
+    r"^(?:general|otros|sin\s+categor[ií]a|producto\s+vario|congelados?|frescos?|"
+    r"folleto\b.*|.*\bgeneral)$",
+    re.IGNORECASE,
+)
+
+_TRAILING_STOPWORDS = frozenset(
+    {
+        "de",
+        "del",
+        "con",
+        "sin",
+        "a",
+        "en",
+        "y",
+        "e",
+        "o",
+        "u",
+        "para",
+        "por",
+        "al",
+        "el",
+        "la",
+        "sabor",
+    }
+)
+
+_BANNED_BRAND_TOKENS = frozenset(
+    {
+        "actimel",
+        "aguinaga",
+        "ariel",
+        "au",
+        "babybel",
+        "baileys",
+        "bebe_seco",
+        "black_label",
+        "calciavena",
+        "calcimel",
+        "cancun",
+        "chips_ahoy",
+        "cointreau",
+        "colacao",
+        "cola_cao",
+        "danet",
+        "danone",
+        "dodot",
+        "dolce_gusto",
+        "don_simon",
+        "el_corte_ingles",
+        "extrafino",
+        "fairy",
+        "fanta",
+        "gallina_blanca",
+        "gelli",
+        "grefusa",
+        "guinas",
+        "gula",
+        "gulas",
+        "halls",
+        "haribo",
+        "heinz",
+        "jetas",
+        "kinder",
+        "kit_kat",
+        "kitkat",
+        "lenor",
+        "lindt",
+        "lotus",
+        "matchball",
+        "matutano",
+        "milka",
+        "milsani",
+        "nenuco",
+        "nescafe",
+        "nespresso",
+        "nesquik",
+        "nocilla",
+        "nutella",
+        "oreo",
+        "oscar_mayer",
+        "perfomance",
+        "pescanova",
+        "philadelphia",
+        "quadritos",
+        "red_bull",
+        "red_label",
+        "reina",
+        "risi",
+        "risketos",
+        "spontex",
+        "tassimo",
+        "triskys",
+        "up2fashion",
+        "valor",
+        "yarroz",
+        "yatekomo",
+        "yogomix",
+    }
+)
+
+
+_BRAND_PHRASE_RE = re.compile(
+    r"\b(?:el\s+corte\s+ingl[eé]s(?:\s+selection)?|el\s+obrador|up2fashion|"
+    r"redondo\s+iglesias|home\s+creation|milsani|lacura|special|dodot|beb[eé]\s+seco|"
+    r"nenuco|chips\s+ahoy|dolce\s+gusto|red\s+label|black\s+label|johnnie\s+walker)\b",
+    re.IGNORECASE,
+)
+
+
+def _strip_brand_parentheticals(text_val: str) -> str:
+    cleaned = re.sub(
+        r"\s*\((?:yogomix|actimel[^)]*|babybel|dolce\s+gusto|nespresso)\)",
+        "",
+        text_val,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(r"\btipo\s+babybel\b", "en porciones", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(
+        r"\bguinas(?:\s+de\s+aguinaga)?\b", "sucedáneo de angula", cleaned, flags=re.IGNORECASE
+    )
+    cleaned = re.sub(r"\byarroz\b", "arroz con", cleaned, flags=re.IGNORECASE)
+    cleaned = _BRAND_PHRASE_RE.sub("", cleaned)
+    return " ".join(cleaned.split())
+
+
+_LEADING_UPPER_BRAND_RE = re.compile(
+    r"^(?:[A-ZÁÉÍÓÚÑ0-9&'.-]{2,}\s+){1,4}(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])"
+)
+
+
+def _fallback_leaf_from_product(product_name: str) -> str:
+    if not product_name:
+        return "Producto de alimentación"
+    stripped = _LEADING_UPPER_BRAND_RE.sub("", product_name.strip())
+    stripped = _strip_brand_parentheticals(stripped)
+    _, without_brand, _ = _preprocessor().find_brand(tokenize(stripped))
+    words = [
+        t.text
+        for t in without_brand
+        if t.kind == "word"
+        and t.key not in _BANNED_BRAND_TOKENS
+        and t.key not in {"pack", "ud", "uds", "kg", "gr", "cl", "ml", "l", "g", "u", "aprox"}
+    ][:5]
+    while words and fold(words[0]) in _TRAILING_STOPWORDS:
+        words.pop(0)
+    while words and fold(words[-1]) in _TRAILING_STOPWORDS:
+        words.pop()
+    phrase = " ".join(words).strip(" ,.-")
+    return (phrase[0].upper() + phrase[1:]) if phrase else "Producto de alimentación"
+
+
+def _has_leaf_defect(name: str) -> bool:
+    tokens = [fold(w.strip("(),.-")) for w in name.split() if w.strip("(),.-")]
+    if not tokens:
+        return True
+    if tokens[0] in _TRAILING_STOPWORDS or tokens[-1] in _TRAILING_STOPWORDS:
+        return True
+    if any(t in _BANNED_BRAND_TOKENS for t in tokens):
+        return True
+    return name.strip().lower() == "producto de alimentación"
+
+
+def _clean_leaf_name(name: str | None, *, fallback_product_name: str = "") -> str:
+    cleaned = _strip_brand_parentheticals(" ".join(str(name or "").strip().split()))
+    if not cleaned or _GENERIC_SECTION_PATTERNS.match(cleaned) or _has_leaf_defect(cleaned):
+        cleaned = _strip_brand_parentheticals(" ".join(str(name or "").strip().split()))
+        words = [w for w in cleaned.split() if fold(w.strip("(),.-")) not in _BANNED_BRAND_TOKENS]
+        while words and fold(words[0].strip("(),.-")) in _TRAILING_STOPWORDS:
+            words.pop(0)
+        while words and fold(words[-1].strip("(),.-")) in _TRAILING_STOPWORDS:
+            words.pop()
+        cleaned = " ".join(words)
+    if not cleaned or _GENERIC_SECTION_PATTERNS.match(cleaned) or _has_leaf_defect(cleaned):
+        cleaned = _fallback_leaf_from_product(fallback_product_name)
+    _, without_brand, found_brand = _preprocessor().find_brand(tokenize(cleaned))
+    if found_brand is not None and without_brand:
+        words = [t.text for t in without_brand if t.key not in _BANNED_BRAND_TOKENS]
+        while words and fold(words[0]) in _TRAILING_STOPWORDS:
+            words.pop(0)
+        while words and fold(words[-1]) in _TRAILING_STOPWORDS:
+            words.pop()
+        if words:
+            cleaned = " ".join(words)
+    return (cleaned[0].upper() + cleaned[1:]) if cleaned else "Producto de alimentación"
+
+
+def _clean_variant_key(raw_vk: str) -> str:
+    if not raw_vk:
+        return ""
+    kept: set[str] = set()
+    for part in raw_vk.split("|"):
+        p = part.strip().lower().replace(" ", "_")
+        if not p:
+            continue
+        bare = p[6:] if p.startswith("sabor:") else p
+        if bare in _BANNED_BRAND_TOKENS:
+            continue
+        if any(f"_{b}_" in f"_{bare}_" for b in _BANNED_BRAND_TOKENS):
+            continue
+        kept.add(p)
+    return "|".join(sorted(kept))
 
 
 def _variant_label(vk: str) -> str:

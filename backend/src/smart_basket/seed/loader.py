@@ -218,13 +218,26 @@ def load_seed(session: Session, data_dir: Path) -> SeedReport:
         _count(report.category, row.inserted)
 
     existing = set(session.execute(text("select key from category")).scalars())
-    report.stale_categories = sorted(existing - incoming_keys)
+    applied_proposals = set(
+        session.execute(
+            text("select category_key from catalog_leaf_proposal where status = 'applied'")
+        ).scalars()
+    )
+    report.stale_categories = sorted(existing - incoming_keys - applied_proposals)
     # Stale categories are kept (canonical products may reference them) but must not feed the
     # preprocessor lexicon, which uses every category with forms.
     if report.stale_categories:
         session.execute(
             text("update category set forms = '{}' where key = any(:keys)"),
             {"keys": report.stale_categories},
+        )
+    if applied_proposals:
+        session.execute(
+            text(
+                "update category set forms = array[lower(name)] "
+                "where key = any(:keys) and coalesce(array_length(forms, 1), 0) = 0"
+            ),
+            {"keys": sorted(applied_proposals)},
         )
 
     # The closure is derived data: drop it and rebuild every (ancestor, descendant, depth).

@@ -100,7 +100,7 @@ def test_parse_froiz_product_with_brand_size_and_offer():
     assert product.url == (
         "https://supermercado.froiz.com/producto/aceite-oliva-virgen-extra-borges-1-l"
     )
-    assert product.image_url == "https://supermercado.froiz.com/images/img/aceite.jpg"
+    assert product.image_url == "https://imagedelivery.net/img/aceite.jpg"
 
     # An offer that only applies to a bundle (quantity 3) does not set the unit price.
     bundle = dict(raw, offer={"price": 12.0, "quantity": 3}, base_price=None)

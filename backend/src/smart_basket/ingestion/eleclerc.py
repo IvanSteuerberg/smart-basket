@@ -18,6 +18,8 @@ from collections.abc import Iterator, Mapping
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
+import httpx
+
 from smart_basket.ingestion.base import (
     CategoryObservation,
     CrawlError,
@@ -83,15 +85,27 @@ def parse_eleclerc_ipaper_html(
         CategoryObservation(code=category_code, name=flyer_name, parent_code="folletos"),
     ]
 
+    aws = settings.get("aws") if isinstance(settings.get("aws"), Mapping) else None
+    aws_url = str(aws.get("url") or "").strip() if aws else ""
+    aws_policy = str(aws.get("policy") or "").strip() if aws else ""
+
     products: list[ProductObservation] = []
     seen_skus: set[str] = set()
     page_texts = settings.get("pageTexts")
     if isinstance(page_texts, list):
-        for raw in page_texts:
+        for page_idx, raw in enumerate(page_texts, start=1):
             if not isinstance(raw, str):
                 continue
+            page_image_url: str | None = None
+            if aws_url:
+                base = aws_url.rstrip("/")
+                suffix = f"?{aws_policy}" if aws_policy else ""
+                page_image_url = f"{base}/Pages/{page_idx}/Normal.jpg{suffix}"
             for observation in parse_eleclerc_page_text(
-                raw, category_code=category_code, flyer_url=flyer_url
+                raw,
+                category_code=category_code,
+                flyer_url=flyer_url,
+                image_url=page_image_url,
             ):
                 if observation.sku not in seen_skus:
                     seen_skus.add(observation.sku)
@@ -100,7 +114,11 @@ def parse_eleclerc_ipaper_html(
 
 
 def parse_eleclerc_page_text(
-    text: str, *, category_code: str, flyer_url: str
+    text: str,
+    *,
+    category_code: str,
+    flyer_url: str,
+    image_url: str | None = None,
 ) -> list[ProductObservation]:
     """Parse one OCR page line into at most one product observation.
 
@@ -109,8 +127,12 @@ def parse_eleclerc_page_text(
     recognizable price or without a product name (price-only banners) yield nothing.
     """
     if _B_LABELS_RE.search(text):
-        return _parse_antes_ahora(text, category_code=category_code, flyer_url=flyer_url)
-    return _parse_unit_price(text, category_code=category_code, flyer_url=flyer_url)
+        return _parse_antes_ahora(
+            text, category_code=category_code, flyer_url=flyer_url, image_url=image_url
+        )
+    return _parse_unit_price(
+        text, category_code=category_code, flyer_url=flyer_url, image_url=image_url
+    )
 
 
 class ELeclercAdapter:
@@ -121,7 +143,9 @@ class ELeclercAdapter:
     retention_policy = "controlled_staples"
 
     def __init__(self, *, fetcher: Fetcher | None = None, delay: float = 1.5) -> None:
-        self._fetcher = fetcher or Fetcher(delay=delay)
+        self._fetcher = fetcher or Fetcher(
+            httpx.Client(timeout=30.0, follow_redirects=True), delay=delay
+        )
         self._owns_fetcher = fetcher is None
 
     def close(self) -> None:
@@ -179,43 +203,64 @@ def _static_settings(html_text: str) -> Mapping[str, Any] | None:
     return settings if isinstance(settings, Mapping) else None
 
 
-def _parse_unit_price(text: str, *, category_code: str, flyer_url: str) -> list[ProductObservation]:
-    """Parse `2 € NAME ... (El kg a 6,64 € ) ... ,99 LA UNIDAD` into one observation."""
+def _parse_unit_price(
+    text: str,
+    *,
+    category_code: str,
+    flyer_url: str,
+    image_url: str | None = None,
+) -> list[ProductObservation]:
+    """Parse one or more `2 € NAME ... (El kg a 6,64 € ) ... ,99 LA UNIDAD` blocks on a page."""
     terminals = list(_PRICE_TERMINAL_RE.finditer(text))
     if not terminals:
         return []
-    terminal = terminals[-1]
-    cents = Decimal(terminal.group(1)) / Decimal(100)
-    integers = [
-        match for match in _STANDALONE_INT_EUR_RE.finditer(text) if match.end() <= terminal.start()
-    ]
-    price = (Decimal(integers[-1].group(1)) + cents).quantize(PRICE_STEP) if integers else cents
-    kg_price = _kg_price_before(text, terminal.start())
-    name = _clean_product_text(text)
-    if not name:
-        return []
-    base_quantity, base_unit, pack_count = parse_dia_size(name)
-    if base_quantity is None and base_unit is None and kg_price is not None and price > 0:
-        # No readable weight, but the kilo price is enough to infer it.
-        base_quantity = (price / kg_price).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-        base_unit = "kg"
-    return [
-        _eleclerc_observation(
-            name,
-            price=price,
-            regular_price=None,
-            price_per_unit=kg_price,
-            base_quantity=base_quantity,
-            base_unit=base_unit,
-            pack_count=pack_count,
-            category_code=category_code,
-            flyer_url=flyer_url,
+    out: list[ProductObservation] = []
+    prev_end = 0
+    for terminal in terminals:
+        segment = text[prev_end : terminal.end()]
+        prev_end = terminal.end()
+        cents = Decimal(terminal.group(1)) / Decimal(100)
+        seg_terminal_start = len(segment) - (terminal.end() - terminal.start())
+        integers = [
+            match
+            for match in _STANDALONE_INT_EUR_RE.finditer(segment)
+            if match.end() <= seg_terminal_start
+        ]
+        price = (Decimal(integers[-1].group(1)) + cents).quantize(PRICE_STEP) if integers else cents
+        kg_price = _kg_price_before(segment, seg_terminal_start)
+        name = _clean_product_text(segment)
+        if not name:
+            continue
+        base_quantity, base_unit, pack_count = parse_dia_size(name)
+        if base_quantity is None and base_unit is None and kg_price is not None and price > 0:
+            # No readable weight, but the kilo price is enough to infer it.
+            base_quantity = (price / kg_price).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
+            base_unit = "kg"
+        if base_quantity is None or base_unit is None or base_quantity <= 0:
+            base_quantity, base_unit = None, None
+        out.append(
+            _eleclerc_observation(
+                name,
+                price=price,
+                regular_price=None,
+                price_per_unit=kg_price,
+                base_quantity=base_quantity,
+                base_unit=base_unit,
+                pack_count=pack_count,
+                category_code=category_code,
+                flyer_url=flyer_url,
+                image_url=image_url,
+            )
         )
-    ]
+    return out
 
 
 def _parse_antes_ahora(
-    text: str, *, category_code: str, flyer_url: str
+    text: str,
+    *,
+    category_code: str,
+    flyer_url: str,
+    image_url: str | None = None,
 ) -> list[ProductObservation]:
     """Parse `ANTES:`/`AHORA:` lines: integer parts before each label, cents after them.
 
@@ -255,6 +300,7 @@ def _parse_antes_ahora(
             pack_count=pack_count,
             category_code=category_code,
             flyer_url=flyer_url,
+            image_url=image_url,
         )
     ]
 
@@ -298,6 +344,7 @@ def _eleclerc_observation(
     pack_count: int,
     category_code: str,
     flyer_url: str,
+    image_url: str | None = None,
 ) -> ProductObservation:
     return ProductObservation(
         sku=f"eleclerc-{_slug(name)}",
@@ -310,7 +357,7 @@ def _eleclerc_observation(
         pack_count=pack_count,
         price=price,
         price_per_unit=price_per_unit,
-        image_url=None,
+        image_url=image_url,
         regular_price=regular_price,
         is_temporary=False,
         valid_from=None,

@@ -163,16 +163,14 @@ def test_aldi_adapter_crawls_categories_paginates_and_merges_offers():
         if request.method == "GET":
             assert str(request.url) == OFFERS_CURRENT_URL
             return httpx.Response(200, json={"algoliaDataMap": {"OFFER-9": OFFER}})
-        if not request.url.query:
-            body = json.loads(request.content)
-            assert body["hitsPerPage"] == 0
+        body = json.loads(request.content)
+        if body.get("hitsPerPage") == 0:
             assert body["facets"] == [
                 "hierarchicalCategories.lvl0",
                 "hierarchicalCategories.lvl1",
                 "categoryIDs",
             ]
             return httpx.Response(200, json=CRAWL_PAYLOAD)
-        body = json.loads(request.content)
         assert body["numericFilters"] == ["currentPrice.priceValue > 0"]
         assert body["hitsPerPage"] == 100
         facet = body["facetFilters"][0][0]
@@ -211,11 +209,11 @@ def test_aldi_adapter_respects_max_categories_and_reports_errors():
     listings: list[str] = []
 
     def limited_handler(request: httpx.Request) -> httpx.Response:
-        if not request.url.query:
-            return httpx.Response(200, json=CRAWL_PAYLOAD)
         if request.method == "GET":
             raise AssertionError("offers must not be fetched in a limited run")
         body = json.loads(request.content)
+        if body.get("hitsPerPage") == 0:
+            return httpx.Response(200, json=CRAWL_PAYLOAD)
         listings.append(body["facetFilters"][0][0])
         return httpx.Response(200, json={"hits": [FISH], "nbPages": 1})
 
@@ -229,7 +227,8 @@ def test_aldi_adapter_respects_max_categories_and_reports_errors():
     assert [p.sku for p in result.products] == ["A1"]
 
     def failing_handler(request: httpx.Request) -> httpx.Response:
-        if not request.url.query:
+        body = json.loads(request.content)
+        if body.get("hitsPerPage") == 0:
             return httpx.Response(200, json=CRAWL_PAYLOAD)
         return httpx.Response(500, text="boom")
 

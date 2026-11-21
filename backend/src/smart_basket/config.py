@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     gadis_zones: str = "24001"
     alimerka_zones: str = "24001"
     lupa_zones: str = "24001"
+    froiz_zones: str = "24001"
+    elcorteingles_zones: str = "24001"
+    aldi_zones: str = "all"
+    lidl_zones: str = "all"
+    eleclerc_zones: str = "all"
+    carrefour_zones: str = "0000GV"
+    alcampo_zones: str = "24003"
     ingest_delay_seconds: float = 1.5
 
     @field_validator("match_decisions_file", mode="before")
@@ -116,6 +123,41 @@ class Settings(BaseSettings):
     def lupa_zone_codes(self) -> list[str]:
         """The configured Lupa postal codes, without blanks left by the comma list."""
         return [code.strip() for code in self.lupa_zones.split(",") if code.strip()]
+
+    @property
+    def froiz_zone_codes(self) -> list[str]:
+        """The configured Froiz postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.froiz_zones.split(",") if code.strip()]
+
+    @property
+    def elcorteingles_zone_codes(self) -> list[str]:
+        """The configured El Corte Inglés postal codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.elcorteingles_zones.split(",") if code.strip()]
+
+    @property
+    def aldi_zone_codes(self) -> list[str]:
+        """The configured Aldi zone codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.aldi_zones.split(",") if code.strip()]
+
+    @property
+    def lidl_zone_codes(self) -> list[str]:
+        """The configured Lidl zone codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.lidl_zones.split(",") if code.strip()]
+
+    @property
+    def eleclerc_zone_codes(self) -> list[str]:
+        """The configured E.Leclerc zone codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.eleclerc_zones.split(",") if code.strip()]
+
+    @property
+    def carrefour_zone_codes(self) -> list[str]:
+        """The configured Carrefour zone codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.carrefour_zones.split(",") if code.strip()]
+
+    @property
+    def alcampo_zone_codes(self) -> list[str]:
+        """The configured Alcampo zone codes, without blanks left by the comma list."""
+        return [code.strip() for code in self.alcampo_zones.split(",") if code.strip()]
 
 
 @lru_cache

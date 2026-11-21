@@ -28,6 +28,7 @@ from smart_basket.ingestion.base import (
 from smart_basket.ingestion.dia import parse_dia_size
 
 BASE_WEB_URL = "https://supermercado.froiz.com"
+IMAGE_CDN_BASE = "https://imagedelivery.net"
 COVERAGE_API_URL = "https://servicios.froiz.com/api/storescoverage/coverage"
 CATEGORIES_API_URL = "https://servicios.froiz.com/api/categories"
 PRODUCTS_API_URL = "https://servicios.froiz.com/api/products"
@@ -148,7 +149,7 @@ def parse_froiz_product(raw: Mapping[str, Any]) -> ProductObservation | None:
     if image.startswith("http"):
         image_url: str | None = image
     elif image.startswith("/"):
-        image_url = f"{BASE_WEB_URL}/images{image}"
+        image_url = f"{IMAGE_CDN_BASE}{image}"
     else:
         image_url = None
 

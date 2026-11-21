@@ -204,9 +204,15 @@ def test_lidl_adapter_crawls_the_flyers_of_one_chain_wide_zone():
         url = str(request.url)
         if url == FOLLETOS_INDEX_URL:
             return httpx.Response(200, text=INDEX_HTML)
-        if url == "https://endpoints.leaflets.schwarz/v4/flyer?slug=folleto-alimentacion":
+        if (
+            url
+            == "https://endpoints.leaflets.schwarz/v4/flyer?flyer_identifier=folleto-alimentacion&region_id=0&region_code=0"
+        ):
             return httpx.Response(200, json=flyer_payload)
-        if url == "https://endpoints.leaflets.schwarz/v4/flyer?slug=folleto-perfumeria":
+        if (
+            url
+            == "https://endpoints.leaflets.schwarz/v4/flyer?flyer_identifier=folleto-perfumeria&region_id=0&region_code=0"
+        ):
             return httpx.Response(200, json={"flyer": {"name": "Perfumería", "products": []}})
         return httpx.Response(404)
 
@@ -219,7 +225,7 @@ def test_lidl_adapter_crawls_the_flyers_of_one_chain_wide_zone():
     assert result.errors == ()
     # The non-food flyer is never fetched because a food flyer was available.
     requested = {raw.url for raw in result.raw}
-    unfetched = "https://endpoints.leaflets.schwarz/v4/flyer?slug=folleto-perfumeria"
+    unfetched = "https://endpoints.leaflets.schwarz/v4/flyer?flyer_identifier=folleto-perfumeria&region_id=0&region_code=0"
     assert unfetched not in requested
     assert {category.code for category in result.categories} == {
         "folletos",
@@ -234,7 +240,7 @@ def test_lidl_adapter_reports_a_failing_flyer_without_stopping_the_run():
         url = str(request.url)
         if url == FOLLETOS_INDEX_URL:
             return httpx.Response(200, text=INDEX_HTML)
-        if url.endswith("slug=folleto-alimentacion"):
+        if "flyer_identifier=folleto-alimentacion" in url:
             return httpx.Response(500)
         return httpx.Response(200, json={"flyer": {"name": "Otros", "products": []}})
 
@@ -245,6 +251,6 @@ def test_lidl_adapter_reports_a_failing_flyer_without_stopping_the_run():
     assert result.status == "partial"
     assert result.complete is False
     assert [error.url for error in result.errors] == [
-        "https://endpoints.leaflets.schwarz/v4/flyer?slug=folleto-alimentacion"
+        "https://endpoints.leaflets.schwarz/v4/flyer?flyer_identifier=folleto-alimentacion&region_id=0&region_code=0"
     ]
     assert result.products == ()

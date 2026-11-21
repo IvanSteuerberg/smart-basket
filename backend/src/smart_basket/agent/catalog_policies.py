@@ -171,6 +171,12 @@ _MUTEX_PAIRS: tuple[tuple[str, str], ...] = (
     ("trigo", "maiz"),
     ("trigo", "espelta"),
     ("trigo", "garbanzo"),
+    ("lenteja", "alubia"),
+    ("lenteja", "garbanzo"),
+    ("alubia", "garbanzo"),
+    ("patata", "maiz"),
+    ("patata", "palomita"),
+    ("zanahoria", "tomate"),
     ("cocinar", "montar"),
     ("perro", "gato"),
     ("nectar", "zumo"),
@@ -178,24 +184,82 @@ _MUTEX_PAIRS: tuple[tuple[str, str], ...] = (
     ("galleta", "polvoron"),
     ("pollo", "cerdo"),
     ("pollo", "vacuno"),
+    ("pollo", "ternera"),
+    ("pollo", "pavo"),
+    ("pollo", "pato"),
+    ("pollo", "conejo"),
     ("vacuno", "cerdo"),
     ("ternera", "cerdo"),
+    ("pato", "cerdo"),
+    ("cordero", "cerdo"),
+    ("cordero", "ternera"),
+    ("jamon", "paleta"),
+    ("jamon", "lomo"),
+    ("jamon", "salchichon"),
+    ("jamon", "chorizo"),
+    ("chorizo", "salchichon"),
+    ("lomo", "salchichon"),
     ("salmon", "atun"),
+    ("salmon", "bacalao"),
+    ("salmon", "merluza"),
+    ("salmon", "dorada"),
+    ("salmon", "lubina"),
     ("merluza", "bacalao"),
+    ("atun", "bonito"),
+    ("atun", "mejillon"),
+    ("atun", "sardina"),
+    ("bonito", "mejillon"),
+    ("bonito", "sardina"),
+    ("mejillon", "poton"),
+    ("mejillon", "pulpo"),
+    ("pulpo", "calamar"),
+    ("gamba", "langostino"),
+    ("sardina", "anchoa"),
+    ("boqueron", "sardina"),
+    ("leche", "soja"),
+    ("leche", "avena"),
+    ("leche", "almendra"),
+    ("avena", "soja"),
+    ("avena", "almendra"),
+    ("soja", "almendra"),
+    ("soja", "arroz"),
+    ("oliva", "girasol"),
+    ("tinto", "blanco"),
+    ("tinto", "rosado"),
+    ("blanco", "rosado"),
+    ("crianza", "reserva"),
+    ("fregona", "estropajo"),
+    ("fregona", "bayeta"),
+    ("mopa", "estropajo"),
+    ("mopa", "bayeta"),
+    ("escoba", "fregona"),
+    ("servilleta", "higienico"),
+    ("detergente", "quitamanchas"),
+    ("detergente", "suavizante"),
+    ("champu", "gel"),
+    ("mascarilla", "exfoliante"),
+    ("reutilizable", "desechable"),
 )
 
 
-def attributes_compatible(
-    product_name: str, canonical_name: str, canonical_variant_key: str | None
-) -> bool:
-    """Whether `product_name` is compatible with `canonical_name` and `canonical_variant_key`.
+def _has_gran_reserva(tokens: Sequence[str]) -> bool:
+    return any(
+        same_word(tokens[i], "gran") and same_word(tokens[i + 1], "reserva")
+        for i in range(len(tokens) - 1)
+    )
 
-    Enforces `variants_compatible` first, then rejects mutually exclusive ingredient or use pairs
-    (`trigo` vs `arroz`/`espelta`, `cocinar` vs `montar`, `perro` vs `gato`, `nectar` vs `zumo`,
-    `galleta` vs `turron`, distinct meats/fish) unless both sides name the same term.
-    """
-    if not variants_compatible(product_name, canonical_variant_key):
-        return False
+
+def _has_reduced_salt(tokens: Sequence[str]) -> bool:
+    salt_mods = ("reducido", "reducida", "bajo", "baja")
+    return any(same_word(tok, "sal") for tok in tokens) and any(
+        any(same_word(tok, mod) for mod in salt_mods) for tok in tokens
+    )
+
+
+def mutex_compatible(
+    product_name: str, canonical_name: str, canonical_variant_key: str | None = None
+) -> bool:
+    """Whether `product_name` and `canonical_name` respect mutually exclusive types/claims."""
     _, without_brand, _ = _preprocessor().find_brand(tokenize(product_name))
     p_tokens = [token.key for token in without_brand]
     c_tokens = [token.key for token in tokenize(canonical_name)]
@@ -208,7 +272,28 @@ def attributes_compatible(
             p_right and c_left and not c_right and not p_left
         ):
             return False
-    return True
+    p_res = any(same_word(tok, "reserva") for tok in p_tokens)
+    c_res = any(same_word(tok, "reserva") for tok in c_tokens)
+    if (p_res or c_res) and (_has_gran_reserva(p_tokens) != _has_gran_reserva(c_tokens)):
+        return False
+    return not (
+        _has_reduced_salt(p_tokens) and "sin_sal" in _canonical_variants(canonical_variant_key)
+    )
+
+
+def attributes_compatible(
+    product_name: str, canonical_name: str, canonical_variant_key: str | None
+) -> bool:
+    """Whether `product_name` is compatible with `canonical_name` and `canonical_variant_key`.
+
+    Enforces `variants_compatible` first, then rejects mutually exclusive ingredient or use pairs
+    (`trigo` vs `arroz`/`espelta`, `cocinar` vs `montar`, `perro` vs `gato`, `nectar` vs `zumo`,
+    `galleta` vs `turron`, distinct meats/fish, wine ageing, dairy vs plant drinks, household
+    tools) unless both sides name the same term.
+    """
+    return variants_compatible(product_name, canonical_variant_key) and mutex_compatible(
+        product_name, canonical_name, canonical_variant_key
+    )
 
 
 def variants_compatible(product_name: str, canonical_variant_key: str | None) -> bool:
@@ -232,10 +317,20 @@ def variants_compatible(product_name: str, canonical_variant_key: str | None) ->
 
 def _product_variants(product_name: str) -> frozenset[str]:
     preprocessor = _preprocessor()
-    keys = set(name_match(preprocessor, product_name).variant_keys)
+    if "antigoteo" in product_name.lower():
+        sanitized = (
+            product_name.lower()
+            .replace("0% antigoteo", "antigoteo")
+            .replace("0 % antigoteo", "antigoteo")
+        )
+    else:
+        sanitized = product_name
+    keys = set(name_match(preprocessor, sanitized).variant_keys)
+    if _has_reduced_salt([t.key for t in tokenize(sanitized)]):
+        keys.discard("sin_sal")
     if any(key.startswith(f"{FLAVOUR}:") for key in keys):
         return frozenset(keys)
-    _, without_brand, _ = preprocessor.find_brand(tokenize(product_name))
+    _, without_brand, _ = preprocessor.find_brand(tokenize(sanitized))
     tokens = [token.key for token in without_brand]
     if len(tokens) >= 2 and any(same_word(tokens[0], carrier) for carrier in _FLAVOUR_CARRIERS):
         trailing = tokens[1:]
