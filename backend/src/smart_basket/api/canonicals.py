@@ -75,6 +75,7 @@ _CANONICAL_DETAIL_SQL = (
     + """
 select
     cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
+    cp.pack_count, cp.dietary_tags,
     cp.chain_id, ch.code as chain_code, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
     ec.id as category_id, ec.key as category_key, ec.name as category_name,
@@ -108,6 +109,7 @@ active_products as (
         cp.image_url,
         cp.base_unit,
         cp.base_quantity,
+        cp.pack_count,
         pc.price,
         ch.code as chain_code,
         row_number() over (
@@ -134,7 +136,8 @@ cheapest_product as (
         image_url,
         price as best_price,
         base_quantity as best_quantity,
-        base_unit as best_unit
+        base_unit as best_unit,
+        pack_count as best_pack_count
     from active_products
     where rn = 1
 ),
@@ -159,6 +162,7 @@ select
     cp.best_price,
     cp.best_quantity,
     cp.best_unit,
+    cp.best_pack_count,
     cs.product_count,
     ac.chains
 from canonical_product canon
@@ -262,7 +266,9 @@ def canonicals(
 
     items = []
     for row in rows:
-        unit_price = _unit_price(row["best_price"], row["best_quantity"], row["best_unit"])
+        unit_price = _unit_price(
+            row["best_price"], row["best_quantity"], row["best_unit"], row["best_pack_count"]
+        )
         assert unit_price is not None
         assert row["best_unit"] is not None
         items.append(
@@ -300,7 +306,9 @@ def canonical(canonical_id: int, session: SessionDep) -> CanonicalDetail:
         raise HTTPException(status_code=404, detail=CANONICAL_ERROR)
 
     best = rows[0]
-    unit_price = _unit_price(best["price"], best["base_quantity"], best["base_unit"])
+    unit_price = _unit_price(
+        best["price"], best["base_quantity"], best["base_unit"], best["pack_count"]
+    )
     if unit_price is None or best["base_unit"] is None:
         raise HTTPException(status_code=404, detail=CANONICAL_ERROR)
 

@@ -8,13 +8,14 @@ is read-only and answerable in a couple of queries.
 
 from __future__ import annotations
 
-from collections import defaultdict
-from collections.abc import Iterable, Mapping
+import threading
+import time
+from collections.abc import Callable, Iterable, Mapping
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,8 @@ UNIT_PRICE_QUANTUM = Decimal("0.0001")
 SORTS = ("unit_price", "price", "name")
 MAX_PAGE_SIZE = 60
 ALTERNATIVES_LIMIT = 12
+#: The sections summary changes only when the catalog changes; a short TTL avoids rebuilding it.
+SECTIONS_TTL_SECONDS = 60.0
 
 SIZE_ERROR = "El tamaño de la página debe estar entre 1 y 60."
 PAGE_ERROR = "La página debe ser al menos 1."
@@ -71,6 +74,7 @@ join price_current pc
 #: A listed product: active and available in its chain's zone, with a current price.
 _PRODUCT_COLUMNS = """
     cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
+    cp.pack_count, cp.dietary_tags,
     cp.chain_id, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
     ec.id as category_id, ec.key as category_key, ec.name as category_name,
@@ -87,10 +91,12 @@ join category ec on ec.id = coalesce(canon.category_id, ccat.category_id)
 
 _ORDERS = {
     # Same rule as `_unit_price`: a product counted by units without a size is priced per unit;
-    # one weighed or measured without a size has no unit price and goes last.
+    # one weighed or measured without a size has no unit price and goes last. A multipack's
+    # `base_quantity` is the size of one item, so its total size is `base_quantity * pack_count`.
     "unit_price": (
         "(cp.base_quantity is null and cp.base_unit is distinct from 'ud'), "
-        "coalesce(pc.price / nullif(cp.base_quantity, 0), "
+        "coalesce(pc.price / nullif("
+        "cp.base_quantity * greatest(coalesce(cp.pack_count, 1), 1), 0), "
         "case when cp.base_unit = 'ud' then pc.price end), "
         "cp.name, cp.id"
     ),
@@ -129,25 +135,48 @@ group by cl.ancestor_id
 """
 )
 
+#: One representative photo per top-level section, chosen entirely in SQL: the photo of the
+#: lowest product id of the most common canonical (or leaf category) holding a photo. Canonical
+#: ids and category ids are different id spaces, so `by_canonical` keeps them apart.
 _SECTION_PHOTOS_SQL = (
     _CHAIN_ZONE
-    + """
-select cl.ancestor_id as section_id, cp.id, cp.image_url, cp.canonical_id,
-       coalesce(canon.category_id, ccat.category_id) as node_id
-from category section
-join category_closure cl on cl.ancestor_id = section.id
-join chain_product cp on cp.is_active
-join chosen cz on cz.chain_id = cp.chain_id
-join chain_product_zone cpz
-    on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
-join price_current pc
-    on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
-left join canonical_product canon on canon.id = cp.canonical_id
-left join chain_category ccat on ccat.id = cp.chain_category_id
-where section.parent_id is null
-  and cp.image_url is not null
-  and cl.descendant_id = coalesce(canon.category_id, ccat.category_id)
-order by cl.ancestor_id, cp.id
+    + """,
+section_products as (
+    select cl.ancestor_id as section_id, cp.id as product_id, cp.image_url,
+           cp.canonical_id is not null as by_canonical,
+           coalesce(cp.canonical_id, canon.category_id, ccat.category_id) as node_id
+    from category section
+    join category_closure cl on cl.ancestor_id = section.id
+    join chain_product cp on cp.is_active
+    join chosen cz on cz.chain_id = cp.chain_id
+    join chain_product_zone cpz
+        on cpz.chain_product_id = cp.id and cpz.zone_id = cz.zone_id and cpz.is_available
+    join price_current pc
+        on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
+    left join canonical_product canon on canon.id = cp.canonical_id
+    left join chain_category ccat on ccat.id = cp.chain_category_id
+    where section.parent_id is null
+      and cp.image_url is not null
+      and cl.descendant_id = coalesce(canon.category_id, ccat.category_id)
+),
+photo_counts as (
+    select section_id, by_canonical, node_id,
+           count(*) as photos, min(product_id) as first_id
+    from section_products
+    group by section_id, by_canonical, node_id
+),
+chosen_group as (
+    select distinct on (section_id) section_id, by_canonical, node_id
+    from photo_counts
+    order by section_id, photos desc, first_id
+)
+select distinct on (sp.section_id) sp.section_id, sp.image_url
+from section_products sp
+join chosen_group cg
+    on cg.section_id = sp.section_id
+    and cg.by_canonical = sp.by_canonical
+    and cg.node_id = sp.node_id
+order by sp.section_id, sp.product_id
 """
 )
 
@@ -188,6 +217,10 @@ class ProductOut(BaseModel):
     base_unit: str | None
     base_quantity: str | None
     canonical: CanonicalOut | None
+    #: Wave 0 contract: populated from `chain_product.dietary_tags` when available.
+    dietary_tags: list[str] = Field(default_factory=list)
+    #: Wave 0 contract: wired to `promotion` in a later iteration, always false for now.
+    on_promo: bool = False
 
 
 class ProductsResponse(BaseModel):
@@ -334,10 +367,17 @@ def _category_id(session: Session, key: str, error: str) -> int:
     return category_id
 
 
-def _unit_price(price: Decimal, quantity: Decimal | None, unit: str | None) -> str | None:
+def _unit_price(
+    price: Decimal,
+    quantity: Decimal | None,
+    unit: str | None,
+    pack_count: int | None = 1,
+) -> str | None:
+    """Price per base unit; `quantity` is the size of one pack item, so multiply by `pack_count`."""
     if quantity is None or quantity <= 0:
         return decimal_text(price) if unit == "ud" else None
-    return decimal_text((price / quantity).quantize(UNIT_PRICE_QUANTUM, rounding=ROUND_HALF_UP))
+    total = quantity * max(pack_count or 1, 1)
+    return decimal_text((price / total).quantize(UNIT_PRICE_QUANTUM, rounding=ROUND_HALF_UP))
 
 
 def _to_product(row: Mapping[str, Any], brands: Brands) -> ProductOut:
@@ -359,34 +399,53 @@ def _to_product(row: Mapping[str, Any], brands: Brands) -> ProductOut:
         image_url=row["image_url"],
         chain=row["chain_name"],
         price=decimal_text(row["price"]),
-        unit_price=_unit_price(row["price"], row["base_quantity"], row["base_unit"]),
+        unit_price=_unit_price(
+            row["price"], row["base_quantity"], row["base_unit"], row.get("pack_count")
+        ),
         base_unit=row["base_unit"],
         base_quantity=(
             decimal_text(row["base_quantity"]) if row["base_quantity"] is not None else None
         ),
         canonical=canonical,
+        dietary_tags=list(row.get("dietary_tags") or ()),
     )
 
 
-def _section_images(rows: Iterable[Mapping[str, Any]]) -> dict[int, str]:
-    """Lowest-id photo of the most common canonical (or leaf) of each section."""
-    groups: dict[int, dict[tuple[str, int], list[tuple[int, str]]]] = defaultdict(
-        lambda: defaultdict(list)
-    )
-    for row in rows:
-        # Canonical ids and category ids are different id spaces: keep them apart.
-        key = (
-            ("canonical", row["canonical_id"])
-            if row["canonical_id"] is not None
-            else ("category", row["node_id"])
-        )
-        groups[row["section_id"]][key].append((row["id"], row["image_url"]))
-    images = {}
-    for section_id, by_key in groups.items():
-        # Rows arrive ordered by product id, so the first of each group is its lowest id.
-        best = max(by_key, key=lambda key: (len(by_key[key]), -by_key[key][0][0]))
-        images[section_id] = by_key[best][0][1]
-    return images
+class SectionsCache:
+    """The sections summary, reused for `ttl_seconds`; tests call `reset` between databases."""
+
+    def __init__(
+        self,
+        ttl_seconds: float = SECTIONS_TTL_SECONDS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.ttl_seconds = ttl_seconds
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._value: SectionsResponse | None = None
+        self._stored_at: float | None = None
+
+    def get(self) -> SectionsResponse | None:
+        with self._lock:
+            if self._value is None or self._stored_at is None:
+                return None
+            if self._clock() - self._stored_at >= self.ttl_seconds:
+                return None
+            return self._value
+
+    def set(self, value: SectionsResponse) -> None:
+        with self._lock:
+            self._value = value
+            self._stored_at = self._clock()
+
+    def reset(self) -> None:
+        """Forget the cached summary; tests call it between databases."""
+        with self._lock:
+            self._value = None
+            self._stored_at = None
+
+
+default_sections_cache = SectionsCache()
 
 
 # Routes --------------------------------------------------------------------
@@ -395,6 +454,9 @@ def _section_images(rows: Iterable[Mapping[str, Any]]) -> dict[int, str]:
 @router.get("/sections", response_model=SectionsResponse)
 def sections(session: SessionDep) -> SectionsResponse:
     """Top-level taxonomy sections with their product count and a representative photo."""
+    cached = default_sections_cache.get()
+    if cached is not None:
+        return cached
     rows = (
         session.execute(
             text("select id, key, name from category where parent_id is null order by id")
@@ -406,8 +468,11 @@ def sections(session: SessionDep) -> SectionsResponse:
         row["section_id"]: row["products"]
         for row in session.execute(text(_SECTION_COUNTS_SQL)).mappings()
     }
-    images = _section_images(session.execute(text(_SECTION_PHOTOS_SQL)).mappings())
-    return SectionsResponse(
+    images = {
+        row["section_id"]: row["image_url"]
+        for row in session.execute(text(_SECTION_PHOTOS_SQL)).mappings()
+    }
+    response = SectionsResponse(
         sections=[
             SectionSummary(
                 key=row["key"],
@@ -419,6 +484,8 @@ def sections(session: SessionDep) -> SectionsResponse:
             if counts.get(row["id"], 0) > 0
         ]
     )
+    default_sections_cache.set(response)
+    return response
 
 
 @router.get("/products", response_model=ProductsResponse)
