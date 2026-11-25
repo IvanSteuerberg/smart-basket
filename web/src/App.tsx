@@ -45,6 +45,7 @@ import {
 } from "./profile";
 import {
   BASKET_HASH,
+  CATALOG_HASH,
   catalogHash,
   LIST_HASH,
   navigate,
@@ -567,6 +568,10 @@ export default function App() {
     dispatchList({ type: "remove", id });
   }
 
+  function handleSetLineQuantity(id: string, quantity: string) {
+    dispatchList({ type: "setQuantity", id, quantity });
+  }
+
   function handleUpdateLine(id: string, patch: Partial<Omit<UnifiedLine, "id">>) {
     dispatchList({ type: "update", id, patch });
   }
@@ -1082,28 +1087,43 @@ export default function App() {
             <CatalogPage
               section={route.section}
               view={route.view}
+              filters={route.filters}
               sections={catalogSections}
               sectionsError={catalogSectionsError}
               query={headerQuery}
+              activeChains={activeChains}
+              origin={origin}
+              mode={options.mode}
+              lines={lines}
               onQueryChange={handleCatalogQueryChange}
               onAdd={handleAddSpecific}
               onAddCanonical={handleAddCanonical}
+              onUpdateLineQuantity={handleSetLineQuantity}
+              onRemoveLine={handleRemoveLine}
             />
           )}
 
           {route.name === "canonical" && (
             <CanonicalPage
               id={route.id}
+              backHref={lastCatalogHashRef.current ?? CATALOG_HASH}
+              lines={lines}
               onAddGeneric={handleAddCanonical}
               onAddSpecific={handleAddSpecific}
+              onUpdateLineQuantity={handleSetLineQuantity}
+              onRemoveLine={handleRemoveLine}
             />
           )}
 
           {route.name === "product" && (
             <ProductPage
               id={route.id}
+              backHref={lastCatalogHashRef.current ?? CATALOG_HASH}
+              lines={lines}
               onAddSpecific={handleAddSpecific}
               onAddGeneric={handleAddGeneric}
+              onUpdateLineQuantity={handleSetLineQuantity}
+              onRemoveLine={handleRemoveLine}
             />
           )}
 
