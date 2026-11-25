@@ -9,7 +9,6 @@ import {
   isChoiceRequired,
   requestRecommendation,
   startAgentRun,
-  type Accept,
   type ActiveChain,
   type AgentAnswerRequest,
   type AgentRunRequest,
@@ -22,22 +21,15 @@ import {
   type Recommendation,
   type RecommendationRequest,
 } from "./api";
+import { canonicalLine, genericLine, specificLine, type CartLine } from "./cart";
+import { draftFromInterpreted, markChoiceRequired, toRequestItem } from "./draft";
 import {
-  canonicalLine,
-  cartItemCount,
-  cartReducer,
-  draftItemsFromCart,
-  genericLine,
-  specificLine,
-} from "./cart";
-import {
-  allResolved,
-  applyAnyBrand,
-  draftFromInterpreted,
-  markChoiceRequired,
-  toRequestItem,
-  type DraftItem,
-} from "./draft";
+  listReducer,
+  migrateCartToUnified,
+  toDraftItems,
+  unifiedLineCount,
+  type UnifiedLine,
+} from "./listStore";
 import {
   appendEvent,
   emptyProfile,
@@ -62,12 +54,19 @@ import {
   type Route,
 } from "./router";
 import {
+  clearLastPlan,
   createSavedList,
+  deleteSavedList,
   loadCart,
+  loadDraft,
+  loadLastPlan,
   loadLists,
   loadOptions,
   loadOrigin,
+  renameSavedList,
   saveCart,
+  saveDraft,
+  saveLastPlan,
   saveLists,
   saveOptions,
   saveOrigin,
@@ -78,12 +77,12 @@ import {
 import { AgentActions } from "./components/AgentActions";
 import { BasketStep } from "./components/BasketStep";
 import { CanonicalPage } from "./components/CanonicalPage";
-import { CartDrawer } from "./components/CartDrawer";
+import { CartDrawer, isLineResolved } from "./components/CartDrawer";
 import { CatalogPage } from "./components/CatalogPage";
 import { CHAINS } from "./components/ChainLogo";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { HomePage } from "./components/HomePage";
-import { ListStep } from "./components/ListStep";
+import { ListStep, type ListNotice } from "./components/ListStep";
 import { type RouteOptions } from "./components/OriginStep";
 import { PreferencesDialog } from "./components/PreferencesDialog";
 import { ProductPage } from "./components/ProductPage";
@@ -243,7 +242,11 @@ function HealthFooter() {
 export default function App() {
   const route = useRoute();
 
-  const [cart, dispatch] = useReducer(cartReducer, null, () => loadCart());
+  // One list for the catalog, the drawer and the list screen (M1). It starts from the saved
+  // draft; a cart left by an older session is merged in once (see the effect that clears it).
+  const [lines, dispatchList] = useReducer(listReducer, null, () =>
+    migrateCartToUnified(loadCart(), loadDraft().draftItems),
+  );
   // At most one overlay (cart drawer or preferences dialog) is open; it owns one history entry
   // so the browser Back button closes it instead of leaving the app.
   const [overlay, setOverlay] = useState<Overlay | null>(null);
@@ -266,8 +269,8 @@ export default function App() {
   const [activeChains, setActiveChains] = useState<ActiveChain[]>([]);
   const [chainsLoading, setChainsLoading] = useState(true);
 
-  const [text, setText] = useState("");
-  const [items, setItems] = useState<DraftItem[]>([]);
+  const [text, setText] = useState(() => loadDraft().draftText);
+  const [listNotice, setListNotice] = useState<ListNotice | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [interpreting, setInterpreting] = useState(false);
   const [interpretError, setInterpretError] = useState<string | null>(null);
@@ -280,14 +283,18 @@ export default function App() {
 
   const [calculating, setCalculating] = useState(false);
   const [calcError, setCalcError] = useState<string | null>(null);
-  const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
-  const [agentRun, setAgentRun] = useState<AgentRunResponse | null>(null);
+  // The last plan survives a reload of the tab (F5 on #/cesta).
+  const [initialPlan] = useState(() => loadLastPlan());
+  const [recommendation, setRecommendation] = useState<Recommendation | null>(
+    initialPlan?.recommendation ?? null,
+  );
+  const [agentRun, setAgentRun] = useState<AgentRunResponse | null>(initialPlan?.agentRun ?? null);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
   const [withoutAgent, setWithoutAgent] = useState(false);
   const busyRef = useRef(false);
   const lastRecommendationRequestRef = useRef<RecommendationRequest | null>(null);
-  const baseRecommendationRef = useRef<Recommendation | null>(null);
+  const baseRecommendationRef = useRef<Recommendation | null>(initialPlan?.recommendation ?? null);
   const agentAbortRef = useRef<AbortController | null>(null);
   const agentSeqRef = useRef(0);
 
@@ -373,9 +380,15 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentKey]);
 
+  // A reload never loses the list or the text being written (M12). The old cart was merged into
+  // the draft on start, so it is emptied to avoid loading its lines twice.
   useEffect(() => {
-    saveCart(cart);
-  }, [cart]);
+    saveDraft({ draftText: text, draftItems: toDraftItems(lines) });
+  }, [lines, text]);
+
+  useEffect(() => {
+    saveCart([]);
+  }, []);
 
   // Load the saved profile once: the padlocks already travel with the cart, this restores
   // the switch and the chains.
@@ -418,7 +431,13 @@ export default function App() {
 
   function handleAnyBrandChange(value: boolean) {
     setAnyBrand(value);
-    if (value) dispatch({ type: "anyBrand" });
+    // The global switch lets every line that is not of shades accept any brand.
+    if (value) {
+      dispatchList({
+        type: "replace",
+        lines: lines.map((line) => (line.exactOnly ? line : { ...line, pinBrand: false })),
+      });
+    }
     const now = new Date();
     const key = { scope_kind: "global", scope_key: "any_brand", kind: "any_brand" } as const;
     commitProfile((profile) =>
@@ -444,18 +463,15 @@ export default function App() {
     });
   }
 
-  function handleAcceptChange(id: string, accept: Accept) {
-    dispatch({ type: "setAccept", id, accept });
-  }
-
-  function handleToggleLock(id: string) {
-    const line = cart.find((candidate) => candidate.id === id);
-    dispatch({ type: "toggleLock", id });
-    if (!line || line.category_key === null) return;
+  /** The single brand control of a line (M2): pins its product or lets any brand do. */
+  function handleSetPinBrand(id: string, pinBrand: boolean) {
+    const line = lines.find((candidate) => candidate.id === id);
+    dispatchList({ type: "setPinBrand", id, pinBrand });
+    if (!line || line.exactOnly || line.categoryKey === null) return;
 
     const now = new Date();
-    const key = { scope_kind: "category", scope_key: line.category_key, kind: "brand_pin" } as const;
-    if (line.locked) {
+    const key = { scope_kind: "category", scope_key: line.categoryKey, kind: "brand_pin" } as const;
+    if (!pinBrand) {
       commitProfile((profile) => removePreference(profile, key, now));
       return;
     }
@@ -464,15 +480,15 @@ export default function App() {
       appendEvent(
         setPreference(
           profile,
-          { ...key, value: { product_id: line.product_id, brand: line.brand } },
+          { ...key, value: { product_id: line.productId, brand: line.brand } },
           now,
         ),
         {
           id: uuidv7(now.getTime()),
-          term: line.category_name ?? line.name,
+          term: line.categoryName || line.text,
           action: "pinned",
           canonical_id: null,
-          product_id: line.product_id,
+          product_id: line.productId,
           brand: line.brand,
           chain: null,
           date: now.toISOString(),
@@ -547,39 +563,47 @@ export default function App() {
     setCalcError(null);
   }
 
-  function handleRemoveItem(id: string) {
-    setItems((current) => current.filter((item) => item.id !== id));
+  function handleRemoveLine(id: string) {
+    dispatchList({ type: "remove", id });
   }
 
-  function handleUpdateItem(id: string, patch: Partial<DraftItem>) {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
+  function handleUpdateLine(id: string, patch: Partial<Omit<UnifiedLine, "id">>) {
+    dispatchList({ type: "update", id, patch });
+  }
+
+  function persistLists(next: SavedList[]) {
+    setLists(next);
+    saveLists(next);
   }
 
   function handleSaveList(name: string) {
-    const next = upsertSavedList(lists, createSavedList(name, text, items));
-    setLists(next);
-    saveLists(next);
+    persistLists(upsertSavedList(lists, createSavedList(name, text, toDraftItems(lines))));
   }
 
-  function handleSaveCartList(name: string) {
-    const cartItems = draftItemsFromCart(cart);
-    const cartText = cartItems.map((item) => item.text).join("\n");
-    const next = upsertSavedList(lists, createSavedList(name, cartText, cartItems));
-    setLists(next);
-    saveLists(next);
+  function handleRenameList(id: string, name: string) {
+    persistLists(renameSavedList(lists, id, name));
+  }
+
+  function handleDeleteList(id: string) {
+    persistLists(deleteSavedList(lists, id));
   }
 
   function handleLoadList(id: string) {
     const list = lists.find((candidate) => candidate.id === id);
     if (!list) return;
+    dispatchList({ type: "replace", lines: migrateCartToUnified([], list.items) });
     setText(list.text);
-    setItems(list.items);
     setDegraded(false);
     setInterpretError(null);
     setCalcError(null);
+    setListNotice(null);
+    dismissOverlayForNavigation();
     goTo(LIST_HASH);
+  }
+
+  /** Asks the list screen to scroll to what is missing before a plan can be calculated. */
+  function raiseNotice(kind: ListNotice["kind"]) {
+    setListNotice((previous) => ({ kind, tick: (previous?.tick ?? 0) + 1 }));
   }
 
   function cancelAgentRun() {
@@ -619,6 +643,7 @@ export default function App() {
       const run = await startAgentRun(body, controller.signal);
       if (controller.signal.aborted || seq !== agentSeqRef.current) return;
       setAgentRun(run);
+      saveLastPlan({ recommendation: run.recommendation ?? baseResult, agentRun: run });
     } catch {
       // Fail gracefully: never break the basket if the agent endpoint is unavailable.
     } finally {
@@ -628,8 +653,26 @@ export default function App() {
     }
   }
 
+  function buildRequest(
+    targetLines: UnifiedLine[],
+    targetOrigin: StoredOrigin,
+    targetOptions: RouteOptions,
+    isDegraded: boolean,
+  ): RecommendationRequest {
+    return {
+      items: toDraftItems(targetLines).map(toRequestItem),
+      origin: { lat: targetOrigin.lat, lon: targetOrigin.lon },
+      mode: targetOptions.mode,
+      max_stores: targetOptions.maxStores,
+      priority_mode: targetOptions.priority,
+      return_to_origin: targetOptions.returnToOrigin,
+      degraded: isDegraded,
+      chains: chainFilter,
+    };
+  }
+
   async function executeRecommendation(
-    targetItems: DraftItem[],
+    targetLines: UnifiedLine[],
     targetOrigin: StoredOrigin,
     targetOptions: RouteOptions,
     isDegraded: boolean = degraded,
@@ -639,30 +682,26 @@ export default function App() {
     setCalcError(null);
     cancelAgentRun();
     try {
-      const requestPayload: RecommendationRequest = {
-        items: targetItems.map(toRequestItem),
-        origin: { lat: targetOrigin.lat, lon: targetOrigin.lon },
-        mode: targetOptions.mode,
-        max_stores: targetOptions.maxStores,
-        priority_mode: targetOptions.priority,
-        return_to_origin: targetOptions.returnToOrigin,
-        degraded: isDegraded,
-        chains: chainFilter,
-      };
+      const requestPayload = buildRequest(targetLines, targetOrigin, targetOptions, isDegraded);
       const result = await requestRecommendation(requestPayload);
       lastRecommendationRequestRef.current = requestPayload;
       baseRecommendationRef.current = result;
       setRecommendation(result);
+      saveLastPlan({ recommendation: result, agentRun: null });
       dismissOverlayForNavigation();
       goTo(BASKET_HASH);
       void runAgentForPlan(requestPayload, result, withoutAgent);
     } catch (error) {
       if (isChoiceRequired(error)) {
         const { line_id: lineId, code, message } = error.detail;
-        setItems((current) =>
-          current.map((item, index) => (index === lineId ? markChoiceRequired(item, code) : item)),
-        );
+        const marked = targetLines.map((line, index) => {
+          if (index !== lineId) return line;
+          const [changed] = migrateCartToUnified([], [markChoiceRequired(toDraftItems([line])[0], code)]);
+          return { ...changed, packaging: line.packaging };
+        });
+        dispatchList({ type: "replace", lines: marked });
         setCalcError(message);
+        raiseNotice("unresolved");
         dismissOverlayForNavigation();
         goTo(LIST_HASH);
       } else {
@@ -674,13 +713,47 @@ export default function App() {
     }
   }
 
-  async function recalculateWithItems(
-    nextItems: DraftItem[],
-    isDegraded: boolean = degraded,
-  ) {
+  async function recalculateWithLines(nextLines: UnifiedLine[], isDegraded: boolean = degraded) {
     if (busyRef.current || !origin) return;
-    setItems(nextItems);
-    await executeRecommendation(nextItems, origin, options, isDegraded);
+    dispatchList({ type: "replace", lines: nextLines });
+    await executeRecommendation(nextLines, origin, options, isDegraded);
+  }
+
+  /**
+   * Interprets the free text and adds its lines to the list. Resolves to the list as it is
+   * afterwards, or null when the text could not be interpreted.
+   */
+  async function addTextToList(): Promise<{ lines: UnifiedLine[]; degraded: boolean } | null> {
+    const trimmed = text.trim();
+    if (trimmed === "") return { lines, degraded };
+    busyRef.current = true;
+    setInterpreting(true);
+    try {
+      const response = await interpretText(trimmed);
+      const added = migrateCartToUnified([], response.items.map(draftFromInterpreted));
+      const next = added.reduce(
+        (current, line) => listReducer(current, { type: "add", line }),
+        lines,
+      );
+      dispatchList({ type: "replace", lines: next });
+      setText("");
+      setDegraded(response.degraded);
+      return { lines: next, degraded: response.degraded };
+    } catch (error) {
+      setInterpretError(describeError(error));
+      return null;
+    } finally {
+      busyRef.current = false;
+      setInterpreting(false);
+    }
+  }
+
+  async function handleAddText() {
+    if (busyRef.current || text.trim() === "") return;
+    setCalcError(null);
+    setInterpretError(null);
+    const result = await addTextToList();
+    if (result && !result.lines.every(isLineResolved)) raiseNotice("unresolved");
   }
 
   async function handleCalculate() {
@@ -688,41 +761,20 @@ export default function App() {
     setCalcError(null);
     setInterpretError(null);
 
-    let currentItems = items;
-    let currentDegraded = degraded;
-    const trimmed = text.trim();
+    const result = await addTextToList();
+    if (!result || result.lines.length === 0) return;
 
-    if (trimmed !== "") {
-      busyRef.current = true;
-      setInterpreting(true);
-      try {
-        const response = await interpretText(trimmed);
-        const newItems = response.items.map(draftFromInterpreted);
-        currentItems = [...items, ...newItems];
-        currentDegraded = response.degraded;
-        setItems(currentItems);
-        setText("");
-        setDegraded(response.degraded);
-      } catch (error) {
-        setInterpretError(describeError(error));
-        busyRef.current = false;
-        setInterpreting(false);
-        return;
-      } finally {
-        busyRef.current = false;
-        setInterpreting(false);
-      }
+    // Lines still vague or unknown: say so and take the user to the first one (A5).
+    if (!result.lines.every(isLineResolved)) {
+      raiseNotice("unresolved");
+      return;
     }
-
-    if (currentItems.length === 0) return;
-
     if (!origin) {
       setOriginOpen(true);
+      raiseNotice("origin");
+      return;
     }
-
-    if (allResolved(currentItems) && origin) {
-      await recalculateWithItems(currentItems, currentDegraded);
-    }
+    await recalculateWithLines(result.lines, result.degraded);
   }
 
   function handleNewList() {
@@ -730,11 +782,13 @@ export default function App() {
     lastRecommendationRequestRef.current = null;
     baseRecommendationRef.current = null;
     setText("");
-    setItems([]);
+    dispatchList({ type: "clear" });
     setDegraded(false);
     setInterpretError(null);
     setCalcError(null);
+    setListNotice(null);
     setRecommendation(null);
+    clearLastPlan();
     goTo(LIST_HASH);
   }
 
@@ -752,65 +806,77 @@ export default function App() {
     }
   }
 
+  /** A catalog line (specific or generic) in the shape of the unified list. */
+  function addCatalogLine(cartLine: CartLine) {
+    dispatchList({ type: "add", line: migrateCartToUnified([cartLine])[0] });
+  }
+
+  // With «Me da igual la marca» active, a product added from the catalog is not pinned.
   function handleAddSpecific(product: Product) {
-    dispatch({ type: "add", line: specificLine(product, anyBrand) });
+    addCatalogLine(specificLine(product, anyBrand));
   }
 
   function handleAddCanonical(card: CanonicalCard) {
-    dispatch({ type: "add", line: canonicalLine(card) });
+    addCatalogLine(canonicalLine(card));
   }
 
   function handleAddGeneric(product: Product) {
     const line = genericLine(product);
-    if (line) dispatch({ type: "add", line });
+    if (line) addCatalogLine(line);
   }
 
-  function handleCalculateFromCart() {
-    const cartItems = draftItemsFromCart(cart);
-    if (cartItems.length === 0) return;
-    cancelAgentRun();
-    lastRecommendationRequestRef.current = null;
-    baseRecommendationRef.current = null;
-    setText("");
-    setItems(cartItems);
-    setDegraded(false);
-    setInterpretError(null);
-    setCalcError(null);
-    setRecommendation(null);
+  /** «Calcular plan» of the drawer: straight away when it can, otherwise to the list screen. */
+  function handleCalculateFromDrawer() {
+    if (lines.length === 0) return;
+    dismissOverlayForNavigation();
+    if (!lines.every(isLineResolved)) {
+      raiseNotice("unresolved");
+      goTo(LIST_HASH);
+      return;
+    }
+    if (!origin) {
+      setOriginOpen(true);
+      raiseNotice("origin");
+      goTo(LIST_HASH);
+      return;
+    }
+    goTo(LIST_HASH);
+    void recalculateWithLines(lines, false);
+  }
+
+  function handleEditList() {
     dismissOverlayForNavigation();
     goTo(LIST_HASH);
-
-    if (origin && allResolved(cartItems)) {
-      void recalculateWithItems(cartItems, false);
-    } else {
-      if (!origin) {
-        setOriginOpen(true);
-      }
-    }
   }
 
   async function handleChangeProduct(lineId: number, productId: number) {
-    const nextItems = items.map((item, index) =>
-      index === lineId
-        ? { ...item, productId, accept: "exact" as const }
-        : item,
+    const nextLines = lines.map((line, index) =>
+      index === lineId ? { ...line, productId, pinBrand: true } : line,
     );
-    await recalculateWithItems(nextItems);
+    await recalculateWithLines(nextLines);
   }
 
   async function handleApplyAnyBrand() {
-    await recalculateWithItems(applyAnyBrand(items));
+    await recalculateWithLines(
+      lines.map((line) =>
+        line.productId !== null && !line.exactOnly ? { ...line, pinBrand: false } : line,
+      ),
+    );
+  }
+
+  /** The request of the plan on screen; after a reload it is rebuilt from the list. */
+  function currentRequest(): RecommendationRequest | null {
+    if (lastRecommendationRequestRef.current) return lastRecommendationRequestRef.current;
+    if (!origin || lines.length === 0) return null;
+    return buildRequest(lines, origin, options, degraded);
   }
 
   function handleToggleWithoutAgent(next: boolean) {
     setWithoutAgent(next);
     setAgentError(null);
-    if (lastRecommendationRequestRef.current && baseRecommendationRef.current) {
-      void runAgentForPlan(
-        lastRecommendationRequestRef.current,
-        baseRecommendationRef.current,
-        next,
-      );
+    const requestPayload = currentRequest();
+    if (requestPayload && baseRecommendationRef.current) {
+      void runAgentForPlan(requestPayload, baseRecommendationRef.current, next);
     }
   }
 
@@ -831,6 +897,7 @@ export default function App() {
       if (controller.signal.aborted || seq !== agentSeqRef.current) return;
       setAgentRun(run);
       if (run.recommendation) setRecommendation(run.recommendation);
+      persistPlan(run);
     } catch (error) {
       if (!controller.signal.aborted && seq === agentSeqRef.current) {
         setAgentError(describeError(error));
@@ -842,13 +909,19 @@ export default function App() {
     }
   }
 
+  /** Keeps the plan the agent produced, so a reload of the tab shows it again. */
+  function persistPlan(run: AgentRunResponse) {
+    const plan = run.recommendation ?? baseRecommendationRef.current;
+    if (plan) saveLastPlan({ recommendation: plan, agentRun: run });
+  }
+
   /**
    * Asks the agent for a change in plain language («¿y si voy en coche?», «sin Lidl»…).
    * Resolves to true when the agent accepted the request, so the form clears its input.
    */
   async function handleRequestAgentChange(message: string): Promise<boolean> {
     const trimmed = message.trim();
-    const requestPayload = lastRecommendationRequestRef.current;
+    const requestPayload = currentRequest();
     const baseResult = baseRecommendationRef.current;
     if (trimmed === "" || agentLoading || !requestPayload || !baseResult) return false;
 
@@ -878,6 +951,7 @@ export default function App() {
       if (controller.signal.aborted || seq !== agentSeqRef.current) return false;
       setAgentRun(run);
       if (run.recommendation) setRecommendation(run.recommendation);
+      persistPlan(run);
       return true;
     } catch (error) {
       if (!controller.signal.aborted && seq === agentSeqRef.current) {
@@ -900,21 +974,28 @@ export default function App() {
     <main className="mx-auto grid min-w-0 max-w-xl gap-4 px-4 pt-4 pb-12 text-[var(--ink-primary)]">
       {route.name === "list" && (
         <ListStep
-          items={items}
-          onRemoveItem={handleRemoveItem}
-          onUpdateItem={handleUpdateItem}
+          lines={lines}
+          anyBrand={anyBrand}
+          onAnyBrandChange={handleAnyBrandChange}
+          onRemoveLine={handleRemoveLine}
+          onUpdateLine={handleUpdateLine}
+          onSetPinBrand={handleSetPinBrand}
           onChooseInCatalog={handleSearch}
           text={text}
           onTextChange={setText}
+          onAddText={handleAddText}
           onCalculate={handleCalculate}
           calculating={calculating}
           interpreting={interpreting}
           interpretError={interpretError}
           calcError={calcError}
           degraded={degraded}
+          notice={listNotice}
           lists={lists}
           onSaveList={handleSaveList}
           onLoadList={handleLoadList}
+          onRenameList={handleRenameList}
+          onDeleteList={handleDeleteList}
           origin={origin}
           onOriginChange={handleOriginChange}
           options={options}
@@ -974,7 +1055,7 @@ export default function App() {
   return (
     <>
       <SiteHeader
-        cartCount={cartItemCount(cart)}
+        cartCount={unifiedLineCount(lines)}
         query={headerQuery}
         onSearch={handleSearch}
         onOpenCart={() => openOverlay("cart")}
@@ -1039,22 +1120,22 @@ export default function App() {
 
       <CartDrawer
         open={cartOpen}
-        lines={cart}
+        lines={lines}
         anyBrand={anyBrand}
         chainFilter={chainFilter}
         onClose={closeOverlay}
-        onQuantityChange={(id, quantity) => dispatch({ type: "setQuantity", id, quantity })}
-        onAcceptChange={handleAcceptChange}
-        onToggleLock={handleToggleLock}
+        onQuantityChange={(id, quantity) => dispatchList({ type: "setQuantity", id, quantity })}
+        onSetPinBrand={handleSetPinBrand}
         onAnyBrandChange={handleAnyBrandChange}
         onChainFilterChange={handleChainFilterChange}
-        onRemove={(id) => dispatch({ type: "remove", id })}
-        onSaveList={handleSaveCartList}
-        onCalculate={handleCalculateFromCart}
-        onExportProfile={handleExportProfile}
-        onImportProfile={(json) => {
-          void handleImportProfile(json).catch(() => undefined);
-        }}
+        onRemove={handleRemoveLine}
+        lists={lists}
+        onSaveList={handleSaveList}
+        onLoadList={handleLoadList}
+        onRenameList={handleRenameList}
+        onDeleteList={handleDeleteList}
+        onEditList={handleEditList}
+        onCalculate={handleCalculateFromDrawer}
       />
     </>
   );

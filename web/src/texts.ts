@@ -1,6 +1,6 @@
 // User-visible texts shared by more than one step.
 
-import type { CanonicalSort, ProductSort } from "./api";
+import type { CanonicalSort, ProductSort, Unit } from "./api";
 
 // Error boundary
 export const ERROR_BOUNDARY_TITLE = "Algo ha fallado al mostrar esta pantalla.";
@@ -100,3 +100,80 @@ export const HOW_IT_WORKS = [
     text: "La cesta más barata y el recorrido más corto, tienda a tienda.",
   },
 ];
+
+// Unified list ("Tu lista"): one list for the catalog, the quick drawer and the list screen.
+export const LIST_EMPTY = "Tu lista está vacía. Añade productos del catálogo o escríbela abajo.";
+export const LIST_EDIT = "Editar lista";
+export const LIST_FULL = "Ver lista completa";
+export const LIST_SAVED_LISTS = "Listas guardadas";
+export const LIST_ADD_FROM_CATALOG = "Añadir desde el catálogo";
+export const LIST_ADD_TEXT = "Añadir a la lista";
+export const LIST_TEXT_LABEL = "Escribe tu lista";
+export const LIST_TEXT_PLACEHOLDER = "Una cosa por línea: 2 l de leche, pan de molde, pollo…";
+export const LIST_REMOVE = "Quitar";
+export const LIST_ORIGIN_REQUIRED = "Indica desde dónde sales para calcular tu plan.";
+export const LIST_DEGRADED =
+  "Hemos interpretado la lista sin el modelo de lenguaje: revisa las líneas marcadas.";
+export const LIST_UNCLASSIFIED_LINE = "Falta elegir el producto antes de calcular.";
+
+export const BRAND_ANY = "Cualquier marca";
+export const BRAND_ONLY_PRODUCT = "Solo este producto";
+export const BRAND_ONLY_BRAND = "Solo esta marca";
+export const BRAND_EXACT_ONLY = "Solo este producto concreto";
+export const BRAND_SWITCH = "Me da igual la marca";
+export const BRAND_SWITCH_HELP = "Compara con cualquier marca en todas las líneas.";
+
+export const SAVED_LISTS_TITLE = "Listas guardadas";
+export const SAVED_LISTS_SAVE_TITLE = "Guardar la lista actual";
+export const SAVED_LISTS_MINE_TITLE = "Mis listas guardadas";
+export const SAVED_LISTS_NAME_LABEL = "Nombre de la lista";
+export const SAVED_LISTS_NAME_REQUIRED = "Escribe un nombre para la lista.";
+export const SAVED_LISTS_NAME_REPLACES = "Ya existe una lista con ese nombre: se sustituirá.";
+export const SAVED_LISTS_NAME_TAKEN = "Ya tienes otra lista con ese nombre.";
+export const SAVED_LISTS_EMPTY = "Todavía no has guardado ninguna lista.";
+export const SAVED_LISTS_NOTHING_TO_SAVE = "Añade productos a tu lista para poder guardarla.";
+
+/** Spanish plural: «1 envase», «2 envases». */
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}
+
+/** A decimal string with a dot, shown with a comma as in Spain. */
+function displayNumber(quantity: string): string {
+  return quantity.trim().replace(".", ",");
+}
+
+/**
+ * Quantity with its unit spelled out (B12): «1 unidad», «2 unidades», «1 envase» for a concrete
+ * product, and «2 l», «500 g», «1,5 kg» for weight or volume.
+ */
+export function quantityLabel(quantity: string, unit: Unit, concrete: boolean): string {
+  const shown = displayNumber(quantity);
+  if (unit !== "ud") return `${shown} ${unit}`;
+  const count = Number(quantity.trim().replace(",", "."));
+  const [one, many] = concrete ? ["envase", "envases"] : ["unidad", "unidades"];
+  return `${shown} ${plural(count, one, many)}`;
+}
+
+/** «Cualquier marca de leche entera»: «marca» is the head noun, so no gender agreement is needed. */
+export function anyBrandOf(categoryName: string): string {
+  const name = categoryName.trim().toLocaleLowerCase("es");
+  return name === "" ? BRAND_ANY : `${BRAND_ANY} de ${name}`;
+}
+
+/** Text of the single brand control of a concrete line. */
+export function pinBrandLabel(pinned: boolean, brand: string): string {
+  if (!pinned) return BRAND_ANY;
+  return brand.trim() === "" ? BRAND_ONLY_PRODUCT : BRAND_ONLY_BRAND;
+}
+
+/** «Resuelve la línea marcada…» / «Resuelve las 3 líneas marcadas…» */
+export function unresolvedAlert(count: number): string {
+  const lines = count === 1 ? "la línea marcada" : `las ${count} líneas marcadas`;
+  return `Resuelve ${lines} antes de calcular tu plan.`;
+}
+
+/** «Hasta 1 tienda», «Hasta 2 tiendas». */
+export function maxStoresLabel(count: number): string {
+  return `Hasta ${count} ${plural(count, "tienda", "tiendas")}`;
+}
