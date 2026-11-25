@@ -218,6 +218,24 @@ def test_a_negation_vetoes_only_its_own_tag():
     assert extract_dietary_tags("Producto sin gluten sin lactosa con trazas de gluten") == (
         "sin_lactosa",
     )
+    assert extract_dietary_tags("Galletas sin gluten", "Contiene: gluten") == ()
+    assert extract_dietary_tags("Postre sin lactosa", "Contiene lactosa") == ()
+
+
+def test_sanitize_preserves_valid_size_when_only_stored_ppu_is_corrupt():
+    result = sanitize_unit_pricing(
+        "Queso semicurado artesano",
+        D("4.50"),
+        D("0.5"),
+        "kg",
+        1,
+        price_per_unit=D("6000"),
+    )
+    assert result.base_quantity == D("0.5")
+    assert result.base_unit == "kg"
+    assert result.pack_count == 1
+    assert result.price_per_unit == D("9.0000")
+    assert result.repaired is True
 
 
 # --- Database: the catalog-quality backfill and the store against PostgreSQL ---------------
@@ -243,7 +261,7 @@ def engine() -> Iterator[Engine]:
 @pytest.fixture
 def db(engine) -> Db:
     with engine.begin() as conn:
-        conn.execute(text("truncate table chain restart identity cascade"))
+        conn.execute(text("truncate table chain, category restart identity cascade"))
         chain_id = conn.execute(
             text("insert into chain (code, name) values ('carrefour', 'Carrefour') returning id")
         ).scalar_one()

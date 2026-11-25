@@ -61,12 +61,14 @@ _DIETARY_TAG_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
 #: Statements that veto a "free of" tag even when the positive form also appears (FR-42).
 _GLUTEN_NEGATIONS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bcon gluten\b"),
+    re.compile(r"\bcontiene gluten\b"),
     re.compile(r"\btrazas de gluten\b"),
     re.compile(r"\bpuede contener gluten\b"),
     re.compile(r"\bno sin gluten\b"),
 )
 _LACTOSE_NEGATIONS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bcon lactosa\b"),
+    re.compile(r"\bcontiene lactosa\b"),
     re.compile(r"\btrazas de lactosa\b"),
     re.compile(r"\bpuede contener lactosa\b"),
     re.compile(r"\bno sin lactosa\b"),
@@ -162,11 +164,13 @@ def sanitize_unit_pricing(
     `chain_product` check constraint requires.
     """
     pack = max(int(pack_count), 1)
-    corrupted = is_unit_price_outlier(price, base_quantity, base_unit, pack) or (
-        _price_per_unit_outlier(price, price_per_unit, base_unit)
-    )
-    if not corrupted:
+    size_corrupted = is_unit_price_outlier(price, base_quantity, base_unit, pack)
+    ppu_corrupted = _price_per_unit_outlier(price, price_per_unit, base_unit)
+    if not size_corrupted and not ppu_corrupted:
         return UnitPricing(base_quantity, base_unit, pack, price_per_unit, False)
+    if not size_corrupted and base_quantity is not None and base_unit is not None:
+        recomputed = derived_price_per_unit(price, base_quantity, base_unit, pack)
+        return UnitPricing(base_quantity, base_unit, pack, recomputed, True)
     quantity, unit, reparsed_pack = reparse_multipack_from_name(name)
     reparsed_pack = max(reparsed_pack, 1)
     if (
