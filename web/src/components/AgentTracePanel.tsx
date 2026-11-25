@@ -202,7 +202,9 @@ function StepCard({ step }: { step: AgentStep }) {
                 {hasProb && (
                   <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--border-subtle)]">
                     <div
-                      className="h-full rounded-full bg-[var(--accent-primary)]"
+                      className={`h-full rounded-full ${
+                        isChosen ? "bg-[var(--accent-primary)]" : "bg-[var(--ink-secondary)]"
+                      }`}
                       style={{ width: `${percent}%` }}
                     />
                   </div>
@@ -307,7 +309,7 @@ export function AgentTracePanel({
                   {onApplyAlternative && (
                     <button
                       type="button"
-                      disabled={loading}
+                      disabled={loading || withoutAgent}
                       onClick={() => onApplyAlternative(alternativeRequestMessage(alt, currentMode))}
                       className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 text-[0.8125rem] font-semibold text-[var(--ink-primary)] transition-colors hover:border-[var(--accent-primary)] disabled:cursor-not-allowed disabled:opacity-50"
                     >
