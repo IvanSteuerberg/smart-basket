@@ -22,7 +22,7 @@ import {
   type RecommendationRequest,
 } from "./api";
 import { canonicalLine, genericLine, specificLine, type CartLine } from "./cart";
-import { draftFromInterpreted, markChoiceRequired, toRequestItem } from "./draft";
+import { draftFromInterpreted, toRequestItem } from "./draft";
 import {
   listReducer,
   migrateCartToUnified,
@@ -696,8 +696,10 @@ export default function App() {
         const { line_id: lineId, code, message } = error.detail;
         const marked = targetLines.map((line, index) => {
           if (index !== lineId) return line;
-          const [changed] = migrateCartToUnified([], [markChoiceRequired(toDraftItems([line])[0], code)]);
-          return { ...changed, packaging: line.packaging };
+          if (code === "EXACT_ONLY") {
+            return { ...line, productId: null, exactOnly: true };
+          }
+          return { ...line, categoryKey: null, productId: null, options: [] };
         });
         dispatchList({ type: "replace", lines: marked });
         setCalcError(message);

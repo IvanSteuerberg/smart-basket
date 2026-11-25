@@ -142,8 +142,8 @@ export function ListStep({
   const [listsOpen, setListsOpen] = useState(false);
   const originRef = useRef<HTMLDivElement>(null);
   const linesRef = useRef<HTMLDivElement>(null);
-  // Only an attempt made while this screen is mounted moves the view.
-  const seenTick = useRef(notice?.tick ?? 0);
+  // Initialize to 0 so an alert raised right before navigating to #/lista still scrolls and focuses.
+  const seenTick = useRef(0);
 
   useEffect(() => {
     if (!notice || notice.tick === seenTick.current) return;
@@ -167,7 +167,7 @@ export function ListStep({
   const showOriginAlert = notice?.kind === "origin" && origin === null;
 
   function renderQuantity(line: UnifiedLine) {
-    if (line.productId !== null) {
+    if (line.productId !== null && line.unit === "ud") {
       return (
         <QuantityStepper
           line={line}
