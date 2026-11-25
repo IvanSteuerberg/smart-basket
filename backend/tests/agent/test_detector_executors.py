@@ -297,11 +297,29 @@ _SHOPPER = Observation(
     },
 )
 
+# The four conversational actions (E5) are only offered when the parser found their hint.
+_CONVERSATIONAL = Observation(
+    kind=ObservationKind.SHOPPER_REQUEST,
+    summary="restringe el plan",
+    line_index=0,
+    details={
+        "message": "solo en Lidl, en una tienda, lo más barato, y pan integral en vez de pan",
+        "allowed_chains": ["lidl"],
+        "max_stores": 1,
+        "priority": "savings",
+        "replace_text": "pan integral",
+    },
+)
+
 _TOPIC_OBSERVATION = {
     ActionKind.BUSCAR_SUSTITUTO: _MISSING,
     ActionKind.PREGUNTAR: _VAGUE,
     ActionKind.DEJAR_SIN_COMPRAR: _VAGUE,
     ActionKind.APLICAR_HABITUAL: _VAGUE,
+    ActionKind.FILTRAR_CADENA: _CONVERSATIONAL,
+    ActionKind.CAMBIAR_MAX_TIENDAS: _CONVERSATIONAL,
+    ActionKind.CAMBIAR_PRIORIDAD: _CONVERSATIONAL,
+    ActionKind.CAMBIAR_PRODUCTO: _CONVERSATIONAL,
 }
 
 
