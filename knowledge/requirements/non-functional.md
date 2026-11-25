@@ -5,8 +5,8 @@ description: Quality targets for the MVP; numeric values are proposals to confir
 tags: [requirements, non-functional, mvp]
 status: draft
 generated:
-  by: claude-code/claude-opus-5-5
-  at: 2026-10-19T19:30:00+02:00
+  by: deepseek-harness/glm-5.3
+  at: 2026-11-20T21:32:00+01:00
 ---
 Numeric targets are initial proposals and must be confirmed or adjusted once real data exists. Scope is defined in [MVP scope](/requirements/scope.md).
 
@@ -18,7 +18,7 @@ Numeric targets are initial proposals and must be confirmed or adjusted once rea
 | NFR-04 | Equivalence quality | At least 90 % of canonical product assignments are correct on a manually validated sample. |
 | NFR-05 | Reproducibility | Every recommendation records its inputs and the data snapshot date, so it can be recomputed. |
 | NFR-06 | Privacy | No accounts and no personal data stored on the server. The user's location is used for the request and not stored, or stored only rounded for anonymous analytics. By default no data leaves the machine. If the cloud fallback LLM is used, it receives only the shopping list text, never the location, stores or travel times; the Gemini API terms for the European Economic Area apply the paid-service data terms to the free tier, so prompts are not used to train models. |
-| NFR-07 | Responsible scraping | Ingestion behaves like a user with a real browser (or the site's own public API), with the author's account where a login is needed. It runs at a moderate rate, set after the first runs, and the collected data stays private ([0006](/decisions/0006-data-collection-with-a-real-browser.md)). |
+| NFR-07 | Responsible scraping | Ingestion behaves like a user with a real browser (or the site's own public API), with the author's account where a login is needed, and never attempts to automatically defeat an anti-bot challenge; gates are handled by the supervised unlock of [0006](/decisions/0006-data-collection-with-a-real-browser.md), a documented exception to NFR-13. It runs at a moderate rate, set after the first runs, and the collected data stays private. |
 | NFR-08 | Usability | Mobile-first responsive interface in Spanish; a recommendation can be obtained in under 2 minutes by a first-time user. |
 | NFR-09 | Resilience | If one chain's ingestion fails, the system keeps working with the other chains and with that chain's last valid data, flagged as stale. |
 | NFR-10 | Deployment | The whole system runs with Docker Compose on a single machine, the author's laptop for the MVP. Ollama may run natively on the host to use the integrated GPU. The same images must run on a server, with configuration only through environment variables ([0008](/decisions/0008-application-structure-and-stack.md)). |

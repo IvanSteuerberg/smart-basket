@@ -5,8 +5,8 @@ description: Calibration of pgvector cosine similarity on Mercadona (I14) and in
 tags: [evaluation, agents, pgvector, embeddings, matching]
 status: draft
 generated:
-  by: antigravity/gemini-4-neon
-  at: 2026-11-20T13:37:00+01:00
+  by: antigravity/gemini-4-neon-high
+  at: 2026-11-21T14:36:00+01:00
 sources:
   - id: adr0020
     resource: /decisions/0020-rule-based-canonical-matching.md
@@ -86,3 +86,26 @@ To guarantee production quality across every single SKU (not only a sample), we 
 * **Initial exhaustive pass (`55/55` batches, `5,438` products):** **75 / 5,438 (`1.38 %`)** hard negatives detected (matching Audit 2's 1.20 % sample estimate) plus 11 additional deterministic flags (**81** unique products total).
 * **Repair & re-verification:** all 81 products were repaired using the auditor's exact reason (creating 51 new canonicals/variants, all embedded in `pgvector`) and re-audited blindly by DeepSeek V4.1 Flash, returning **`0 / 81` (`[]`)** remaining hard negatives — achieving **0 / 5,438 (`0.00 %`) unresolved hard negatives at 100.0 % coverage**.
 * **Productionized for future chains:** `attributes_compatible` (enforced in `_DbAssignCanonical.validate`), Dia private-label sub-brands in `brands_es.json`, and `smart-basket-catalog-agent expand --chain <chain>` (`catalog_expand.py`) are now first-class parts of the Catalog Agent (`1,732` backend `--db` tests passing).
+
+# Multi-Chain Scale-Out Across León: Alimerka, Gadis & Lupa (I16, 2026-11-20)
+
+Using the productionized `attributes_compatible` + `LLMVerifiedCatalogPolicy` (`top_k=8`) + `expand` pipeline with zero manual hand-mapping, we onboarded three more León supermarkets (`AlimerkaAdapter`, `GadisAdapter`, `LupaAdapter`, `1,741` backend `--db` tests passing) and audited each with an independent 250-product blind sample judged by **DeepSeek V4.1 Flash** (stored in `%TEMP%`, outside the repo per NFR-07):
+
+| Chain | León stores | Products | Classified | Pass-1 existing | `expand` (leaves / variants) | Strict accuracy (n=250) | Wilson 95 % CI | Hard negatives | Wilson 95 % CI |
+| --- | ---: | ---: | ---: | ---: | --- | ---: | --- | ---: | --- |
+| **Gadis** (`24001`, HTTP REST) | 1 | 10,732 | **100.0 %** | 8,518 (79.4 %) | 2,214 (326 / 909) | **94.00 %** | `[90.34 %, 96.33 %]` | **2.00 %** (5/250) | `[0.86 %, 4.60 %]` |
+| **Lupa** (`24001`, browser fetch) | 3 | 8,479 | **100.0 %** | 6,625 (78.1 %) | 1,854 (210 / 902) | **97.60 %** | `[94.86 %, 98.90 %]` | **0.40 %** (1/250) | `[0.07 %, 2.23 %]` |
+| **Alimerka** (`24001`, HTTP HTML) | 13 | 7,308 | **100.0 %** | 5,835 (79.8 %) | 1,473 (367 / 537) | **94.40 %** | `[90.82 %, 96.64 %]` | **0.40 %** (1/250) | `[0.07 %, 2.23 %]` |
+| **Dia** (`24001`, browser JSON) | 11 | 5,438 | **100.0 %** | 4,232 (77.8 %) | 1,206 (176 / 236) | **94.00 %** (p1) | `[90.34 %, 96.33 %]` | **0.00 %** (0/5,438 post-repair) | — |
+| **Mercadona** (`3683`, HTTP REST) | 5 | 4,307 | **100.0 %** | — | — | **95.60 %** (I12) | — | **2.70 %** (I12) | — |
+| **Total León** | **33** | **36,264** | **100.0 %** | — | — | **All ≥ 94 %** | **All lower bounds > 90 %** | **All ≤ 2.7 %** | — |
+
+* **Cross-chain competition:** **651** canonicals are now present in **all 5 chains simultaneously**, **1,059** in ≥ 4 chains, and **2,020** in ≥ 2 chains. Live `/api/recommendations` verified optimal multi-chain splits across all 5 chains in León.
+* **Exhaustive full-catalog dual-model audit (Alimerka + Lupa + Gadis, `n = 26,519`, 177/177 batches, `0` errors):** DeepSeek V4.1 Flash flagged **321 / 26,519 (`1.21 %`)** hard negatives across all three new chains; all 321 were repaired (`172` new canonicals embedded) and re-verified by DeepSeek (`5/321` remaining, immediately fixed via `review`), bringing all **36,264 products across all 5 León chains** to **0 unresolved hard negatives at 100.0 % coverage**.
+* **Remaining León chains — Full 12 / 12 León Scale-Out (I16 Part 2, 2026-11-20–21):**
+  * Added **7 more production adapters** with zero manual hand-mapping: `FroizAdapter` (Hydra REST), `AldiAdapter` (Algolia Peninsula index + `/api/offer/es/current`), `ElCorteInglesAdapter` (Playwright across all 11 sections), `LidlAdapter` (Schwarz Leaflets v4 + Controlled Staple Retention Option B), `ELeclercAdapter` (iPaper `pageTexts` + `cdn.ipaper.io` page images + Option B), and shared `RadarSuperAdapter` (`CarrefourAdapter` + `AlcampoAdapter`, plain HTTP over 152 leaf categories, explicitly allowed by `robots.txt` `Allow: /`, replacing the blocked `carrefour.es` Cloudflare `403` and the `compraonline.alcampo.es` AWS WAF `405` that re-challenged after 1 hour in T2).
+  * **Live PostgreSQL catalog (12 / 12 León chains, `48` active physical stores):** **96,197 / 96,197 (`100.00 %`)** active products embedded, classified, and with verified product images — El Corte Inglés `20,304`, Alcampo `18,962`, Gadis `10,732`, Carrefour `10,222`, Lupa `8,479`, Alimerka `7,308`, Froiz `7,106`, Dia `5,438`, Mercadona `4,307`, Aldi `2,698`, Lidl `463`, E.Leclerc `178`.
+  * **Cross-chain competition across 12 chains:** **6,621** canonicals in ≥ 2 chains, **1,743** in ≥ 4 chains, **894** in ≥ 6 chains, **391** in ≥ 8 chains, and up to **12 chains simultaneously**.
+  * **Classifier hardening (`catalog_expand.py`, `catalog_policies.py`, `taxonomy_es.json`):** after the initial exhaustive audit over Froiz, Aldi, Lidl, E.Leclerc, and El Corte Inglés (`30,749` products, 206 batches alternating DeepSeek V4.1 Flash + GLM 5.3) surfaced **1,019 (`3.31 %`)** hard negatives, we fixed four root causes directly in production code: per-chunk top-32 nearest leaf candidates instead of 12 per section bucket; blocking generic section/brochure labels (`Alimentación General general`, `FOLLETO...`); `mutex_compatible` guard expanded across fish/meats/plant-drinks/wine-ageing/reduced-salt/household tools; deterministic brand & leading ALL-CAPS prefix stripping + bag-of-content-words `_norm_leaf_key` deduplication. Re-running on the flagged items dropped hard negatives by **96.7 %** in one pass and down to **0 / 30,749** after iterative verification.
+  * **Exhaustive audit of Carrefour + Alcampo (`n = 29,184`, 195 / 195 batches alternating DeepSeek V4.1 Flash + native Gemini 4 Hydrogen Medium):** with the hardened classifier in production, first-pass hard negatives dropped to **542 / 29,184 (`1.86 %`)** (**Carrefour `1.18 %`**, **Alcampo `1.97 %`**, already well below NFR-14's `<= 3 %` target); all 542 were repaired (`209` new leaves, `358` new canonicals embedded) and re-verified by Gemini 4 Hydrogen (`0` unresolved hard negatives across all **96,197 products**).
+  * **Taxonomy duplicate-leaf consolidation:** deterministic Layer-1 (`981` singular/accent duplicate leaves) + bag-of-content-words (`238` word-order/preposition duplicate leaves) + Layer-2 semantic synonym audit (DeepSeek V4.1 Flash + native Gemini 4 Hydrogen Medium over `3,521` cosine `>= 0.94` pairs, `760` approved merges → `689` synonym leaves consolidated, `1,034` canonicals merged, `2,432` products re-pointed) eliminated **`1,908` duplicate level-3 leaves** across the catalog (reducing active leaves to `5,876`).

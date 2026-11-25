@@ -2515,7 +2515,7 @@
       },
       {
        "key": "babybel",
-       "name": "Queso mini tipo Babybel",
+       "name": "Queso mini en porciones",
        "base_unit": "kg",
        "forms": [
         "quesitos mini",
@@ -2905,7 +2905,7 @@
       },
       {
        "key": "yogur_bolitas",
-       "name": "Yogur con bolitas y cereales (YogoMix)",
+       "name": "Yogur con bolitas y cereales",
        "base_unit": "kg",
        "forms": [
         "yogomix",
@@ -2960,7 +2960,7 @@
       },
       {
        "key": "bebida_lactobacilos",
-       "name": "Bebida láctea con lactobacilos (Actimel, L-casei)",
+       "name": "Bebida láctea con L-casei",
        "base_unit": "kg",
        "forms": [
         "actimel",

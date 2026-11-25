@@ -7,9 +7,19 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from smart_basket.config import Settings, get_settings
+from smart_basket.ingestion.alcampo import AlcampoAdapter
+from smart_basket.ingestion.aldi import AldiAdapter
+from smart_basket.ingestion.alimerka import AlimerkaAdapter
 from smart_basket.ingestion.backfill import backfill_images
 from smart_basket.ingestion.base import ChainAdapter, collect
+from smart_basket.ingestion.carrefour import CarrefourAdapter
 from smart_basket.ingestion.dia import DiaAdapter
+from smart_basket.ingestion.elcorteingles import ElCorteInglesAdapter
+from smart_basket.ingestion.eleclerc import ELeclercAdapter
+from smart_basket.ingestion.froiz import FroizAdapter
+from smart_basket.ingestion.gadis import GadisAdapter
+from smart_basket.ingestion.lidl import LidlAdapter
+from smart_basket.ingestion.lupa import LupaAdapter
 from smart_basket.ingestion.mercadona import MercadonaAdapter
 from smart_basket.ingestion.store import IngestSetupError, ingest_catalog, log_ingest_summary
 
@@ -33,6 +43,46 @@ ADAPTERS: dict[str, ChainEntry] = {
     "dia": ChainEntry(
         adapter=DiaAdapter,
         zones=lambda settings: settings.dia_zone_codes,
+    ),
+    "gadis": ChainEntry(
+        adapter=GadisAdapter,
+        zones=lambda settings: settings.gadis_zone_codes,
+    ),
+    "alimerka": ChainEntry(
+        adapter=AlimerkaAdapter,
+        zones=lambda settings: settings.alimerka_zone_codes,
+    ),
+    "lupa": ChainEntry(
+        adapter=LupaAdapter,
+        zones=lambda settings: settings.lupa_zone_codes,
+    ),
+    "froiz": ChainEntry(
+        adapter=FroizAdapter,
+        zones=lambda settings: settings.froiz_zone_codes,
+    ),
+    "aldi": ChainEntry(
+        adapter=AldiAdapter,
+        zones=lambda settings: settings.aldi_zone_codes,
+    ),
+    "elcorteingles": ChainEntry(
+        adapter=ElCorteInglesAdapter,
+        zones=lambda settings: settings.elcorteingles_zone_codes,
+    ),
+    "lidl": ChainEntry(
+        adapter=LidlAdapter,
+        zones=lambda settings: settings.lidl_zone_codes,
+    ),
+    "eleclerc": ChainEntry(
+        adapter=ELeclercAdapter,
+        zones=lambda settings: settings.eleclerc_zone_codes,
+    ),
+    "carrefour": ChainEntry(
+        adapter=CarrefourAdapter,
+        zones=lambda settings: settings.carrefour_zone_codes,
+    ),
+    "alcampo": ChainEntry(
+        adapter=AlcampoAdapter,
+        zones=lambda settings: settings.alcampo_zone_codes,
     ),
 }
 

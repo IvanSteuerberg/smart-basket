@@ -25,7 +25,12 @@ class CategoryObservation:
 
 @dataclass(frozen=True, slots=True)
 class ProductObservation:
-    """A product as sold by the chain, with its size and the price seen in one crawl."""
+    """A product as sold by the chain, with its size and the price seen in one crawl.
+
+    Flyer-borne observations may also carry the regular (pre-offer) price, a temporary-item
+    flag and the offer validity dates; the controlled-staples retention of decision 0006
+    reads them to keep staples sellable after the flyer that carried them rotates away.
+    """
 
     sku: str
     name: str
@@ -38,6 +43,10 @@ class ProductObservation:
     price: Decimal
     price_per_unit: Decimal | None
     image_url: str | None = None
+    regular_price: Decimal | None = None
+    is_temporary: bool = False
+    valid_from: str | None = None
+    valid_until: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

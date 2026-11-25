@@ -1,7 +1,7 @@
 """Overpass answers, and the tags that decide which chain a supermarket belongs to.
 
-Only the ten chains of the seed matter: every other brand is ignored, so a store of the database
-is always a chain the recommender can price (decisions 0002, 0006).
+Only the chains of the seed matter: every other brand is ignored, so a store of the database is
+always a chain the recommender can price (decisions 0002, 0006).
 """
 
 import unicodedata
@@ -38,6 +38,14 @@ CHAIN_ALIASES: dict[str, str] = {
     "carrefourmarket": "carrefour",
     "gadis": "gadis",
     "claudio": "gadis",
+    "froiz": "froiz",
+    "supermercadosfroiz": "froiz",
+    "hiperfroiz": "froiz",
+    "elcorteingles": "elcorteingles",
+    "supermercadoelcorteingles": "elcorteingles",
+    "supercor": "elcorteingles",
+    "supercorexpres": "elcorteingles",
+    "hipercor": "elcorteingles",
     "aldi": "aldi",
 }
 
@@ -47,6 +55,10 @@ STORE_FORMATS: dict[str, str] = {
     "carrefourmarket": "Market",
     "diago": "Dia&Go",
     "laplazadedia": "La Plaza",
+    "hiperfroiz": "Hiper Froiz",
+    "supercor": "Supercor",
+    "supercorexpres": "Supercor Exprés",
+    "hipercor": "Hipercor",
 }
 
 #: OSM `shop` values that already describe a whole supermarket.
@@ -54,7 +66,10 @@ STORE_SHOPS = frozenset({"supermarket", "hypermarket"})
 
 # Brand or name spellings a chain is known by, for the Overpass regex that finds a chain-named
 # building without a `shop` tag. It may over-match: `chain_for_tags` filters the aliases exactly.
-CHAIN_SEARCH = "merc[aá]dona|d[ií]a|alimerka|lidl|alcampo|leclerc|lupa|carrefour|gadis|claudio|aldi"
+CHAIN_SEARCH = (
+    "merc[aá]dona|d[ií]a|alimerka|lidl|alcampo|leclerc|lupa|carrefour|gadis|claudio|aldi"
+    "|froiz|corte ingl[eé]s|supercor|hipercor"
+)
 
 # Fallback `name` when OSM does not name the store (same names as the seed).
 CHAIN_NAMES: dict[str, str] = {
@@ -68,6 +83,8 @@ CHAIN_NAMES: dict[str, str] = {
     "aldi": "Aldi",
     "lidl": "Lidl",
     "eleclerc": "E.Leclerc",
+    "froiz": "Froiz",
+    "elcorteingles": "El Corte Inglés",
 }
 
 
@@ -132,7 +149,7 @@ def normalize(value: str | None) -> str:
 
 
 def chain_for_tags(tags: dict[str, str]) -> str | None:
-    """The chain code of `tags` by brand, then name, or None when it is not one of the ten."""
+    """The chain code of `tags` by brand, then name, or None when it is not one of the seed."""
     for key in ("brand", "name"):
         value = tags.get(key)
         if value and (code := CHAIN_ALIASES.get(normalize(value))) is not None:
@@ -159,9 +176,15 @@ def build_address(tags: dict[str, str]) -> str | None:
 
 
 def is_store(tags: dict[str, str]) -> bool:
-    """True for an OSM supermarket, or for a chain-named building without a `shop` tag."""
+    """True for an OSM supermarket, a chain-named building, or an El Corte Inglés department store.
+
+    El Corte Inglés maps its stores as `shop="department_store"` (way/26956135 in León), which
+    is a store of the seed only when the tags name the chain; other department stores stay out.
+    """
     if "shop" in tags:
-        return tags["shop"] in STORE_SHOPS
+        return tags["shop"] in STORE_SHOPS or (
+            tags["shop"] == "department_store" and chain_for_tags(tags) == "elcorteingles"
+        )
     return "building" in tags
 
 

@@ -5,15 +5,15 @@ description: What the MVP covers and excludes, constraints and assumptions agree
 tags: [requirements, scope, mvp]
 status: draft
 generated:
-  by: claude-code/claude-opus-5-5
-  at: 2026-10-19T19:30:00+02:00
+  by: google-antigravity/gemini-4-argon-high
+  at: 2026-11-20T21:22:00+01:00
 ---
 # In scope
 
 | Area | MVP scope |
 | --- | --- |
 | Geography | City of León only. |
-| Chains | Every chain with an online catalog that serves León: Mercadona, Carrefour, Dia, Alcampo, Gadis, Lupa and Alimerka. Aldi through its weekly offers page, Lidl and E.Leclerc through their flyers. Eroski only if it opens a store in León capital. See the [data-source viability study](/data/source-viability.md) and [0006](/decisions/0006-data-collection-with-a-real-browser.md). |
+| Chains | Every accessible chain that serves León: Mercadona, Gadis, Lupa, Alimerka, Froiz, Dia, El Corte Inglés / Supercor and Aldi (via its public Algolia product catalog `an_prd_es_es_pen_products2` and offers API), plus Lidl (`endpoints.leaflets.schwarz`) and E.Leclerc (`folletos.e-leclerc.es`) through their digital food flyers with controlled staple retention, and Alcampo and Carrefour through the **supervised unlock** with persistent browser profiles ([0006](/decisions/0006-data-collection-with-a-real-browser.md), [NFR-07](/requirements/non-functional.md), measured in `experiments/supervised-unlock/`). Eroski only if it opens a store in León capital. See the [data-source viability study](/data/source-viability.md). |
 | Platform | Responsive web app, mobile first. The MVP runs on the author's laptop ([0005](/decisions/0005-local-first-ai-models.md)). |
 | Users | Personal use by the author and people they share it with; the app is not published. No accounts and no authentication. Lists and personal history live in the user's browser. |
 | Travel | The user chooses walking or car and the shopping date for each request; at most 3 stores per trip. |
@@ -41,7 +41,7 @@ generated:
 
 # Assumptions and risks
 
-* **Data availability** was checked in the [data-source viability study](/data/source-viability.md): a real browser reaches every chain checked, with no login. The remaining risks are site changes and tighter blocks. Lidl, Aldi and E.Leclerc only publish offers in weekly flyers.
+* **Data availability** was checked and updated in the [data-source viability study](/data/source-viability.md): Mercadona, Gadis, Alimerka, Froiz and Aldi (full ~2,856-product Algolia catalog) work over plain HTTP; Dia, Lupa and El Corte Inglés work in a headed Chromium session (`with-xvfb`); Lidl and E.Leclerc publish digital food flyers with embedded text layers (`endpoints.leaflets.schwarz` and `folletos.e-leclerc.es`) and use controlled staple retention (reverting fixed private-label staples to their regular non-promotional price upon promo expiry with a 21-day TTL, while deactivating seasonal items). Carrefour and Alcampo serve Cloudflare and AWS WAF gates to fresh contexts and are handled through the **supervised unlock** of [0006](/decisions/0006-data-collection-with-a-real-browser.md) (persistent browser profile + human unlock in a visible window / noVNC when an interactive puzzle appears, measured in `experiments/supervised-unlock/`).
 * **Store assortment.** A chain's online catalog is not what every store carries: small neighbourhood stores have a reduced range, so a recommended product may not be on the shelf. Mitigations, from most to least reliable: per-store catalogs where a chain publishes them (to check in the viability study), the user marking products as not found ([FR-38](/requirements/functional.md)), a fallback per item ([FR-39](/requirements/functional.md)) and estimates by store format ([FR-40](/requirements/functional.md)).
 * Online prices are assumed to match prices in León stores. Chains that price by postal code or warehouse need the León zone selected.
 * Without accounts, consumer savings history is lost if the user clears the browser data.
