@@ -21,11 +21,18 @@ export const PLAN_CALCULATE = "Calcular plan";
 // Catalog sort options for generic products
 export const CANONICAL_SORT_OPTIONS: { value: CanonicalSort; label: string }[] = [
   { value: "relevance", label: "Relevancia" },
-  { value: "popular", label: "Más opciones" },
-  { value: "unit_price", label: "Precio por kg/l" },
-  { value: "price", label: "Precio" },
-  { value: "name", label: "Nombre" },
+  { value: "popular", label: "Más populares" },
+  { value: "unit_price", label: "Más barato por unidad" },
+  { value: "price", label: "Menor precio" },
+  { value: "name", label: "Nombre (A a Z)" },
 ];
+
+// Catalog filters
+export const CATALOG_DIETARY_NOTICE =
+  "Comprueba siempre la etiqueta del fabricante. El filtro se basa en el nombre publicado por el supermercado.";
+export const CATALOG_SECTION_MISSING = "Esta sección no existe.";
+export const CATALOG_SEE_ALL = "Ver todo el catálogo";
+export const CATALOG_NEAR_NEEDS_ORIGIN = "Para ver lo que hay cerca, elige antes una dirección en";
 
 // Dietary filters (FR-42)
 export const DIETARY_LABELS: Record<string, string> = {
