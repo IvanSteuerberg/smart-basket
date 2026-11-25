@@ -689,15 +689,23 @@ export function answerAgentRun(
   });
 }
 
+/**
+ * Sends a follow-up shopper message to a live run, keeping its accumulated changes (C2). The
+ * origin travels with every message: a resumed run may need to re-optimize the route.
+ */
 export function sendAgentMessage(
   runId: string,
   message: string,
+  origin?: LatLon | null,
   signal?: AbortSignal,
 ): Promise<AgentRunResponse> {
   return request<AgentRunResponse>(`/api/agent/runs/${encodeURIComponent(runId)}/message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      ...(origin ? { origin: { lat: origin.lat, lon: origin.lon } } : {}),
+    }),
     signal,
   });
 }

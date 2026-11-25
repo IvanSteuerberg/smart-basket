@@ -376,4 +376,21 @@ describe("catalog filters and new endpoints", () => {
     expect(init.method).toBe("POST");
     expect(init.body).toBe(JSON.stringify({ message: "en coche" }));
   });
+
+  it("sends the origin with a follow-up message so the run can re-optimize", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+    await sendAgentMessage("run/1", "en coche", { lat: 42.5987, lon: -5.5671 });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run%2F1/message");
+    expect(init.body).toBe(
+      JSON.stringify({ message: "en coche", origin: { lat: 42.5987, lon: -5.5671 } }),
+    );
+  });
+
+  it("omits the origin entirely when there is none to send", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+    await sendAgentMessage("run/1", "en coche", null);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.body).toBe(JSON.stringify({ message: "en coche" }));
+  });
 });

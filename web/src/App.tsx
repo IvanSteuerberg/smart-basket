@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import {
   answerAgentRun,
+  ApiError,
   describeError,
   getChains,
   getHealth,
@@ -8,6 +9,7 @@ import {
   interpretText,
   isChoiceRequired,
   requestRecommendation,
+  sendAgentMessage,
   startAgentRun,
   type ActiveChain,
   type AgentAnswerRequest,
@@ -107,6 +109,27 @@ function routeKey(route: Route): string {
 /** Navigates only when the hash differs, so a no-op never adds a history entry. */
 function goTo(hash: string): void {
   if (window.location.hash !== hash) navigate(hash);
+}
+
+/**
+ * Keeps the drawn route (the Leaflet polyline of E4/E5) when a follow-up run returns the same
+ * stores without one: the plan did not move, so the line on the map should not disappear.
+ */
+function runWithKeptRoute(
+  run: AgentRunResponse,
+  previous: Recommendation | null,
+): AgentRunResponse {
+  const next = run.recommendation;
+  if (!next || !previous) return run;
+  if (Array.isArray(next.route) && next.route.length > 0) return run;
+  if (!Array.isArray(previous.route) || previous.route.length === 0) return run;
+  const sameStores =
+    previous.stores.length === next.stores.length &&
+    previous.stores.every(
+      (store, index) => String(store.store_id) === String(next.stores[index].store_id),
+    );
+  if (!sameStores) return run;
+  return { ...run, recommendation: { ...next, route: previous.route } };
 }
 
 /** Derives per-term habit counts from the local browser profile for the agent. */
@@ -902,9 +925,10 @@ export default function App() {
     try {
       const run = await answerAgentRun(runId, answer, controller.signal);
       if (controller.signal.aborted || seq !== agentSeqRef.current) return;
-      setAgentRun(run);
-      if (run.recommendation) setRecommendation(run.recommendation);
-      persistPlan(run);
+      const merged = runWithKeptRoute(run, agentRun?.recommendation ?? recommendation);
+      setAgentRun(merged);
+      if (merged.recommendation) setRecommendation(merged.recommendation);
+      persistPlan(merged);
     } catch (error) {
       if (!controller.signal.aborted && seq === agentSeqRef.current) {
         setAgentError(describeError(error));
@@ -924,7 +948,10 @@ export default function App() {
 
   /**
    * Asks the agent for a change in plain language («¿y si voy en coche?», «sin Lidl»…).
-   * Resolves to true when the agent accepted the request, so the form clears its input.
+   * A live run receives the message first, so every change so far stays accumulated (C2-B);
+   * only when there is no run, or the backend no longer knows it (404), does a new one start
+   * from the base plan with `previous_run_id`. Resolves to true when the agent accepted the
+   * request, so the form clears its input.
    */
   async function handleRequestAgentChange(message: string): Promise<boolean> {
     const trimmed = message.trim();
@@ -943,22 +970,35 @@ export default function App() {
       await profileLoaded.current.catch(() => undefined);
       if (controller.signal.aborted || seq !== agentSeqRef.current) return false;
 
-      const habits = deriveHabitsFromProfile(profileRef.current);
-      const dietaryRules = deriveDietaryRulesFromProfile(profileRef.current);
-      const body: AgentRunRequest = {
-        request: requestPayload,
-        recommendation_id:
-          baseResult.id !== null && baseResult.id !== undefined ? String(baseResult.id) : null,
-        shopper_message: trimmed,
-        ...(Object.keys(habits).length > 0 ? { habits } : {}),
-        ...(dietaryRules.length > 0 ? { dietary_rules: dietaryRules } : {}),
-        ...(withoutAgent ? { policy: "default" } : {}),
-      };
-      const run = await startAgentRun(body, controller.signal);
+      let run: AgentRunResponse | null = null;
+      if (agentRun?.run_id && origin) {
+        try {
+          run = await sendAgentMessage(agentRun.run_id, trimmed, origin, controller.signal);
+        } catch (error) {
+          // An old run (e.g. after a backend restart) is gone: start a clean one.
+          if (!(error instanceof ApiError) || error.status !== 404) throw error;
+        }
+      }
+      if (run === null) {
+        const habits = deriveHabitsFromProfile(profileRef.current);
+        const dietaryRules = deriveDietaryRulesFromProfile(profileRef.current);
+        const body: AgentRunRequest = {
+          request: requestPayload,
+          recommendation_id:
+            baseResult.id !== null && baseResult.id !== undefined ? String(baseResult.id) : null,
+          shopper_message: trimmed,
+          previous_run_id: agentRun?.run_id ?? null,
+          ...(Object.keys(habits).length > 0 ? { habits } : {}),
+          ...(dietaryRules.length > 0 ? { dietary_rules: dietaryRules } : {}),
+          ...(withoutAgent ? { policy: "default" } : {}),
+        };
+        run = await startAgentRun(body, controller.signal);
+      }
       if (controller.signal.aborted || seq !== agentSeqRef.current) return false;
-      setAgentRun(run);
-      if (run.recommendation) setRecommendation(run.recommendation);
-      persistPlan(run);
+      const merged = runWithKeptRoute(run, agentRun?.recommendation ?? recommendation);
+      setAgentRun(merged);
+      if (merged.recommendation) setRecommendation(merged.recommendation);
+      persistPlan(merged);
       return true;
     } catch (error) {
       if (!controller.signal.aborted && seq === agentSeqRef.current) {
@@ -1038,6 +1078,9 @@ export default function App() {
           agentLoading={agentLoading}
           withoutAgent={withoutAgent}
           onToggleWithoutAgent={handleToggleWithoutAgent}
+          onApplyAlternative={(message) => {
+            void handleRequestAgentChange(message);
+          }}
           agentSlot={
             <AgentActions
               agentRun={agentRun}
