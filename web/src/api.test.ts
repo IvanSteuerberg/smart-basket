@@ -311,7 +311,7 @@ describe("describeError", () => {
   });
 
   it("translates bare HTTP statuses without exposing them", () => {
-    for (const status of [500, 502, 503, 504, 404, 429]) {
+    for (const status of [400, 401, 403, 404, 429, 500, 502, 503, 504]) {
       const message = describeError(new ApiError(`HTTP ${status}`, status));
       expect(message).not.toContain("HTTP");
       expect(message.length).toBeGreaterThan(10);
@@ -321,8 +321,8 @@ describe("describeError", () => {
     );
   });
 
-  it("keeps the backend detail when there is one", () => {
-    expect(describeError(new ApiError("Lista vacía", 422, "Lista vacía"))).toBe("Lista vacía");
+  it("prefers the backend detail over a generic HTTP status message", () => {
+    expect(describeError(new ApiError("HTTP 422", 422, "Lista vacía"))).toBe("Lista vacía");
   });
 });
 

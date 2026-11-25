@@ -489,12 +489,14 @@ function describeStatus(status: number): string | null {
   }
 }
 
+const GENERIC_HTTP_ERROR_MESSAGE = "No hemos podido completar la petición. Inténtalo de nuevo.";
+
 /** A message safe to show: never a raw «HTTP 502» or «Failed to fetch». */
 export function describeError(error: unknown): string {
   if (error instanceof ApiError) {
-    const hasDetail = messageOf(error.detail) !== null;
-    if (!hasDetail) return describeStatus(error.status) ?? error.message;
-    return error.message;
+    const detailMessage = messageOf(error.detail);
+    if (detailMessage !== null) return detailMessage;
+    return describeStatus(error.status) ?? GENERIC_HTTP_ERROR_MESSAGE;
   }
   if (error instanceof TypeError) return NETWORK_ERROR_MESSAGE;
   if (error instanceof Error && error.message) return error.message;
