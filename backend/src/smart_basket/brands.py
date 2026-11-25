@@ -88,6 +88,10 @@ class Brands:
         target = fold(brand)
         return {target, *self._aliases.get(target, ())}
 
+    def private_label_terms(self) -> dict[int, tuple[tuple[str, ...], ...]]:
+        """The folded whole-word terms of each chain's private labels, keyed by chain id."""
+        return {chain_id: tuple(labels) for chain_id, labels in self._private_labels.items()}
+
     def brand_for(self, product_name: str) -> str | None:
         """The most specific brand named by the product, or None when it names no brand.
 
