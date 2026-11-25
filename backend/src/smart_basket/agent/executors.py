@@ -17,7 +17,8 @@ proposed.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import unicodedata
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import date
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
@@ -28,9 +29,16 @@ from sqlalchemy.orm import Session
 
 from smart_basket.agent.actions import ActionKind, CandidateAction
 from smart_basket.agent.core import ActionExecutor, Proposal
-from smart_basket.agent.detector import plan_snapshot_from_result
+from smart_basket.agent.detector import (
+    alternative_reason,
+    detect_observations,
+    plan_snapshot_from_result,
+    same_chains,
+)
+from smart_basket.agent.observations import ObservationKind
 from smart_basket.agent.state import (
     AgentState,
+    AlternativePlanSummary,
     LineHabit,
     LineState,
     PendingQuestion,
@@ -103,6 +111,20 @@ class _Engine(Protocol):
 
     def active_chains(self) -> tuple[str, ...]: ...
 
+    def line_options(
+        self, state: AgentState, line: LineState, kind: str, limit: int
+    ) -> list[dict[str, Any]]: ...
+
+    def product_for_canonical(
+        self, canonical_id: int | None, state: AgentState
+    ) -> dict[str, Any] | None: ...
+
+    def restrict_chains(self, state: AgentState, keep: Sequence[str]) -> AgentState: ...
+
+    def set_category(self, state: AgentState, index: int, category_key: str) -> AgentState: ...
+
+    def category_for_text(self, value: str) -> str | None: ...
+
 
 class _ExecutorBase:
     """Template for `propose → validate → apply`; subclasses fill the three hooks."""
@@ -174,6 +196,9 @@ class _CompararEscenarios(_ExecutorBase):
         self, state: AgentState, action: CandidateAction
     ) -> tuple[dict[str, Any], str | None]:
         mode = action.args.get("mode")
+        if mode is None and "line_index" not in action.args and _real_alternatives(state):
+            # A near tie: show the real plans on the table instead of repeating the mode.
+            return {"plans": True}, None
         if mode is None:
             mode = "car" if state.mode == "walk" else "walk"
         if mode not in _MODES:
@@ -181,6 +206,21 @@ class _CompararEscenarios(_ExecutorBase):
         return {"mode": mode}, None
 
     def _apply(self, state: AgentState, proposal: Proposal) -> AgentState:
+        if proposal.payload.get("plans"):
+            shown = tuple(
+                {
+                    "mode": state.mode,
+                    "store_names": list(alt.store_names),
+                    "chain_codes": list(alt.chain_codes),
+                    "total_cost": str(alt.total_cost),
+                    "travel_minutes": str(alt.travel_minutes),
+                    "cost_delta": str(alt.cost_delta if alt.cost_delta is not None else 0),
+                    "minutes_delta": str(alt.minutes_delta if alt.minutes_delta is not None else 0),
+                    "reason": alt.reason,
+                }
+                for alt in _real_alternatives(state)
+            )
+            return replace(state, alternatives_shown=(*state.alternatives_shown, *shown))
         mode = str(proposal.payload["mode"])
         updated, shown = self.engine.compare(state, mode)
         return replace(updated, alternatives_shown=(*updated.alternatives_shown, shown))
@@ -303,30 +343,107 @@ class _AplicarHabitual(_ExecutorBase):
         return state if updated is None else updated
 
 
+_SKIP_OPTION: dict[str, Any] = {"label": "Dejar sin comprar", "action": "skip"}
+
+
 class _Preguntar(_ExecutorBase):
+    """Leaves the shopper a concrete question: what is wrong and which options solve it."""
+
     def _prepare(
         self, state: AgentState, action: CandidateAction
     ) -> tuple[dict[str, Any], str | None]:
         index = _int_arg(action, "line_index")
         line = _line_at(state, index)
-        options = action.args.get("options")
-        if options is None and line is not None:
-            options = list(line.candidate_options)
+        given = action.args.get("options")
+        options = [dict(option) for option in given or ()]
+        prompt: str | None = None
+        if line is not None and line.status == "vague":
+            options = options or [dict(o) for o in line.candidate_options]
+            options = options or self.engine.line_options(state, line, "vague", 6)
+            prompt = f"¿Qué tipo de «{line.raw_text}» prefieres?"
+            options = _with_skip(options)
+        elif line is not None and line.status == "missing":
+            options = options or [dict(o) for o in line.substitute_options]
+            options = options or self.engine.line_options(state, line, "missing", 4)
+            prompt = (
+                f"«{line.raw_text}» no está disponible en tiendas cercanas. ¿Qué prefieres hacer?"
+            )
+            options = _with_skip(options)
+        elif line is not None:
+            options = options or [dict(o) for o in line.candidate_options]
+            prompt = f"¿Cuál prefieres para «{line.raw_text}»?" if options else None
+        else:
+            tie = _tie_question(state)
+            if tie is not None:
+                prompt, options = tie
+            elif state.shopper_message and state.shopper_message.strip():
+                prompt = (
+                    f"No estoy seguro de cómo aplicar «{state.shopper_message.strip()}». "
+                    "¿Puedes concretarlo?"
+                )
         return {
             "line_index": line.index if line is not None else None,
-            "options": tuple(dict(option) for option in options or ()),
+            "options": tuple(options),
+            "prompt": prompt,
         }, None
 
     def _apply(self, state: AgentState, proposal: Proposal) -> AgentState:
-        return replace(
-            state,
-            pending_question=PendingQuestion(
+        prompt = proposal.payload.get("prompt")
+        # Without a specific prompt the harness fills the question from the observation summary.
+        question = (
+            PendingQuestion(
                 line_index=proposal.payload["line_index"],
-                prompt="El agente necesita tu ayuda para elegir esta línea.",
+                prompt=str(prompt),
                 options=tuple(proposal.payload.get("options") or ()),
-            ),
-            status=RunStatus.WAITING_SHOPPER,
+            )
+            if prompt
+            else None
         )
+        return replace(state, pending_question=question, status=RunStatus.WAITING_SHOPPER)
+
+
+def _with_skip(options: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    if any(option.get("action") == "skip" for option in options):
+        return options
+    return [*options, dict(_SKIP_OPTION)]
+
+
+def _real_alternatives(state: AgentState) -> tuple[AlternativePlanSummary, ...]:
+    """Alternatives that visit other chains than the current plan (the only real choices)."""
+    return tuple(
+        alt
+        for alt in state.plan.alternatives
+        if not same_chains(state.plan.chain_codes, state.plan.store_names, alt)
+    )
+
+
+def _tie_question(state: AgentState) -> tuple[str, list[dict[str, Any]]] | None:
+    alternatives = _real_alternatives(state)
+    if not alternatives:
+        return None
+    plan = state.plan
+    current = " + ".join(plan.store_names) if plan.store_names else "el plan actual"
+    prompt = (
+        f"Hay opciones muy parecidas a {current} "
+        f"({plan.total_cost} €, {plan.travel_minutes} min). ¿Cuál prefieres?"
+    )
+    options: list[dict[str, Any]] = [
+        {"label": f"Mantener {current} ({plan.total_cost} €)", "action": "keep_plan"}
+    ]
+    for alt in alternatives:
+        names = " + ".join(alt.store_names)
+        label = f"{names} ({alt.total_cost} €, {alt.travel_minutes} min)"
+        if alt.reason:
+            label += f" · {alt.reason}"
+        options.append(
+            {
+                "label": label,
+                "action": "select_alternative",
+                "chain_codes": list(alt.chain_codes),
+                "store_names": list(alt.store_names),
+            }
+        )
+    return prompt, options
 
 
 class _DejarSinComprar(_ExecutorBase):
@@ -480,8 +597,34 @@ class _SimulatedEngine:
             "travel_minutes": str(state.plan.travel_minutes),
             "cost_delta": "0",
             "minutes_delta": "0",
+            "reason": _mode_reason(mode, len(state.plan.store_names), Decimal(0), Decimal(0)),
         }
         return state, shown
+
+    def line_options(
+        self, state: AgentState, line: LineState, kind: str, limit: int
+    ) -> list[dict[str, Any]]:
+        source = line.candidate_options if kind == "vague" else line.substitute_options
+        return [dict(option) for option in source[:limit]]
+
+    def product_for_canonical(
+        self, canonical_id: int | None, state: AgentState
+    ) -> dict[str, Any] | None:
+        if canonical_id is None:
+            return None
+        return {"product_id": None, "canonical_id": canonical_id}
+
+    def restrict_chains(self, state: AgentState, keep: Sequence[str]) -> AgentState:
+        wanted = {code.lower() for code in keep}
+        excluded = tuple(code for code in self._chains if code.lower() not in wanted)
+        merged = (*state.excluded_chains, *(c for c in excluded if c not in state.excluded_chains))
+        return self.reoptimize(replace(state, excluded_chains=merged))
+
+    def set_category(self, state: AgentState, index: int, category_key: str) -> AgentState:
+        return self.reoptimize(_update(state, index, status="ok"))
+
+    def category_for_text(self, value: str) -> str | None:
+        return None
 
     def find_substitute(self, state: AgentState, index: int) -> dict[str, Any] | None:
         line = _line_at(state, index)
@@ -644,13 +787,65 @@ class _RecommenderEngine:
             "travel_minutes": str(basket.minutes),
             "cost_delta": str(basket.total_cost - state.plan.total_cost),
             "minutes_delta": str(basket.minutes - state.plan.travel_minutes),
+            "reason": _mode_reason(
+                mode,
+                len(response.stores),
+                basket.total_cost - state.plan.total_cost,
+                basket.minutes - state.plan.travel_minutes,
+                current_stores=len(state.plan.store_names),
+            ),
         }
         return state, shown
 
+    def line_options(
+        self, state: AgentState, line: LineState, kind: str, limit: int
+    ) -> list[dict[str, Any]]:
+        if kind == "vague":
+            item = self._items.get(line.index)
+            key = item.category_key if item is not None else None
+            if key is None:
+                key = self.category_for_text(line.raw_text)
+            return self.category_options(key, self._planned_zones(state), limit) if key else []
+        return self._substitutes(state, line.index, limit)
+
+    def category_options(
+        self, category_key: str, zones: Sequence[int], limit: int = 6
+    ) -> list[dict[str, Any]]:
+        return category_candidate_options(self.session, category_key, zones, limit)
+
+    def product_for_canonical(
+        self, canonical_id: int | None, state: AgentState
+    ) -> dict[str, Any] | None:
+        return self._product_for_canonical(canonical_id, state)
+
+    def restrict_chains(self, state: AgentState, keep: Sequence[str]) -> AgentState:
+        wanted = {code.lower() for code in keep}
+        active = self.active_chains()
+        if not wanted & {code.lower() for code in active}:
+            return state
+        excluded = [code.lower() for code in active if code.lower() not in wanted]
+        chains = tuple(dict.fromkeys((*state.excluded_chains, *excluded)))
+        return self._commit(replace(state, excluded_chains=chains), excluded=excluded)
+
+    def set_category(self, state: AgentState, index: int, category_key: str) -> AgentState:
+        items = dict(self._items)
+        item = items.get(index)
+        if item is not None:
+            items[index] = replace(item, category_key=category_key, product_id=None)
+        cleared = _update(state, index, status="ok", candidate_options=(), substitute_options=())
+        return self._commit(cleared, items=items)
+
+    def category_for_text(self, value: str) -> str | None:
+        return self._category_for_text(value)
+
     def find_substitute(self, state: AgentState, index: int) -> dict[str, Any] | None:
+        found = self._substitutes(state, index, 1)
+        return found[0] if found else None
+
+    def _substitutes(self, state: AgentState, index: int, limit: int) -> list[dict[str, Any]]:
         category = self._line_category(index)
         if category is None:
-            return None
+            return []
         category_id, parent_id = category
         ancestor = parent_id if parent_id is not None else category_id
         own = self._own_canonical(index)
@@ -666,10 +861,10 @@ class _RecommenderEngine:
         ).mappings()
         canonical_ids = [row["canonical_id"] for row in siblings]
         if not canonical_ids:
-            return None
+            return []
         zones = self._planned_zones(state)
         if not zones:
-            return None
+            return []
         products = self.session.execute(
             text(
                 "select p.id as product_id, p.name, canon.id as canonical_id, "
@@ -688,19 +883,29 @@ class _RecommenderEngine:
             ),
             {"canonicals": sorted(canonical_ids), "zones": sorted(zones)},
         ).mappings()
+        found: list[dict[str, Any]] = []
+        seen: set[int] = set()
         for row in products:
+            if row["canonical_id"] in seen:
+                continue
             if _dietary_ok(
                 row["variant_key"], row["name"], state.dietary_rules, strict_variant=True
             ):
-                return {
-                    "product_id": row["product_id"],
-                    "canonical_id": row["canonical_id"],
-                    "canonical_name": row["canonical_name"],
-                    "name": row["name"],
-                    "variant_key": row["variant_key"],
-                    "price": str(row["price"]),
-                }
-        return None
+                seen.add(row["canonical_id"])
+                found.append(
+                    {
+                        "label": row["canonical_name"],
+                        "product_id": row["product_id"],
+                        "canonical_id": row["canonical_id"],
+                        "canonical_name": row["canonical_name"],
+                        "name": row["name"],
+                        "variant_key": row["variant_key"],
+                        "price": str(row["price"]),
+                    }
+                )
+                if len(found) >= limit:
+                    break
+        return found
 
     def active_chains(self) -> tuple[str, ...]:
         rows = self.session.execute(text("select code from chain order by code")).scalars()
@@ -747,7 +952,18 @@ class _RecommenderEngine:
             index = positions.get(exc.line_id)
             if index is None:
                 raise
-            vague = _update(state, index, status="vague")
+            line = _line_at(state, index)
+            options = (
+                tuple(self.category_options(exc.category_key, self._planned_zones(state)))
+                if line is not None and not line.candidate_options
+                else ()
+            )
+            vague = _update(
+                state,
+                index,
+                status="vague",
+                **({"candidate_options": options} if options else {}),
+            )
             return self._reoptimize(vague, mode=mode, items=items, excluded=excluded)
         self.last_recommendation = response
         return self._state_from_result(state, query, response, basket, positions)
@@ -838,6 +1054,8 @@ class _RecommenderEngine:
             plan=plan,
             buyer_summary=response.explanation,
             status=RunStatus.RUNNING,
+            # A re-optimization means the shopper's request was handled: it must not fire again.
+            shopper_message=None,
         )
 
     # -- catalog helpers -------------------------------------------------
@@ -962,6 +1180,174 @@ class _RecommenderEngine:
 
 
 # -- shared helpers -------------------------------------------------------
+
+
+def category_candidate_options(
+    session: Session, category_key: str, zones: Sequence[int], limit: int = 6
+) -> list[dict[str, Any]]:
+    """Cheapest available canonical products under a category, as clickable options."""
+    if not zones:
+        return []
+    rows = session.execute(
+        text(
+            "select cp.id as canonical_id, cp.name, min(pc.price) as price "
+            "from canonical_product cp "
+            "join category_closure cc on cc.descendant_id = cp.category_id "
+            "join category c on c.id = cc.ancestor_id and c.key = :key "
+            "join chain_product p on p.canonical_id = cp.id and p.is_active "
+            "join chain_product_zone pz on pz.chain_product_id = p.id and pz.is_available "
+            "join price_current pc on pc.chain_product_id = p.id and pc.zone_id = pz.zone_id "
+            "where pz.zone_id in :zones "
+            "group by cp.id, cp.name order by min(pc.price), cp.id limit :limit"
+        ).bindparams(bindparam("zones", expanding=True)),
+        {"key": category_key, "zones": sorted(zones), "limit": limit},
+    ).mappings()
+    return [
+        {
+            "label": row["name"],
+            "canonical_id": row["canonical_id"],
+            "category_key": category_key,
+            "price": str(row["price"]),
+        }
+        for row in rows
+    ]
+
+
+def _mode_reason(
+    mode: str,
+    stores: int,
+    cost_delta: Decimal,
+    minutes_delta: Decimal,
+    *,
+    current_stores: int | None = None,
+) -> str:
+    label = "En coche" if mode == "car" else "Andando"
+    reason = alternative_reason(
+        stores=stores,
+        current_stores=current_stores if current_stores is not None else stores,
+        cost_delta=cost_delta,
+        minutes_delta=minutes_delta,
+    )
+    return f"{label}: {reason[0].lower()}{reason[1:]}"
+
+
+def _fold(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value.casefold())
+    return "".join(char for char in decomposed if not unicodedata.combining(char)).strip()
+
+
+def _chosen_option(
+    question: PendingQuestion | None, answer: Mapping[str, Any]
+) -> dict[str, Any] | None:
+    """The option an answer picks: by index, by canonical id or by label (accent-insensitive)."""
+    options = question.options if question is not None else ()
+    index = answer.get("option_index")
+    if isinstance(index, int) and not isinstance(index, bool) and 0 <= index < len(options):
+        return dict(options[index])
+    if answer.get("product_id") is not None:
+        return {"product_id": answer["product_id"], "canonical_id": answer.get("canonical_id")}
+    canonical_id = answer.get("canonical_id")
+    if canonical_id is not None:
+        match = next((o for o in options if o.get("canonical_id") == canonical_id), None)
+        return dict(match) if match is not None else {"canonical_id": canonical_id}
+    for key in ("choice_label", "message"):
+        value = answer.get(key)
+        if isinstance(value, str) and value.strip():
+            wanted = _fold(value)
+            match = next((o for o in options if _fold(str(o.get("label") or "")) == wanted), None)
+            if match is not None:
+                return dict(match)
+    return None
+
+
+def apply_shopper_answer(
+    engine: _Engine, state: AgentState, answer: Mapping[str, Any]
+) -> AgentState:
+    """Turn the shopper's answer to the pending question into a real change of the plan.
+
+    The chosen option (by index, canonical id or label) is applied through the engine: skip the
+    line, keep or switch the plan, use a product or narrow a vague category. A free text that
+    matches nothing is looked up in the catalog for the pending line and otherwise queued as a
+    `shopper_request`. Observations are then recomputed, so what was solved is not asked again.
+    """
+    question = state.pending_question
+    line_index = question.line_index if question is not None else None
+    line = _line_at(state, line_index)
+    option = _chosen_option(question, answer)
+    message = answer.get("message")
+    message = message.strip() if isinstance(message, str) and message.strip() else None
+    state = replace(state, shopper_message=None, pending_question=None)
+    decided_plan = False
+    request: str | None = None
+
+    if option is not None:
+        action = option.get("action")
+        if action == "skip":
+            if line is not None:
+                state = engine.skip_line(state, line.index)
+        elif action in {"keep_plan", "select_alternative"}:
+            decided_plan = True
+            codes = [str(code) for code in option.get("chain_codes") or ()]
+            if action == "select_alternative" and codes:
+                state = engine.restrict_chains(state, codes)
+        elif line is not None:
+            state = _apply_product_choice(engine, state, line, option)
+    elif message is not None:
+        category = (
+            engine.category_for_text(message)
+            if line is not None and line.status in {"vague", "missing"}
+            else None
+        )
+        if category is not None and line is not None:
+            state = engine.set_category(state, line.index, category)
+        else:
+            request = message
+
+    state = replace(state, shopper_message=request)
+    observations = detect_observations(state)
+    if decided_plan:
+        observations = tuple(o for o in observations if o.kind is not ObservationKind.NEAR_TIE)
+    return replace(state, observations=observations)
+
+
+def _apply_product_choice(
+    engine: _Engine, state: AgentState, line: LineState, option: Mapping[str, Any]
+) -> AgentState:
+    label = option.get("canonical_name") or option.get("name") or option.get("label")
+    canonical_id = option.get("canonical_id")
+    product_id = option.get("product_id")
+    if product_id is None and canonical_id is not None:
+        product = engine.product_for_canonical(canonical_id, state)
+        if product is None or not _dietary_ok(
+            product.get("variant_key"),
+            product.get("name"),
+            state.dietary_rules,
+            strict_variant="variant_key" in product,
+        ):
+            return state
+        product_id = product.get("product_id")
+        label = label or product.get("canonical_name")
+    if product_id is not None or canonical_id is not None:
+        return engine.use_product(
+            state, line.index, product_id, label=label, canonical_id=canonical_id
+        )
+    category_key = option.get("category_key")
+    if category_key:
+        return engine.set_category(state, line.index, str(category_key))
+    return state
+
+
+def answer_applier(
+    executors: Mapping[ActionKind, ActionExecutor],
+) -> Callable[[AgentState, Mapping[str, Any]], AgentState]:
+    """`apply_answer` for `AgentHarness.resume`, bound to the engine behind `executors`."""
+    engine = next(
+        (e for e in (getattr(ex, "engine", None) for ex in executors.values()) if e is not None),
+        None,
+    )
+    if engine is None:
+        raise ValueError("the executors have no engine to apply an answer with")
+    return lambda state, answer: apply_shopper_answer(engine, state, answer)
 
 
 def last_recommendation(

@@ -110,9 +110,47 @@ def test_agent_run_completes_and_persists_the_trace(world):
     assert stored["policy_name"] == "default"
     assert stored["steps_count"] == run["steps_count"]
 
+    # The route is only served live (NFR-06): the stored run has none, so a later read is empty.
+    assert run["recommendation"]["route"]
+    assert "route" not in json.dumps(_stored_state(world, run["run_id"]))
+
     fetched = world.client.get(f"/api/agent/runs/{run['run_id']}")
     assert fetched.status_code == 200
-    assert fetched.json() == run
+    reread = fetched.json()
+    assert reread["recommendation"]["route"] == []
+    assert _without_route(reread) == _without_route(run)
+
+
+def _without_route(run: dict) -> dict:
+    recommendation = {k: v for k, v in run["recommendation"].items() if k != "route"}
+    return {**run, "recommendation": recommendation}
+
+
+def _canonical_id(world, name: str) -> int:
+    return world.connection.execute(
+        text("select id from canonical_product where name = :name"), {"name": name}
+    ).scalar_one()
+
+
+def _bought(run: dict) -> list[str]:
+    stores = run["recommendation"]["stores"]
+    return [line["product_name"] for store in stores for line in store["lines"]]
+
+
+# One line the plan can buy plus one vague line: the plan exists (so it has zones and a route)
+# while the agent pauses to ask about the vague one.
+MILK_AND_VAGUE = [
+    item("leche semidesnatada", "leche", "2", "l"),
+    item("pollo preparado", "vague", "1", "kg"),
+]
+
+
+def _pause_on_the_vague_line(world, items: list[dict] = MILK_AND_VAGUE) -> dict:
+    paused = world.client.post("/api/agent/runs", json=run_body(items, policy="default")).json()
+    assert paused["status"] == "waiting_shopper"
+    assert paused["recommendation"] is None
+    assert paused["pending_question"]["line_index"] == len(items) - 1
+    return paused
 
 
 def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
@@ -129,6 +167,7 @@ def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
     assert paused["steps"][0]["chosen_action"] == "preguntar"
     assert paused["steps"][0]["observation"]["kind"] == "vague_line"
 
+    # A free text that names a category settles the line itself: no further step is needed.
     resumed = world.client.post(
         f"/api/agent/runs/{paused['run_id']}/answer",
         json={"message": "quiero pechuga de pollo"},
@@ -137,15 +176,35 @@ def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
     final = resumed.json()
     assert final["status"] == "completed"
     assert final["pending_question"] is None
-    assert final["steps_count"] >= 2
-    assert [step["step_number"] for step in final["steps"]] == list(
-        range(1, final["steps_count"] + 1)
-    )
-    assert final["steps"][-1]["observation"]["kind"] == "shopper_request"
+    assert final["steps_count"] == 1
+    assert [step["step_number"] for step in final["steps"]] == [1]
+    assert final["steps"][0] == paused["steps"][0]
+    assert any("pollo" in name.lower() for name in _bought(final))
 
     fetched = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
     assert fetched["status"] == "completed"
     assert fetched["steps"] == final["steps"]
+
+
+def test_unresolved_text_keeps_asking_and_appends_the_steps_in_order(world):
+    paused = _pause_on_the_vague_line(world)
+
+    resumed = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer", json={"message": "lo que sea, algo rico"}
+    )
+    assert resumed.status_code == 200
+    again = resumed.json()
+
+    # The text matches no category, so it is handled as a request and the vague line is asked
+    # again: the new steps follow the old one with no gap or repeated number.
+    assert again["status"] == "waiting_shopper"
+    assert again["pending_question"]["line_index"] == 1
+    assert again["steps_count"] == len(again["steps"]) >= 2
+    assert [step["step_number"] for step in again["steps"]] == list(
+        range(1, again["steps_count"] + 1)
+    )
+    assert again["steps"][0] == paused["steps"][0]
+    assert again["steps"][1]["observation"]["kind"] == "shopper_request"
 
 
 def test_shopper_message_can_change_the_mode_with_the_injected_policy(world):
@@ -235,25 +294,99 @@ def test_resumed_run_strips_the_query_once_it_completes(world):
 
 
 @pytest.mark.parametrize(
-    ("answer", "expected_message"),
+    ("kind", "bought_after"),
     [
-        ({"option_index": 1}, "Opción 2"),
-        ({"canonical_id": 4242}, "Producto 4242"),
+        ("option_index", []),  # the only option is "Dejar sin comprar": the line is skipped
+        ("canonical_id", ["Pollo entero"]),
+        ("choice_label", ["Pollo entero + Pechugas enteras de pollo"]),
     ],
 )
-def test_answering_a_paused_run_with_a_structured_choice(world, answer, expected_message):
-    paused = world.client.post(
-        "/api/agent/runs",
-        json=run_body([item("pollo preparado", "vague", "1", "kg")], policy="default"),
-    ).json()
-    assert paused["status"] == "waiting_shopper"
+def test_answering_a_paused_run_with_a_structured_choice(world, kind, bought_after):
+    paused = _pause_on_the_vague_line(world)
+    skip = {"label": "Dejar sin comprar", "action": "skip"}
+    assert paused["pending_question"]["options"] == [skip]
+    answer = {
+        "option_index": {"option_index": 0},
+        "canonical_id": {"canonical_id": _canonical_id(world, "Pollo entero")},
+        "choice_label": {"choice_label": "Pollo"},
+    }[kind]
 
     resumed = world.client.post(f"/api/agent/runs/{paused['run_id']}/answer", json=answer)
     assert resumed.status_code == 200
     final = resumed.json()
+
     assert final["status"] == "completed"
-    assert final["steps"][-1]["observation"]["kind"] == "shopper_request"
-    assert final["steps"][-1]["observation"]["details"]["message"] == expected_message
+    assert final["pending_question"] is None
+    assert final["steps_count"] == 1
+    # The plan was re-optimized with the answer and still carries the live route.
+    recommendation = final["recommendation"]
+    assert recommendation is not None
+    assert recommendation["route"]
+    assert _bought(final) == ["Leche semidesnatada Hacendado", *bought_after]
+    assert recommendation["total_cost"] != "0"
+
+    stored = _stored_state(world, paused["run_id"])
+    assert "route" not in json.dumps(stored)
+    _assert_origin_not_persisted(stored)
+    reread = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
+    assert reread["recommendation"]["route"] == []
+    assert _without_route(reread) == _without_route(final)
+
+
+def test_option_index_out_of_range_is_rejected_and_the_run_keeps_waiting(world):
+    paused = _pause_on_the_vague_line(world)
+    options = paused["pending_question"]["options"]
+
+    for index in (len(options), 5):
+        rejected = world.client.post(
+            f"/api/agent/runs/{paused['run_id']}/answer", json={"option_index": index}
+        )
+        assert rejected.status_code == 422
+
+    still = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
+    assert still["status"] == "waiting_shopper"
+    assert still["steps"] == paused["steps"]
+
+
+def test_unknown_canonical_is_asked_again_while_a_real_one_is_accepted(world):
+    paused = _pause_on_the_vague_line(world)
+    unknown = _canonical_id(world, "Pollo entero") + 10_000
+
+    asked_again = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer", json={"canonical_id": unknown}
+    )
+    assert asked_again.status_code == 200
+    again = asked_again.json()
+    assert again["status"] == "waiting_shopper"
+    assert again["pending_question"]["line_index"] == 1
+    assert again["recommendation"] is None
+    assert [step["step_number"] for step in again["steps"]] == list(
+        range(1, again["steps_count"] + 1)
+    )
+
+    accepted = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer",
+        json={"canonical_id": _canonical_id(world, "Pollo entero")},
+    )
+    assert accepted.status_code == 200
+    final = accepted.json()
+    assert final["status"] == "completed"
+    assert _bought(final) == ["Leche semidesnatada Hacendado", "Pollo entero"]
+
+
+def test_run_response_carries_the_route_but_the_stored_state_never_does(world):
+    response = world.client.post("/api/agent/runs", json=run_body(FIVE_ITEMS, policy="default"))
+    assert response.status_code == 200
+    run = response.json()
+
+    route = run["recommendation"]["route"]
+    assert route
+    stored = _stored_state(world, run["run_id"])
+    # The recommendation is kept for later reads, but without its route (NFR-06).
+    assert stored["_recommendation"]["total_cost"] == run["recommendation"]["total_cost"]
+    assert "route" not in stored["_recommendation"]
+    assert "route" not in json.dumps(stored)
+    _assert_origin_not_persisted(stored)
 
 
 def test_unknown_policy_is_rejected_with_422(world):

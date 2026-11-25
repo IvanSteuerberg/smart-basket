@@ -119,6 +119,10 @@ class AlternativePlanSummary:
     total_cost: Decimal
     travel_minutes: Decimal
     objective_delta: Decimal
+    chain_codes: tuple[str, ...] = ()
+    cost_delta: Decimal | None = None
+    minutes_delta: Decimal | None = None
+    reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -126,15 +130,25 @@ class AlternativePlanSummary:
             "total_cost": str(self.total_cost),
             "travel_minutes": str(self.travel_minutes),
             "objective_delta": str(self.objective_delta),
+            "chain_codes": list(self.chain_codes),
+            "cost_delta": str(self.cost_delta) if self.cost_delta is not None else None,
+            "minutes_delta": str(self.minutes_delta) if self.minutes_delta is not None else None,
+            "reason": self.reason,
         }
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> AlternativePlanSummary:
+        cost_delta = data.get("cost_delta")
+        minutes_delta = data.get("minutes_delta")
         return cls(
             store_names=tuple(str(name) for name in data.get("store_names") or ()),
             total_cost=Decimal(str(data["total_cost"])),
             travel_minutes=Decimal(str(data["travel_minutes"])),
             objective_delta=Decimal(str(data["objective_delta"])),
+            chain_codes=tuple(str(code) for code in data.get("chain_codes") or ()),
+            cost_delta=Decimal(str(cost_delta)) if cost_delta is not None else None,
+            minutes_delta=Decimal(str(minutes_delta)) if minutes_delta is not None else None,
+            reason=data.get("reason"),
         )
 
 
@@ -147,6 +161,7 @@ class PlanSnapshot:
     travel_minutes: Decimal = Decimal(0)
     comparable_cost: Decimal = Decimal(0)
     alternatives: tuple[AlternativePlanSummary, ...] = ()
+    chain_codes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,6 +170,7 @@ class PlanSnapshot:
             "travel_minutes": str(self.travel_minutes),
             "comparable_cost": str(self.comparable_cost),
             "alternatives": [item.to_dict() for item in self.alternatives],
+            "chain_codes": list(self.chain_codes),
         }
 
     @classmethod
@@ -167,6 +183,7 @@ class PlanSnapshot:
             alternatives=tuple(
                 AlternativePlanSummary.from_dict(item) for item in data.get("alternatives") or ()
             ),
+            chain_codes=tuple(str(code) for code in data.get("chain_codes") or ()),
         )
 
 
