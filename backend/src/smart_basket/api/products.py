@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any
 
@@ -21,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.api.lexicon_cache import search_forms_for
 from smart_basket.brands import Brands, brands_for
+from smart_basket.config import get_settings
 from smart_basket.db.engine import get_session
 from smart_basket.preprocessor.rules_es import CONNECTORS
 from smart_basket.preprocessor.text import tokenize
@@ -32,7 +34,7 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 #: Unit prices keep the four decimals of `price_current.price_per_unit`.
 UNIT_PRICE_QUANTUM = Decimal("0.0001")
-SORTS = ("unit_price", "price", "name")
+SORTS = ("relevance", "popular", "unit_price", "price", "name")
 MAX_PAGE_SIZE = 60
 ALTERNATIVES_LIMIT = 12
 #: The sections summary changes only when the catalog changes; a short TTL avoids rebuilding it.
@@ -40,10 +42,18 @@ SECTIONS_TTL_SECONDS = 60.0
 
 SIZE_ERROR = "El tamaño de la página debe estar entre 1 y 60."
 PAGE_ERROR = "La página debe ser al menos 1."
-SORT_ERROR = "El orden debe ser unit_price, price o name."
+SORT_ERROR = "El orden debe ser relevance, popular, unit_price, price o name."
 SECTION_ERROR = "La sección no existe."
 CATEGORY_ERROR = "La categoría no existe."
 PRODUCT_ERROR = "El producto no existe o no está disponible."
+NEAR_PAIR_ERROR = "Debes indicar la latitud y la longitud juntas."
+MODE_ERROR = "El modo debe ser walk o car."
+LATITUDE_ERROR = "La latitud debe estar entre -90 y 90."
+LONGITUDE_ERROR = "La longitud debe estar entre -180 y 180."
+MIN_PRICE_ERROR = "El precio mínimo no puede ser negativo."
+MAX_PRICE_ERROR = "El precio máximo no puede ser negativo."
+PRICE_RANGE_ERROR = "El precio mínimo no puede ser mayor que el precio máximo."
+TRAVEL_MODES = ("walk", "car")
 
 #: The zone of each chain's active stores in León; ties keep the lowest zone id.
 _CHAIN_ZONE = """
@@ -71,14 +81,43 @@ join price_current pc
     on pc.chain_product_id = cp.id and pc.zone_id = cz.zone_id
 """
 
+#: Whether a promotion of the product's chain is active today in the product's chosen zone.
+#: A promotion with rows in `promotion_zone` counts only for those zones; one without rows is
+#: chain-wide. The `not exists ... or exists ...` form keeps a promotion of another zone out.
+_PROMO_ACTIVE_SQL = """
+exists (
+    select 1
+    from promotion pr
+    join promotion_target pt on pt.promotion_id = pr.id
+    where pr.chain_id = cp.chain_id
+      and pr.valid @> current_date
+      and (
+          not exists (
+              select 1 from promotion_zone pz
+              where pz.promotion_id = pr.id
+          )
+          or exists (
+              select 1 from promotion_zone pz
+              where pz.promotion_id = pr.id and pz.zone_id = cz.zone_id
+          )
+      )
+      and (
+          pt.chain_product_id = cp.id
+          or (pt.canonical_id is not null and pt.canonical_id = cp.canonical_id)
+          or (pt.category_id is not null and pt.category_id = ec.id)
+      )
+)
+"""
+
 #: A listed product: active and available in its chain's zone, with a current price.
-_PRODUCT_COLUMNS = """
+_PRODUCT_COLUMNS = f"""
     cp.id, cp.name, cp.packaging, cp.image_url, cp.base_quantity, cp.base_unit,
     cp.pack_count, cp.dietary_tags,
     cp.chain_id, ch.name as chain_name, pc.price,
     cp.canonical_id, canon.name as canonical_name,
     ec.id as category_id, ec.key as category_key, ec.name as category_name,
-    ec.exact_only
+    ec.exact_only,
+    ({_PROMO_ACTIVE_SQL}) as on_promo
 """
 _PRODUCT_FROM = (
     _ACTIVE_PRICED_PRODUCT_FROM
@@ -102,6 +141,12 @@ _ORDERS = {
     ),
     "price": "pc.price, cp.name, cp.id",
     "name": "cp.name, cp.id",
+    # Popularity: how many chains sell the product's canonical, then the package price.
+    "popular": (
+        "coalesce((select count(distinct cp2.chain_id) from chain_product cp2"
+        " where cp2.canonical_id = cp.canonical_id and cp2.is_active), 0) desc,"
+        " pc.price, cp.name, cp.id"
+    ),
 }
 
 
@@ -219,7 +264,7 @@ class ProductOut(BaseModel):
     canonical: CanonicalOut | None
     #: Wave 0 contract: populated from `chain_product.dietary_tags` when available.
     dietary_tags: list[str] = Field(default_factory=list)
-    #: Wave 0 contract: wired to `promotion` in a later iteration, always false for now.
+    #: True when a promotion of the chain is valid today in the product's chosen zone.
     on_promo: bool = False
 
 
@@ -267,24 +312,46 @@ def _start_pattern(word: str) -> str:
     return rf"^({body})([^a-z0-9]|$)"
 
 
-def _relevance_sql(name_column: str, has_categories: bool) -> str:
-    """Relevance rank: 0 if category form matches or folded name starts with query; 1 otherwise."""
-    category_branch = (
-        "ec.id in (select descendant_id from category_closure "
-        "where ancestor_id = any(:q_categories)) or "
-        if has_categories
-        else ""
+def _phrase_pattern(phrase: str) -> str:
+    """Whole-word pattern for a phrase, tolerating a plural -s or -es on each word."""
+    body = r"[^a-z0-9]+".join(f"({_word_regex_body(word)})" for word in phrase.split() if word)
+    return rf"(^|[^a-z0-9])({body})([^a-z0-9]|$)"
+
+
+def _relevance_rank_sql(name_columns: Sequence[str], has_categories: bool) -> str:
+    """Deterministic relevance rank of `q` against the given folded name columns.
+
+    Level 0 is an exact name match or a category-form match whose name starts with the query;
+    level 1 is a canonical prefix match of the whole normalized phrase; level 2 is a category
+    subtree match or a prefix match of the first word; level 3 is a plain all-words match.
+    """
+    folded = [_fold_sql(column) for column in name_columns]
+    exact = " or ".join(f"{name} = :q_norm" for name in folded)
+    phrase = " or ".join(f"{name} ~ :q_phrase" for name in folded)
+    starts = " or ".join(f"{name} ~ :q_start" for name in folded)
+    if has_categories:
+        in_categories = (
+            "ec.id in (select descendant_id from category_closure "
+            "where ancestor_id = any(:q_categories))"
+        )
+        level_zero = f"({exact}) or ({in_categories} and ({starts}))"
+        level_two = f"({in_categories}) or ({starts})"
+    else:
+        level_zero = exact
+        level_two = starts
+    return (
+        f"(case when {level_zero} then 0 when {phrase} then 1 when {level_two} then 2 else 3 end)"
     )
-    return f"(case when {category_branch}{_fold_sql(name_column)} ~ :q_start then 0 else 1 end)"
+
+
+def _query_tokens(q: str) -> tuple[str, ...]:
+    """Every folded word or number of `q`, connectors included."""
+    return tuple(token.key for token in tokenize(q) if token.kind in ("word", "num"))
 
 
 def _query_words(q: str) -> tuple[str, ...]:
     """Folded content tokens of `q`; connectors such as "de" carry no product meaning."""
-    return tuple(
-        token.key
-        for token in tokenize(q)
-        if token.kind in ("word", "num") and token.key not in CONNECTORS
-    )
+    return tuple(word for word in _query_tokens(q) if word not in CONNECTORS)
 
 
 def search_params(
@@ -293,12 +360,17 @@ def search_params(
     params: dict[str, Any],
 ) -> tuple[tuple[str, ...], list[int]]:
     """Folded content tokens, regex patterns and matching category IDs for `q`."""
-    query = _query_words(q)
+    tokens = _query_tokens(q)
+    query = tuple(word for word in tokens if word not in CONNECTORS)
     if not query:
         return (), []
     for index, word in enumerate(query):
         params[f"q_word_{index}"] = _word_pattern(word)
     params["q_start"] = _start_pattern(query[0])
+    params["q_norm"] = " ".join(tokens)
+    params["q_phrase"] = (
+        "^" + "[^a-z0-9]+".join(f"({_word_regex_body(word)})" for word in tokens) + r"([^a-z0-9]|$)"
+    )
     normalized = " ".join(query)
     category_ids = sorted(
         category_id
@@ -310,9 +382,8 @@ def search_params(
     return query, category_ids
 
 
-def _search_sql(q: str, forms: Mapping[int, Iterable[str]], params: dict[str, Any]) -> str | None:
+def _search_sql(query: tuple[str, ...], category_ids: list[int]) -> str | None:
     """Every word in the product name, or a match of `q` against the category's forms."""
-    query, category_ids = search_params(q, forms, params)
     if not query:
         return None
     name_parts = [f"{_FOLDED_NAME} ~ :q_word_{index}" for index in range(len(query))]
@@ -344,18 +415,129 @@ def _taxonomy_conditions(
     return conditions
 
 
-def _filters(
-    section_id: int | None,
-    category_id: int | None,
-    q: str,
-    forms: Mapping[int, Iterable[str]],
+@dataclass(frozen=True, slots=True)
+class CatalogFilters:
+    """Product-level filters shared by the product and canonical listings."""
+
+    chains: frozenset[str]
+    brand: str | None
+    private_label: bool | None
+    dietary: tuple[str, ...]
+    on_promo: bool | None
+    min_price: Decimal | None
+    max_price: Decimal | None
+
+
+def _split_values(value: str | None) -> list[str]:
+    """Comma-separated values, trimmed and lower-cased, in order and without repeats."""
+    if not value:
+        return []
+    parts = (part.strip().lower() for part in value.split(","))
+    return list(dict.fromkeys(part for part in parts if part))
+
+
+def _chains_filter(chain: str | None, chains: str | None) -> frozenset[str]:
+    """The deduplicated lowercase chain codes of `chain` and `chains` together."""
+    return frozenset(_split_values(f"{chain or ''},{chains or ''}"))
+
+
+def _validate_price_bounds(min_price: Decimal | None, max_price: Decimal | None) -> None:
+    if min_price is not None and min_price < 0:
+        raise HTTPException(status_code=422, detail=MIN_PRICE_ERROR)
+    if max_price is not None and max_price < 0:
+        raise HTTPException(status_code=422, detail=MAX_PRICE_ERROR)
+    if min_price is not None and max_price is not None and min_price > max_price:
+        raise HTTPException(status_code=422, detail=PRICE_RANGE_ERROR)
+
+
+def _near_radius(near_lat: float | None, near_lon: float | None, mode: str | None) -> int | None:
+    """Radius in metres of the origin search, or None when no coordinates were given."""
+    if mode is not None and mode not in TRAVEL_MODES:
+        raise HTTPException(status_code=422, detail=MODE_ERROR)
+    if (near_lat is None) != (near_lon is None):
+        raise HTTPException(status_code=422, detail=NEAR_PAIR_ERROR)
+    if near_lat is None or near_lon is None:
+        return None
+    if not -90 <= near_lat <= 90:
+        raise HTTPException(status_code=422, detail=LATITUDE_ERROR)
+    if not -180 <= near_lon <= 180:
+        raise HTTPException(status_code=422, detail=LONGITUDE_ERROR)
+    settings = get_settings()
+    return settings.walk_radius_m if (mode or "walk") == "walk" else settings.car_radius_m
+
+
+def _chains_within_radius(
+    session: Session, near_lat: float, near_lon: float, radius: int
+) -> frozenset[str]:
+    """Codes of the chains with an active store within `radius` metres of the origin."""
+    rows = session.execute(
+        text(
+            "select distinct ch.code"
+            " from store s"
+            " join chain ch on ch.id = s.chain_id"
+            " where s.is_active"
+            "   and st_dwithin("
+            "       s.geom, st_setsrid(st_makepoint(:lon, :lat), 4326)::geography, :radius)"
+        ),
+        {"lon": near_lon, "lat": near_lat, "radius": radius},
+    ).scalars()
+    return frozenset(rows)
+
+
+def _brand_condition(brand: str, brands: Brands, params: dict[str, Any]) -> str:
+    """Whole-word match of the brand's folded name or any of its aliases."""
+    patterns = []
+    for index, term in enumerate(sorted(brands.terms(brand))):
+        key = f"brand_{index}"
+        params[key] = _phrase_pattern(term)
+        patterns.append(f"{_FOLDED_NAME} ~ :{key}")
+    return f"({' or '.join(patterns)})"
+
+
+def _private_label_condition(private_label: bool, brands: Brands, params: dict[str, Any]) -> str:
+    """Keep (or exclude) the products naming one of their own chain's private labels."""
+    clauses = []
+    for index, (chain_id, labels) in enumerate(sorted(brands.private_label_terms().items())):
+        chain_key = f"private_chain_{index}"
+        params[chain_key] = chain_id
+        patterns = []
+        for label_index, label in enumerate(labels):
+            key = f"private_label_{index}_{label_index}"
+            params[key] = _phrase_pattern(" ".join(label))
+            patterns.append(f"{_FOLDED_NAME} ~ :{key}")
+        clauses.append(f"(cp.chain_id = :{chain_key} and ({' or '.join(patterns)}))")
+    clause = f"({' or '.join(clauses)})" if clauses else "false"
+    return clause if private_label else f"not {clause}"
+
+
+def _product_conditions(
+    filters: CatalogFilters,
+    brands: Brands,
     params: dict[str, Any],
-) -> tuple[str, bool]:
-    conditions = _taxonomy_conditions(section_id, category_id, params)
-    search = _search_sql(q, forms, params)
-    if search is not None:
-        conditions.append(search)
-    return "".join(f" and {condition}" for condition in conditions), "q_categories" in params
+) -> list[str]:
+    """SQL conditions for the product-level catalog filters (aliases cp, ch, cz, pc, ec)."""
+    conditions: list[str] = []
+    if filters.chains:
+        params["chains"] = sorted(filters.chains)
+        conditions.append("ch.code = any(:chains)")
+    if filters.brand:
+        conditions.append(_brand_condition(filters.brand, brands, params))
+    if filters.private_label is not None:
+        conditions.append(_private_label_condition(filters.private_label, brands, params))
+    if filters.dietary:
+        params["dietary"] = list(filters.dietary)
+        conditions.append("cp.dietary_tags @> cast(:dietary as text[])")
+    if filters.on_promo is not None:
+        conditions.append(
+            f"({_PROMO_ACTIVE_SQL})" if filters.on_promo else f"not ({_PROMO_ACTIVE_SQL})"
+        )
+    if filters.min_price is not None:
+        params["min_price"] = filters.min_price
+        conditions.append("pc.price >= :min_price")
+    if filters.max_price is not None:
+        params["max_price"] = filters.max_price
+        conditions.append("pc.price <= :max_price")
+    return conditions
 
 
 def _category_id(session: Session, key: str, error: str) -> int:
@@ -408,6 +590,7 @@ def _to_product(row: Mapping[str, Any], brands: Brands) -> ProductOut:
         ),
         canonical=canonical,
         dietary_tags=list(row.get("dietary_tags") or ()),
+        on_promo=bool(row.get("on_promo")),
     )
 
 
@@ -494,26 +677,69 @@ def products(
     section: str | None = None,
     category: str | None = None,
     q: str = "",
+    chain: str | None = None,
+    chains: str | None = None,
+    brand: str | None = None,
+    private_label: bool | None = None,
+    dietary: str | None = None,
+    on_promo: bool | None = None,
+    min_price: Decimal | None = None,
+    max_price: Decimal | None = None,
+    near_lat: float | None = None,
+    near_lon: float | None = None,
+    mode: str | None = None,
     sort: str = "unit_price",
     page: int = 1,
     size: int = 24,
 ) -> ProductsResponse:
-    """A page of the chain products of a section or category, searched and sorted."""
+    """A page of the chain products of a section or category, filtered, searched and sorted."""
     if not 1 <= size <= MAX_PAGE_SIZE:
         raise HTTPException(status_code=422, detail=SIZE_ERROR)
     if page < 1:
         raise HTTPException(status_code=422, detail=PAGE_ERROR)
     if sort not in SORTS:
         raise HTTPException(status_code=422, detail=SORT_ERROR)
+    _validate_price_bounds(min_price, max_price)
+    radius = _near_radius(near_lat, near_lon, mode)
     section_id = _category_id(session, section, SECTION_ERROR) if section else None
     category_id = _category_id(session, category, CATEGORY_ERROR) if category else None
+
+    chains_set = _chains_filter(chain, chains)
+    if radius is not None:
+        nearby = _chains_within_radius(session, near_lat, near_lon, radius)
+        chains_set = chains_set & nearby if chains_set else nearby
+        if not chains_set:
+            return ProductsResponse(items=[], total=0, page=page, size=size)
+
+    brands = brands_for(session)
     params: dict[str, Any] = {}
-    where, has_categories = _filters(section_id, category_id, q, search_forms_for(session), params)
-    query = _query_words(q)
+    conditions = _taxonomy_conditions(section_id, category_id, params)
+    query, category_ids = search_params(q, search_forms_for(session), params)
+    search = _search_sql(query, category_ids)
+    if search is not None:
+        conditions.append(search)
+    conditions.extend(
+        _product_conditions(
+            CatalogFilters(
+                chains=chains_set,
+                brand=(brand or "").strip() or None,
+                private_label=private_label,
+                dietary=tuple(_split_values(dietary)),
+                on_promo=on_promo,
+                min_price=min_price,
+                max_price=max_price,
+            ),
+            brands,
+            params,
+        )
+    )
+    where = "".join(f" and {condition}" for condition in conditions)
     if query:
-        order_clause = f"{_relevance_sql('cp.name', has_categories)}, {_ORDERS[sort]}"
+        rank = _relevance_rank_sql(("cp.name", "canon.name"), bool(category_ids))
+        secondary = _ORDERS["popular"] if sort == "relevance" else _ORDERS[sort]
+        order_clause = f"{rank}, {secondary}"
     else:
-        order_clause = _ORDERS[sort]
+        order_clause = _ORDERS["popular"] if sort == "relevance" else _ORDERS[sort]
     page_params = {**params, "size": size, "offset": (page - 1) * size}
     rows = (
         session.execute(
@@ -537,7 +763,6 @@ def products(
         text(_CHAIN_ZONE + "select count(*)" + _PRODUCT_FROM + " where cp.is_active" + where),
         params,
     ).scalar_one()
-    brands = brands_for(session)
     return ProductsResponse(
         items=[_to_product(row, brands) for row in rows],
         total=total,
