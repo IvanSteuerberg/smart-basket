@@ -22,6 +22,7 @@ from smart_basket.ingestion.mercadona import iter_product_images
 from smart_basket.ingestion.quality import (
     derived_price_per_unit,
     extract_dietary_tags,
+    normalize_image_url,
     reparse_multipack_from_name,
     sanitize_unit_pricing,
 )
@@ -128,15 +129,19 @@ class CatalogQualityBackfillSummary:
     multipacks_fixed: int
     outliers_sanitized: int
     dietary_tagged: int
+    images_normalized: int = 0
 
     def message(self) -> str:
         """The one-line summary the CLI prints."""
-        return (
+        text_ = (
             f"catalog quality: {self.products} products, "
             f"{self.multipacks_fixed} multipacks fixed, "
             f"{self.outliers_sanitized} unit-price outliers sanitized, "
             f"{self.dietary_tagged} dietary tag sets filled"
         )
+        if self.images_normalized:
+            text_ += f", {self.images_normalized} image URLs normalized"
+        return text_
 
 
 def backfill_catalog_quality(
@@ -159,7 +164,7 @@ def _backfill_catalog_quality(session: Session) -> CatalogQualityBackfillSummary
     rows = session.execute(
         text(
             "select p.id as product_id, p.name, p.packaging, p.base_quantity, p.base_unit, "
-            "p.pack_count, p.dietary_tags, c.zone_id, c.price, c.price_per_unit "
+            "p.pack_count, p.dietary_tags, p.image_url, c.zone_id, c.price, c.price_per_unit "
             "from chain_product p "
             "left join price_current c on c.chain_product_id = p.id "
             "where p.is_active order by p.id, c.zone_id"
@@ -169,7 +174,7 @@ def _backfill_catalog_quality(session: Session) -> CatalogQualityBackfillSummary
     for row in rows:
         grouped.setdefault(row.product_id, []).append(row)
 
-    multipacks_fixed = outliers_sanitized = dietary_tagged = 0
+    multipacks_fixed = outliers_sanitized = dietary_tagged = images_normalized = 0
     for product_id, price_rows in grouped.items():
         first = price_rows[0]
         name = first.name
@@ -209,21 +214,27 @@ def _backfill_catalog_quality(session: Session) -> CatalogQualityBackfillSummary
 
         tags = extract_dietary_tags(name, first.packaging)
         tags_changed = tags != tuple(first.dietary_tags or ())
+        image = normalize_image_url(first.image_url)
+        image_changed = image != first.image_url
         if multipack_fixed:
             multipacks_fixed += 1
         if sanitized:
             outliers_sanitized += 1
         if tags_changed:
             dietary_tagged += 1
-        if not (multipack_fixed or sanitized or tags_changed):
+        if image_changed:
+            images_normalized += 1
+        if not (multipack_fixed or sanitized or tags_changed or image_changed):
             continue
         session.execute(
             text(
                 "update chain_product set base_quantity = :quantity, base_unit = :unit, "
-                "pack_count = :pack_count, dietary_tags = :tags where id = :product"
+                "pack_count = :pack_count, dietary_tags = :tags, image_url = :image "
+                "where id = :product"
             ),
             {
                 "product": product_id,
+                "image": image,
                 "quantity": quantity,
                 "unit": unit,
                 "pack_count": pack_count,
@@ -244,6 +255,7 @@ def _backfill_catalog_quality(session: Session) -> CatalogQualityBackfillSummary
         multipacks_fixed=multipacks_fixed,
         outliers_sanitized=outliers_sanitized,
         dietary_tagged=dietary_tagged,
+        images_normalized=images_normalized,
     )
 
 

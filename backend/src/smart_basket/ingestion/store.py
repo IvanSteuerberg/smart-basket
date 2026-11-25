@@ -31,7 +31,11 @@ from smart_basket.ingestion.base import (
     RunStatus,
     collect,
 )
-from smart_basket.ingestion.quality import extract_dietary_tags, sanitize_unit_pricing
+from smart_basket.ingestion.quality import (
+    extract_dietary_tags,
+    normalize_image_url,
+    sanitize_unit_pricing,
+)
 
 log = logging.getLogger("smart_basket.ingestion")
 
@@ -499,7 +503,7 @@ def _upsert_product(
             "name": product.name,
             "packaging": product.packaging,
             "url": product.url,
-            "image_url": product.image_url,
+            "image_url": normalize_image_url(product.image_url),
             "quantity": product.base_quantity,
             "unit": product.base_unit,
             "pack_count": product.pack_count,

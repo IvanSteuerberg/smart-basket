@@ -30,6 +30,7 @@ from smart_basket.ingestion.quality import (
     derived_price_per_unit,
     extract_dietary_tags,
     is_unit_price_outlier,
+    normalize_image_url,
     reparse_multipack_from_name,
     sanitize_unit_pricing,
 )
@@ -513,3 +514,28 @@ def test_store_fills_dietary_tags_and_sanitizes_unit_prices_on_crawls(db, tmp_pa
     leche = stored(db, "leche")
     assert leche.dietary_tags == ["sin_lactosa"]
     assert leche.price_per_unit == D("1")
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("   ", None),
+        ("  https://cdn.example.com/a.jpg  ", "https://cdn.example.com/a.jpg"),
+        ("http://cdn.example.com/a.jpg", "https://cdn.example.com/a.jpg"),
+        ("/img/a.jpg", None),
+        ("a.jpg", None),
+        ("javascript:void(0)", None),
+        ("data:image/gif;base64,R0lGODlhAQABAAAAACw=", None),
+        ("https://cdn.example.com/no-image.png", None),
+        ("https://cdn.example.com/Placeholder.png", None),
+        ("https://cdn.example.com/default_product.jpg", None),
+        ("https://cdn.example.com/sin-imagen.jpg", None),
+        ("https://cdn.example.com/not-found.jpg", None),
+        ("https://cdn.example.com/with space.jpg", None),
+        ("https://", None),
+    ],
+)
+def test_normalize_image_url(url, expected):
+    assert normalize_image_url(url) == expected

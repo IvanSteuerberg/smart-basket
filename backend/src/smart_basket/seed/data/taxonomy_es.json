@@ -747,7 +747,11 @@
         "pechugas de pollo",
         "filetes de pechuga",
         "pechuga",
-        "filetes de pollo"
+        "filetes de pollo",
+        "filete de pollo",
+        "filete de pechuga",
+        "filetes de pechuga de pollo",
+        "filete de pechuga de pollo"
        ]
       },
       {
@@ -2646,12 +2650,28 @@
      "vague": true,
      "children": [
       {
+       "key": "leche_sin_especificar",
+       "name": "Leche sin especificar",
+       "base_unit": "l",
+       "default_quantity": 1,
+       "forms": [
+        "leche"
+       ],
+       "vague": true,
+       "options": [
+        "leche",
+        "leche_cabra",
+        "bebida_avena",
+        "bebida_soja",
+        "bebida_almendras"
+       ]
+      },
+      {
        "key": "leche",
        "name": "Leche",
        "base_unit": "l",
        "default_quantity": 1,
        "forms": [
-        "leche",
         "brick de leche",
         "leche entera",
         "leche semidesnatada",
@@ -8922,12 +8942,31 @@
      "vague": true,
      "children": [
       {
+       "key": "detergente_sin_especificar",
+       "name": "Detergente sin especificar",
+       "base_unit": "l",
+       "forms": [
+        "detergente"
+       ],
+       "vague": true,
+       "options": [
+        "detergente_liquido",
+        "detergente_capsulas",
+        "capsulas_detergente_ropa",
+        "lavavajillas_mano",
+        "lavavajillas_maquina"
+       ]
+      },
+      {
        "key": "detergente_liquido",
        "name": "Detergente líquido",
        "base_unit": "l",
        "forms": [
-        "detergente",
         "detergente líquido",
+        "detergente lavadora",
+        "detergente para lavadora",
+        "detergente de ropa",
+        "detergente para la ropa",
         "jabón para la ropa"
        ]
       },

@@ -78,6 +78,10 @@ _ECO_FALSE_POSITIVE = re.compile(r"\bahorro eco\b")
 
 _NON_ALPHANUMERIC = re.compile(r"[^a-z0-9]+")
 
+_PLACEHOLDER_IMAGE = re.compile(
+    r"no[-_]?image|placeholder|default[-_]?product|sin[-_]?imagen|not[-_]?found", re.IGNORECASE
+)
+
 
 @dataclass(frozen=True, slots=True)
 class UnitPricing:
@@ -88,6 +92,28 @@ class UnitPricing:
     pack_count: int
     price_per_unit: Decimal | None
     repaired: bool
+
+
+def normalize_image_url(url: str | None) -> str | None:
+    """A usable absolute https photo URL, or None so the UI shows its clean fallback.
+
+    Blank values, relative paths, `data:` or `javascript:` URIs, URLs with spaces and the known
+    "no image" placeholders become None; `http://` is upgraded to `https://` to avoid mixed
+    content.
+    """
+    if not url:
+        return None
+    cleaned = url.strip()
+    lowered = cleaned.lower()
+    if lowered.startswith("http://"):
+        cleaned = "https://" + cleaned[len("http://") :]
+    elif not lowered.startswith("https://"):
+        return None
+    if len(cleaned) <= len("https://") or any(char.isspace() for char in cleaned):
+        return None
+    if _PLACEHOLDER_IMAGE.search(cleaned):
+        return None
+    return cleaned
 
 
 def extract_dietary_tags(name: str, packaging: str | None = None) -> tuple[str, ...]:
