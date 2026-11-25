@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   describeError,
   getCanonical,
@@ -132,7 +132,9 @@ export function ProductAlternativesModal({
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedError, setRelatedError] = useState<string | null>(null);
   // Set as soon as the related tab fetches once: an empty answer must not fetch forever.
-  const [relatedLoaded, setRelatedLoaded] = useState(false);
+  // A ref, not state: setting it inside the effect would re-run (and abort) the very fetch
+  // it guards, leaving the tab stuck on «Buscando opciones parecidas…».
+  const relatedLoadedRef = useRef(false);
 
   useEffect(() => {
     if (!open) return;
@@ -142,7 +144,7 @@ export function ProductAlternativesModal({
     setDetailError(null);
     setRelated([]);
     setRelatedError(null);
-    setRelatedLoaded(false);
+    relatedLoadedRef.current = false;
   }, [open, canonicalId]);
 
   useEffect(() => {
@@ -165,11 +167,11 @@ export function ProductAlternativesModal({
 
   // The related tab loads on first use, not on open: the shopper often stays on the first one.
   useEffect(() => {
-    if (!open || tab !== "related" || detail === null || relatedLoaded) {
+    if (!open || tab !== "related" || detail === null || relatedLoadedRef.current) {
       return;
     }
     const controller = new AbortController();
-    setRelatedLoaded(true);
+    relatedLoadedRef.current = true;
     setRelatedLoading(true);
     setRelatedError(null);
     getProducts({ category: detail.category_key, size: 24 }, controller.signal)
@@ -189,7 +191,7 @@ export function ProductAlternativesModal({
         if (!controller.signal.aborted) setRelatedLoading(false);
       });
     return () => controller.abort();
-  }, [open, tab, detail, relatedLoaded, currentProductId]);
+  }, [open, tab, detail, currentProductId]);
 
   function handleSelect(productId: number) {
     onSelect(lineId, productId);
