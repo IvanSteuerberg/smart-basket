@@ -549,7 +549,11 @@ def _db_run(state: AgentState, observation: Observation, key: str, executors):
 
 @pytest.mark.db
 def test_recommend_with_basket_exposes_alternatives(session: Session) -> None:
-    query = _db_query(max_alternatives=2)
+    # Alternatives need a different *set of chains*. In the synthetic world Carrefour only sells
+    # rice, so with rice added to the milk the winner uses both chains and Mercadona alone (rice
+    # left out) is the other chain set.
+    rice = Item(text="arroz redondo", category_key="arroz", quantity=Decimal(1), unit=Unit.KG)
+    query = _db_query((LEGACY_ITEMS[0], rice), max_alternatives=2)
 
     response, basket = recommend_with_basket(session, query, FakeRouting(), TODAY, get_settings())
 

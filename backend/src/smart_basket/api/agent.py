@@ -23,7 +23,12 @@ from sqlalchemy.orm import Session
 
 from smart_basket.agent.core import AgentHarness, HarnessConfig, Policy, StepRecord
 from smart_basket.agent.detector import state_from_recommendation
-from smart_basket.agent.executors import build_recommender_executors, last_recommendation
+from smart_basket.agent.executors import (
+    answer_applier,
+    build_recommender_executors,
+    category_candidate_options,
+    last_recommendation,
+)
 from smart_basket.agent.observations import jsonable
 from smart_basket.agent.policies import policy_from_settings
 from smart_basket.agent.state import AgentState, LineHabit, RunStatus
@@ -46,6 +51,7 @@ from smart_basket.api.recommendations import (
 from smart_basket.config import Settings, get_settings
 from smart_basket.db import get_session
 from smart_basket.optimizer import PriorityMode, Unit
+from smart_basket.recommender.candidates import candidate_stores
 from smart_basket.recommender.catalog import Item, UnknownProduct
 from smart_basket.recommender.service import (
     BasketCalculationError,
@@ -380,14 +386,22 @@ def _step_response(row: AgentStepRow) -> AgentStepResponse:
     )
 
 
-def _run_response(run: AgentRunRow) -> AgentRunResponse:
+def _run_response(
+    run: AgentRunRow, *, live_recommendation: RecommendationResponse | None = None
+) -> AgentRunResponse:
+    """The HTTP view of a run.
+
+    `live_recommendation` carries the route of the request being served. The persisted copy has
+    none (NFR-06), so a later read returns an empty `route`.
+    """
     state = run.state_json or {}
     stored = state.get("_recommendation")
-    recommendation = (
-        RecommendationResponse.model_validate({**stored, "route": []})
-        if isinstance(stored, dict)
-        else None
-    )
+    if live_recommendation is not None:
+        recommendation: RecommendationResponse | None = live_recommendation
+    elif isinstance(stored, dict):
+        recommendation = RecommendationResponse.model_validate({**stored, "route": []})
+    else:
+        recommendation = None
     return AgentRunResponse(
         run_id=run.id,
         recommendation_id=run.recommendation_id,
@@ -459,7 +473,18 @@ def create_agent_run(
         # The preprocessor needs the shopper to narrow a vague line first: surface it so the
         # agent can ask, instead of failing the whole run with a 422.
         response, basket = None, None
-        vague_lines = ({"line_id": exc.line_id, "category_key": exc.category_key},)
+        zones = {
+            store.zone_id for store in candidate_stores(session, query.origin, query.mode, settings)
+        }
+        vague_lines = (
+            {
+                "line_id": exc.line_id,
+                "category_key": exc.category_key,
+                "candidate_options": category_candidate_options(
+                    session, exc.category_key, sorted(zones)
+                ),
+            },
+        )
     except UnknownProduct:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Producto desconocido."
@@ -528,7 +553,7 @@ def create_agent_run(
     run = get_run(session, run_id)
     if run is None:  # pragma: no cover - the row was just inserted
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return _run_response(run)
+    return _run_response(run, live_recommendation=recommendation)
 
 
 @router.post("/agent/runs/{run_id}/answer", response_model=AgentRunResponse)
@@ -548,6 +573,13 @@ def answer_agent_run(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="The agent run is not waiting for an answer.",
+        )
+    question = (run.state_json or {}).get("pending_question") or {}
+    options = question.get("options") or []
+    if body.option_index is not None and not 0 <= body.option_index < len(options):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="La opción elegida no existe.",
         )
     # Claim the run atomically: of two concurrent answers only one may resume it, or both
     # would append steps with the same `(run_id, step_number)`.
@@ -585,7 +617,9 @@ def answer_agent_run(
             answer["message"] = message
 
     initial = _plan_key(state)
-    result = AgentHarness(_harness_config(settings)).resume(state, answer, policy, executors)
+    result = AgentHarness(_harness_config(settings)).resume(
+        state, answer, policy, executors, apply_answer=answer_applier(executors)
+    )
     recomputed = last_recommendation(executors)
     if recomputed is not None:
         recommendation_data: dict[str, Any] | None = _recommendation_payload(recomputed)
@@ -611,7 +645,7 @@ def answer_agent_run(
     updated = get_run(session, run_id)
     if updated is None:  # pragma: no cover - the row cannot vanish inside the request
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return _run_response(updated)
+    return _run_response(updated, live_recommendation=recomputed)
 
 
 @router.get("/agent/runs/{run_id}", response_model=AgentRunResponse)

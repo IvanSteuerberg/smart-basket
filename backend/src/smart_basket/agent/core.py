@@ -516,9 +516,14 @@ def _probabilities(data: Mapping[str, Any]) -> dict[str, float] | None:
 
 def _question_for(action: CandidateAction, observation: Observation) -> PendingQuestion:
     index = action.args.get("line_index")
+    message = observation.details.get("message") or observation.details.get("text")
+    if observation.kind is ObservationKind.SHOPPER_REQUEST and message:
+        prompt = f"No estoy seguro de cómo aplicar «{message}». ¿Puedes concretarlo?"
+    else:
+        prompt = observation.summary
     return PendingQuestion(
         line_index=index if isinstance(index, int) else None,
-        prompt=f"El agente necesita tu ayuda: {observation.summary}",
+        prompt=prompt,
         options=tuple(dict(item) for item in action.args.get("options") or ()),
     )
 

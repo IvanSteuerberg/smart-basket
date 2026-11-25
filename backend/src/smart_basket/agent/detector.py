@@ -228,6 +228,10 @@ def detect_observations(
 ) -> tuple[Observation, ...]:
     """Every phenomenon present in `state`, in a fixed order, one observation per finding."""
     observations: list[Observation] = []
+    # What the shopper just asked for always goes first: pausing on a near tie must never
+    # swallow an explicit request.
+    if state.shopper_message and state.shopper_message.strip():
+        observations.append(_shopper_request(state))
     for line in state.lines:
         if line.status == "vague":
             observations.append(_vague(line))
@@ -236,8 +240,6 @@ def detect_observations(
     near_tie = _near_tie_observation(state, near_tie_threshold)
     if near_tie is not None:
         observations.append(near_tie)
-    if state.shopper_message and state.shopper_message.strip():
-        observations.append(_shopper_request(state))
     return tuple(observations)
 
 
@@ -364,6 +366,22 @@ def _near_ties(state: AgentState, threshold: Decimal) -> tuple[AlternativePlanSu
         alternative
         for alternative in state.plan.alternatives
         if alternative.objective_delta <= threshold
+        and not same_chains(state.plan.chain_codes, state.plan.store_names, alternative)
+    )
+
+
+def same_chains(
+    current_codes: Sequence[str], current_names: Sequence[str], alternative: AlternativePlanSummary
+) -> bool:
+    """Whether an alternative visits exactly the same chains as the current plan.
+
+    Other branches of the same chains are not a real choice, so they never form a tie. Chain
+    codes are used when both sides have them; otherwise the normalized store names.
+    """
+    if current_codes and alternative.chain_codes:
+        return frozenset(current_codes) == frozenset(alternative.chain_codes)
+    return frozenset(_fold(name).strip() for name in current_names) == frozenset(
+        _fold(name).strip() for name in alternative.store_names
     )
 
 
@@ -434,39 +452,89 @@ def plan_snapshot_from_result(
             travel_minutes=_decimal(response.minutes),
             comparable_cost=total,
         )
-    alternatives = tuple(
-        AlternativePlanSummary(
-            store_names=store_names(session, alternative.plan.visiting_order),
-            total_cost=alternative.plan.total_cost,
-            travel_minutes=alternative.plan.minutes,
-            objective_delta=alternative.objective_delta,
+    current_names, current_codes = _stores_and_chains(session, basket_result.visiting_order)
+    current_names = plan_stores or current_names
+    alternatives: list[AlternativePlanSummary] = []
+    for alternative in basket_result.alternatives:
+        names, codes = _stores_and_chains(session, alternative.plan.visiting_order)
+        cost_delta = alternative.plan.total_cost - basket_result.total_cost
+        minutes_delta = alternative.plan.minutes - basket_result.minutes
+        alternatives.append(
+            AlternativePlanSummary(
+                store_names=names,
+                total_cost=alternative.plan.total_cost,
+                travel_minutes=alternative.plan.minutes,
+                objective_delta=alternative.objective_delta,
+                chain_codes=codes,
+                cost_delta=cost_delta,
+                minutes_delta=minutes_delta,
+                reason=alternative_reason(
+                    stores=len(names),
+                    current_stores=len(current_names),
+                    cost_delta=cost_delta,
+                    minutes_delta=minutes_delta,
+                ),
+            )
         )
-        for alternative in basket_result.alternatives
-    )
     return PlanSnapshot(
-        store_names=plan_stores
-        or tuple(
-            name for name in store_names(session, basket_result.visiting_order) if name is not None
-        ),
+        store_names=current_names,
         total_cost=basket_result.total_cost,
         travel_minutes=basket_result.minutes,
         comparable_cost=basket_result.comparable_cost,
-        alternatives=alternatives,
+        alternatives=tuple(alternatives),
+        chain_codes=current_codes,
     )
+
+
+def alternative_reason(
+    *, stores: int, current_stores: int, cost_delta: Decimal, minutes_delta: Decimal
+) -> str:
+    """Short Spanish text saying why an alternative plan is worth a look."""
+    cost = f"{_signed(cost_delta, 2)} €"
+    if stores == 1 and current_stores >= 2:
+        return f"Solo 1 tienda ({cost})"
+    if cost_delta < 0:
+        return f"Ahorra {_signed(-cost_delta, 2, plus=False)} € ({_signed(minutes_delta, 0)} min)"
+    if minutes_delta < 0:
+        return f"{_signed(-minutes_delta, 0, plus=False)} min más rápido ({cost})"
+    return f"Opción similar ({cost})"
+
+
+def _signed(value: Decimal, places: int, *, plus: bool = True) -> str:
+    text_value = f"{abs(value):.{places}f}".replace(".", ",")
+    if places == 0 and "," in text_value:
+        text_value = text_value.rstrip("0").rstrip(",")
+    if value < 0:
+        return f"-{text_value}"
+    return f"+{text_value}" if plus else text_value
+
+
+def _stores_and_chains(
+    session: Session, store_ids: Sequence[int]
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Store names and chain codes at `store_ids`, in the given order."""
+    if not store_ids:
+        return (), ()
+    rows = session.execute(
+        text(
+            "select s.id, s.name, c.code from store s "
+            "left join chain c on c.id = s.chain_id where s.id in :ids"
+        ).bindparams(bindparam("ids", expanding=True)),
+        {"ids": list(store_ids)},
+    ).mappings()
+    by_id = {row["id"]: row for row in rows}
+    names = tuple(by_id[sid]["name"] if sid in by_id else f"tienda {sid}" for sid in store_ids)
+    codes = tuple(
+        sorted(
+            {str(by_id[sid]["code"]) for sid in store_ids if sid in by_id and by_id[sid]["code"]}
+        )
+    )
+    return names, codes
 
 
 def store_names(session: Session, store_ids: Sequence[int]) -> tuple[str, ...]:
     """Names of the stores at `store_ids`, in the given order, for plan snapshots."""
-    if not store_ids:
-        return ()
-    rows = session.execute(
-        text("select id, name from store where id in :ids").bindparams(
-            bindparam("ids", expanding=True)
-        ),
-        {"ids": list(store_ids)},
-    ).mappings()
-    by_id = {row["id"]: row["name"] for row in rows}
-    return tuple(by_id.get(store_id, f"tienda {store_id}") for store_id in store_ids)
+    return _stores_and_chains(session, store_ids)[0]
 
 
 def _habit_for(

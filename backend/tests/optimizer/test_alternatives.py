@@ -112,8 +112,14 @@ def test_matches_independent_brute_force_top_k(seed):
     assert base.alternatives == ()
     assert res.to_dict() | {"alternatives": []} == base.to_dict()
 
-    oracle = bruteforce.solve_top_k_subsets(req, 3)
-    assert len(res.alternatives) == max(0, len(oracle) - 1)
+    # Alternatives are the best subset of each *other* chain set, so the oracle is the full
+    # ranking and every alternative must be one of its entries with the same figures.
+    oracle = bruteforce.solve_top_k_subsets(req, 10**6)
+    chain_of = {s.store_id: s.chain_id for s in req.stores}
+
+    def chain_set(ids):
+        return frozenset(chain_of[sid] for sid in ids)
+
     uncovered = MissingReason.NOT_AVAILABLE
     if oracle:
         assert tuple(sorted(res.visiting_order)) == oracle[0][0]
@@ -122,15 +128,71 @@ def test_matches_independent_brute_force_top_k(seed):
         assert sum(m.reason is not uncovered for m in res.missing) == oracle[0][2]
     else:
         assert res.stores == ()
-    for rank, alt in enumerate(res.alternatives, start=1):
-        entry = oracle[rank]
-        # Same subset, same route length, same lines left out, same rank in the same order.
-        assert tuple(sorted(alt.plan.visiting_order)) == entry[0]
+    winner_chains = chain_set(res.visiting_order)
+    by_subset = {entry[0]: entry for entry in oracle}
+    seen = {winner_chains}
+    for alt in res.alternatives:
+        entry = by_subset[tuple(sorted(alt.plan.visiting_order))]
         assert alt.plan.alternatives == ()
         assert len(alt.plan.stores) == entry[3]
         assert Fraction(alt.plan.minutes) == entry[4]
         assert sum(m.reason is not uncovered for m in alt.plan.missing) == entry[2]
         assert Fraction(alt.objective_delta) == entry[1] - oracle[0][1]
         assert alt.objective_delta >= 0
+        # Never the winner's chains, never twice the same chains.
+        chains = chain_set(alt.plan.visiting_order)
+        assert chains not in seen
+        seen.add(chains)
+    others = {chain_set(entry[0]) for entry in oracle[1:]} - {winner_chains}
+    assert len(res.alternatives) == min(3, len(others))
     deltas = [Fraction(a.objective_delta) for a in res.alternatives]
     assert deltas == sorted(deltas)
+
+
+def chain_store(store_id, chain_id, price, minutes_x):
+    return Store(store_id, chain_id, (product(10 * store_id + 1, 1, price, "1", unit="l"),))
+
+
+def test_branches_of_the_same_chain_are_never_alternatives():
+    # Stores 1 and 2 belong to chain 7, store 3 to chain 8: only chain 8 is a real alternative.
+    stores = [
+        chain_store(1, 7, "1.00", 1),
+        chain_store(2, 7, "1.01", 2),
+        chain_store(3, 8, "1.05", 3),
+    ]
+    req = request(MILK, stores, {1: (1, 0), 2: (2, 0), 3: (3, 0)})
+    res = optimize(req, max_alternatives=3)
+    assert res.visiting_order == (1,)
+    assert [a.plan.visiting_order for a in res.alternatives] == [(3,)]
+
+
+def test_pareto_single_store_and_cheaper_plan_are_kept_within_the_quota():
+    lines = [Line("milk", 1, D(1), Unit.L), Line("oil", 2, D(1), Unit.L)]
+
+    # Chains 1+2 win: milk is cheap in 1, oil in 2, each one minute away. Chain 3 sells both
+    # at a higher price (a single-store plan); chains 4 and 5 are near copies that would fill
+    # the quota if the Pareto plans were not reserved a slot.
+    def shop(sid, chain, milk, oil):
+        items = tuple(
+            product(100 * sid + i, i, price, "1", unit="l")
+            for i, price in ((1, milk), (2, oil))
+            if price is not None
+        )
+        return Store(sid, chain, items)
+
+    stores = [
+        shop(1, 1, "1.00", None),
+        shop(2, 2, None, "1.00"),
+        shop(3, 3, "1.40", "1.40"),
+        shop(4, 4, "1.00", "1.05"),
+        shop(5, 5, "1.00", "1.06"),
+    ]
+    points = {1: (1, 0), 2: (0, 1), 3: (1, 1), 4: (6, 0), 5: (7, 0)}
+    req = BasketRequest(tuple(lines), tuple(stores), grid_matrix((0, 0), points), shopping_date=DAY)
+    res = optimize(req, max_alternatives=2)
+    chosen = {frozenset(s.store_id for s in a.plan.stores) for a in res.alternatives}
+    assert len(res.alternatives) <= 2
+    assert all(len(a.plan.stores) >= 1 for a in res.alternatives)
+    assert optimize(req).visiting_order == res.visiting_order
+    if len(res.stores) >= 2:
+        assert any(len(ids) == 1 for ids in chosen)
