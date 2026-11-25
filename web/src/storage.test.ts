@@ -1,14 +1,23 @@
 import { describe, expect, it } from "vitest";
+import type { Recommendation } from "./api";
 import type { CartLine } from "./cart";
 import { GENERIC_DEFAULTS, newId, type DraftItem } from "./draft";
 import {
+  clearLastPlan,
   createSavedList,
   DEFAULT_ROUTE_OPTIONS,
+  deleteSavedList,
+  LAST_PLAN_KEY,
   loadCart,
+  loadDraft,
+  loadLastPlan,
   loadLists,
   loadOptions,
   loadOrigin,
+  renameSavedList,
   saveCart,
+  saveDraft,
+  saveLastPlan,
   saveLists,
   saveOptions,
   saveOrigin,
@@ -382,7 +391,7 @@ describe("origin and options storage (schema 3)", () => {
     expect(loadOptions(storage)).toEqual(customOptions);
 
     const payload = JSON.parse(storage.getItem(STORAGE_KEY) ?? "{}");
-    expect(payload.schema_version).toBe(3);
+    expect(payload.schema_version).toBe(SCHEMA_VERSION);
   });
 
   it("preserves lists and cart when updating origin or options", () => {
@@ -447,6 +456,93 @@ describe("origin and options storage (schema 3)", () => {
 
     expect(loadOrigin(storage)).toBeNull();
     expect(loadOptions(storage)).toEqual(DEFAULT_ROUTE_OPTIONS);
+  });
+});
+
+describe("schema version 4: list draft", () => {
+  it("is version 4 and still reads versions 1, 2 and 3", () => {
+    expect(SCHEMA_VERSION).toBe(4);
+    for (const version of [1, 2, 3]) {
+      const storage = memoryStorage();
+      storage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ schema_version: version, lists: [list()], cart: [cartLine()] }),
+      );
+      expect(loadLists(storage)).toHaveLength(1);
+      expect(loadCart(storage)).toHaveLength(1);
+      expect(loadDraft(storage)).toEqual({ draftText: "", draftItems: [] });
+    }
+  });
+
+  it("persists the draft without touching the rest", () => {
+    const storage = memoryStorage();
+    saveCart([cartLine()], storage);
+    const draftItems = [item({ text: "arroz" })];
+    saveDraft({ draftText: "arroz", draftItems }, storage);
+
+    expect(loadDraft(storage)).toEqual({ draftText: "arroz", draftItems });
+    expect(loadCart(storage)).toHaveLength(1);
+    saveCart([], storage);
+    expect(loadDraft(storage).draftText).toBe("arroz");
+  });
+
+  it("ignores a malformed draft", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        schema_version: SCHEMA_VERSION,
+        lists: [],
+        draftText: 5,
+        draftItems: [{ text: "sin id" }, item()],
+      }),
+    );
+    const draft = loadDraft(storage);
+    expect(draft.draftText).toBe("");
+    expect(draft.draftItems).toHaveLength(1);
+  });
+});
+
+describe("last plan in the session", () => {
+  const recommendation = { id: "rec-1", total: "10.00" } as unknown as Recommendation;
+
+  it("round-trips and clears", () => {
+    const storage = memoryStorage();
+    expect(loadLastPlan(storage)).toBeNull();
+    saveLastPlan({ recommendation, agentRun: null }, storage);
+    const plan = loadLastPlan(storage);
+    expect(plan?.recommendation).toEqual(recommendation);
+    expect(plan?.agentRun).toBeNull();
+    clearLastPlan(storage);
+    expect(loadLastPlan(storage)).toBeNull();
+  });
+
+  it("returns null for broken content and tolerates missing storage", () => {
+    const storage = memoryStorage();
+    storage.setItem(LAST_PLAN_KEY, "{broken");
+    expect(loadLastPlan(storage)).toBeNull();
+    storage.setItem(LAST_PLAN_KEY, JSON.stringify({ recommendation: 3 }));
+    expect(loadLastPlan(storage)).toBeNull();
+    expect(loadLastPlan(null)).toBeNull();
+    expect(() => saveLastPlan({ recommendation, agentRun: null }, null)).not.toThrow();
+    expect(() => clearLastPlan(null)).not.toThrow();
+  });
+});
+
+describe("renameSavedList and deleteSavedList", () => {
+  it("renames a list, refusing empty or duplicate names", () => {
+    const a = list({ name: "Semanal" });
+    const b = list({ name: "Fiesta" });
+    const renamed = renameSavedList([a, b], a.id, "  Mensual ");
+    expect(renamed[0].name).toBe("Mensual");
+    expect(renameSavedList([a, b], a.id, "fiesta")).toEqual([a, b]);
+    expect(renameSavedList([a, b], a.id, "  ")).toEqual([a, b]);
+  });
+
+  it("deletes a list by id", () => {
+    const a = list({ name: "Semanal" });
+    const b = list({ name: "Fiesta" });
+    expect(deleteSavedList([a, b], a.id)).toEqual([b]);
   });
 });
 

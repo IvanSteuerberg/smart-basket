@@ -2,14 +2,19 @@
 
 import type { Decimal } from "./api";
 
-export function parseDecimal(value: Decimal): number {
+/** Nullable values come straight from the API; none of the helpers below ever throws on them. */
+type MaybeDecimal = Decimal | null | undefined;
+
+export function parseDecimal(value: MaybeDecimal): number {
+  if (value === null || value === undefined) return Number.NaN;
   if (typeof value === "number") return value;
   const normalized = value.trim().replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 }
 
-function formatNumber(value: Decimal, digits: number): string {
+function formatNumber(value: MaybeDecimal, digits: number): string {
+  if (value === null || value === undefined) return "";
   const parsed = parseDecimal(value);
   if (!Number.isFinite(parsed)) return String(value);
   return new Intl.NumberFormat("es-ES", {
@@ -19,27 +24,34 @@ function formatNumber(value: Decimal, digits: number): string {
 }
 
 /** Amount with two decimals and the euro sign, for prices and totals. */
-export function formatEuro(value: Decimal): string {
-  return `${formatNumber(value, 2)} €`;
+export function formatEuro(value: MaybeDecimal): string {
+  const amount = formatNumber(value, 2);
+  return amount === "" ? "" : `${amount} €`;
 }
 
 /** Price per unit as the catalog shows it: «1,15 €/kg». */
-export function formatUnitPrice(unitPrice: Decimal, baseUnit: string): string {
-  return `${formatEuro(unitPrice)}/${baseUnit}`;
+export function formatUnitPrice(
+  unitPrice: MaybeDecimal,
+  baseUnit: string | null | undefined,
+): string {
+  if (!baseUnit) return "";
+  const euro = formatEuro(unitPrice);
+  return euro === "" ? "" : `${euro}/${baseUnit}`;
 }
 
 /** Amount without unit, for sentences that already carry one. */
-export function formatAmount(value: Decimal): string {
+export function formatAmount(value: MaybeDecimal): string {
   return formatNumber(value, 2);
 }
 
 /** Quantities such as packs or bought amounts, without trailing zeros. */
-export function formatQuantity(value: Decimal): string {
+export function formatQuantity(value: MaybeDecimal): string {
   return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 3 }).format(parseDecimal(value) || 0);
 }
 
 /** A travel time in whole minutes; the raw value if it is not a number. */
-export function formatMinutes(value: Decimal): string {
+export function formatMinutes(value: MaybeDecimal): string {
+  if (value === null || value === undefined) return "";
   const parsed = parseDecimal(value);
   if (!Number.isFinite(parsed)) return String(value);
   return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(Math.round(parsed));

@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   answerAgentRun,
   ApiError,
+  describeError,
+  getCanonicals,
+  getChains,
+  getProducts,
+  sendAgentMessage,
   geocode,
   getAgentRun,
   interpretText,
@@ -295,5 +300,80 @@ describe("agent API client", () => {
       message: "Ejecución no encontrada",
       status: 404,
     });
+  });
+});
+
+describe("describeError", () => {
+  it("translates network failures", () => {
+    expect(describeError(new TypeError("Failed to fetch"))).toBe(
+      "No hemos podido conectar con el servidor. Inténtalo en unos segundos.",
+    );
+  });
+
+  it("translates bare HTTP statuses without exposing them", () => {
+    for (const status of [400, 401, 403, 404, 429, 500, 502, 503, 504]) {
+      const message = describeError(new ApiError(`HTTP ${status}`, status));
+      expect(message).not.toContain("HTTP");
+      expect(message.length).toBeGreaterThan(10);
+    }
+    expect(describeError(new ApiError("HTTP 502", 502))).toBe(
+      "El servicio no responde en este momento. Inténtalo de nuevo.",
+    );
+  });
+
+  it("prefers the backend detail over a generic HTTP status message", () => {
+    expect(describeError(new ApiError("HTTP 422", 422, "Lista vacía"))).toBe("Lista vacía");
+  });
+});
+
+describe("catalog filters and new endpoints", () => {
+  it("serializes the filters in getProducts and getCanonicals", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse({ items: [], total: 0, page: 1, size: 24 })),
+    );
+    const filters = {
+      chains: ["mercadona", "lidl"],
+      brand: "Hacendado",
+      private_label: true,
+      dietary: ["sin_gluten"],
+      on_promo: true,
+      min_price: 1,
+      max_price: 5.5,
+      near_lat: 42.6,
+      near_lon: -5.57,
+      mode: "walk" as const,
+      sort: "popular" as const,
+    };
+    await getProducts(filters);
+    await getCanonicals(filters);
+    for (const [url] of fetchMock.mock.calls as [string][]) {
+      const params = new URL(url, "http://x").searchParams;
+      expect(params.get("chains")).toBe("mercadona,lidl");
+      expect(params.get("brand")).toBe("Hacendado");
+      expect(params.get("private_label")).toBe("true");
+      expect(params.get("dietary")).toBe("sin_gluten");
+      expect(params.get("on_promo")).toBe("true");
+      expect(params.get("min_price")).toBe("1");
+      expect(params.get("max_price")).toBe("5.5");
+      expect(params.get("near_lat")).toBe("42.6");
+      expect(params.get("near_lon")).toBe("-5.57");
+      expect(params.get("mode")).toBe("walk");
+      expect(params.get("sort")).toBe("popular");
+    }
+  });
+
+  it("calls GET /api/chains", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ chains: [] }));
+    await getChains();
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe("/api/chains");
+  });
+
+  it("posts a shopper message to a run", async () => {
+    fetchMock.mockResolvedValue(jsonResponse(sampleAgentRunResponse()));
+    await sendAgentMessage("run/1", "en coche");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/agent/runs/run%2F1/message");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe(JSON.stringify({ message: "en coche" }));
   });
 });
