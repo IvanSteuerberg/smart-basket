@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import {
   answerAgentRun,
   describeError,
+  getChains,
   getHealth,
   getSections,
   interpretText,
@@ -9,6 +10,7 @@ import {
   requestRecommendation,
   startAgentRun,
   type Accept,
+  type ActiveChain,
   type AgentAnswerRequest,
   type AgentRunRequest,
   type AgentRunResponse,
@@ -49,7 +51,16 @@ import {
   type Profile,
   type ProfileStore,
 } from "./profile";
-import { CATALOG_HASH, LIST_HASH, navigate, useRoute } from "./router";
+import {
+  BASKET_HASH,
+  catalogHash,
+  LIST_HASH,
+  navigate,
+  parseRoute,
+  replaceHash,
+  useRoute,
+  type Route,
+} from "./router";
 import {
   createSavedList,
   loadCart,
@@ -70,13 +81,33 @@ import { CanonicalPage } from "./components/CanonicalPage";
 import { CartDrawer } from "./components/CartDrawer";
 import { CatalogPage } from "./components/CatalogPage";
 import { CHAINS } from "./components/ChainLogo";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { HomePage } from "./components/HomePage";
 import { ListStep } from "./components/ListStep";
 import { type RouteOptions } from "./components/OriginStep";
+import { PreferencesDialog } from "./components/PreferencesDialog";
 import { ProductPage } from "./components/ProductPage";
 import { SiteHeader } from "./components/SiteHeader";
 
-type Step = "list" | "basket";
+type Overlay = "preferences" | "cart";
+
+/** Identity of a screen for scroll bookkeeping: catalog URLs keep their filters. */
+function routeKey(route: Route): string {
+  switch (route.name) {
+    case "catalog":
+      return catalogHash(route.section, route.view, route.filters);
+    case "canonical":
+    case "product":
+      return `${route.name}/${route.id}`;
+    default:
+      return route.name;
+  }
+}
+
+/** Navigates only when the hash differs, so a no-op never adds a history entry. */
+function goTo(hash: string): void {
+  if (window.location.hash !== hash) navigate(hash);
+}
 
 /** Derives per-term habit counts from the local browser profile for the agent. */
 function deriveHabitsFromProfile(profile: Profile): Record<string, HabitInput> {
@@ -199,7 +230,7 @@ function HealthFooter() {
   }, []);
 
   return (
-    <footer className="py-4 text-center text-xs text-stone-500" aria-live="polite">
+    <footer className="py-4 text-center text-[0.8125rem] text-[var(--ink-secondary)]" aria-live="polite">
       {failed
         ? "No se puede contactar con el servidor"
         : health
@@ -213,7 +244,12 @@ export default function App() {
   const route = useRoute();
 
   const [cart, dispatch] = useReducer(cartReducer, null, () => loadCart());
-  const [cartOpen, setCartOpen] = useState(false);
+  // At most one overlay (cart drawer or preferences dialog) is open; it owns one history entry
+  // so the browser Back button closes it instead of leaving the app.
+  const [overlay, setOverlay] = useState<Overlay | null>(null);
+  const overlayPushedRef = useRef(false);
+  const cartOpen = overlay === "cart";
+  const [dietaryRules, setDietaryRules] = useState<string[]>([]);
   // Shopper preferences (decision 0019): the chains to shop in (null = all) and the global
   // "Me da igual la marca" switch. The profile keeps them in the browser between sessions.
   const [chainFilter, setChainFilter] = useState<string[] | null>(null);
@@ -226,8 +262,9 @@ export default function App() {
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([]);
   const [catalogSectionsError, setCatalogSectionsError] = useState<string | null>(null);
-
-  const [step, setStep] = useState<Step>("list");
+  const [sectionsLoading, setSectionsLoading] = useState(true);
+  const [activeChains, setActiveChains] = useState<ActiveChain[]>([]);
+  const [chainsLoading, setChainsLoading] = useState(true);
 
   const [text, setText] = useState("");
   const [items, setItems] = useState<DraftItem[]>([]);
@@ -268,9 +305,68 @@ export default function App() {
       })
       .catch((error: unknown) => {
         if (!controller.signal.aborted) setCatalogSectionsError(describeError(error));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setSectionsLoading(false);
+      });
+    getChains(controller.signal)
+      .then((response) => {
+        if (!controller.signal.aborted) setActiveChains(response.chains);
+      })
+      .catch(() => {
+        // The home page falls back to the static chain list.
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setChainsLoading(false);
       });
     return () => controller.abort();
   }, []);
+
+  // Back button closes the open overlay: popstate without our overlay state means we left it.
+  useEffect(() => {
+    function onPopState() {
+      if (window.history.state?.overlay) return;
+      overlayPushedRef.current = false;
+      setOverlay(null);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Scroll: a new screen starts at the top; coming back to a catalog URL restores its position.
+  const scrollPositionsRef = useRef(new Map<string, number>());
+  const lastCatalogHashRef = useRef<string | null>(null);
+  const committedKeyRef = useRef<string | null>(null);
+  const previousRouteNameRef = useRef<string | null>(null);
+  const currentKey = routeKey(route);
+
+  useEffect(() => {
+    function onScroll() {
+      const live = parseRoute(window.location.hash);
+      const key = routeKey(live);
+      // Ignore scrolls caused by the screen swap itself (hash already new, effect not yet run).
+      if (live.name === "catalog" && key === committedKeyRef.current) {
+        scrollPositionsRef.current.set(key, window.scrollY);
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const previousName = previousRouteNameRef.current;
+    previousRouteNameRef.current = route.name;
+    committedKeyRef.current = currentKey;
+    if (route.name === "catalog") lastCatalogHashRef.current = currentKey;
+    if (previousName === null || previousName === route.name) return;
+    const savedY = route.name === "catalog" ? scrollPositionsRef.current.get(currentKey) : undefined;
+    if (savedY !== undefined) {
+      requestAnimationFrame(() => window.scrollTo(0, savedY));
+    } else {
+      window.scrollTo(0, 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentKey]);
 
   useEffect(() => {
     saveCart(cart);
@@ -302,11 +398,12 @@ export default function App() {
     setAnyBrand(
       live.some((preference) => preference.kind === "any_brand" && preference.value === true),
     );
+    setDietaryRules(deriveDietaryRulesFromProfile(profile));
   }
 
   /** Applies a change on top of the loaded profile, saves it and shows its preferences. */
-  function commitProfile(change: (profile: Profile) => Profile) {
-    void profileLoaded.current.then(() => {
+  function commitProfile(change: (profile: Profile) => Profile): Promise<void> {
+    return profileLoaded.current.then(() => {
       const next = change(profileRef.current);
       profileRef.current = next;
       applyPreferences(next);
@@ -379,6 +476,41 @@ export default function App() {
     );
   }
 
+  function handleToggleDietaryRule(rule: string) {
+    const now = new Date();
+    const key = { scope_kind: "global", scope_key: rule, kind: "dietary_rule" } as const;
+    const active = dietaryRules.includes(rule);
+    void commitProfile((profile) =>
+      active
+        ? removePreference(profile, key, now)
+        : setPreference(profile, { ...key, value: rule }, now),
+    );
+  }
+
+  function openOverlay(kind: Overlay) {
+    if (!overlayPushedRef.current) {
+      window.history.pushState({ overlay: kind }, "");
+      overlayPushedRef.current = true;
+    }
+    setOverlay(kind);
+  }
+
+  /** Closes through history.back() so the pushed entry is consumed (popstate then clears it). */
+  function closeOverlay() {
+    if (overlayPushedRef.current) {
+      overlayPushedRef.current = false;
+      window.history.back();
+    } else {
+      setOverlay(null);
+    }
+  }
+
+  /** Closes the overlay because the app navigates anyway: no history.back(). */
+  function dismissOverlayForNavigation() {
+    overlayPushedRef.current = false;
+    setOverlay(null);
+  }
+
   function handleExportProfile() {
     const blob = new Blob([exportProfile(profileRef.current)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -391,8 +523,8 @@ export default function App() {
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
-  function handleImportProfile(json: string) {
-    commitProfile((profile) => importProfile(json, profile));
+  function handleImportProfile(json: string): Promise<void> {
+    return commitProfile((profile) => importProfile(json, profile));
   }
 
   function handleOriginChange(next: StoredOrigin) {
@@ -442,7 +574,7 @@ export default function App() {
     setDegraded(false);
     setInterpretError(null);
     setCalcError(null);
-    setStep("list");
+    goTo(LIST_HASH);
   }
 
   function cancelAgentRun() {
@@ -516,7 +648,7 @@ export default function App() {
       lastRecommendationRequestRef.current = requestPayload;
       baseRecommendationRef.current = result;
       setRecommendation(result);
-      setStep("basket");
+      goTo(BASKET_HASH);
       void runAgentForPlan(requestPayload, result, withoutAgent);
     } catch (error) {
       if (isChoiceRequired(error)) {
@@ -525,7 +657,7 @@ export default function App() {
           current.map((item, index) => (index === lineId ? markChoiceRequired(item, code) : item)),
         );
         setCalcError(message);
-        setStep("list");
+        goTo(LIST_HASH);
       } else {
         setCalcError(describeError(error));
       }
@@ -596,13 +728,21 @@ export default function App() {
     setInterpretError(null);
     setCalcError(null);
     setRecommendation(null);
-    setStep("list");
+    goTo(LIST_HASH);
   }
 
   function handleSearch(query: string) {
     setCatalogQuery(query);
-    setCartOpen(false);
-    navigate(CATALOG_HASH);
+    dismissOverlayForNavigation();
+    navigate(catalogHash(null, "product", { q: query }));
+  }
+
+  /** CatalogPage clears the query through here; the URL stays the source of truth. */
+  function handleCatalogQueryChange(query: string) {
+    setCatalogQuery(query);
+    if (route.name === "catalog") {
+      replaceHash(catalogHash(route.section, route.view, { ...route.filters, q: query }));
+    }
   }
 
   function handleAddSpecific(product: Product) {
@@ -630,9 +770,8 @@ export default function App() {
     setInterpretError(null);
     setCalcError(null);
     setRecommendation(null);
-    setStep("list");
-    setCartOpen(false);
-    navigate(LIST_HASH);
+    dismissOverlayForNavigation();
+    goTo(LIST_HASH);
 
     if (origin && allResolved(cartItems)) {
       void recalculateWithItems(cartItems, false);
@@ -747,9 +886,12 @@ export default function App() {
 
   const displayedRecommendation = agentRun?.recommendation ?? recommendation;
 
+  // On the catalog the URL owns the query; elsewhere the last submitted search is kept.
+  const headerQuery = route.name === "catalog" ? route.filters.q : catalogQuery;
+
   const flow = (
-    <main className="mx-auto grid max-w-xl gap-4 px-4 pt-4 pb-12 text-slate-900">
-      {step === "list" && (
+    <main className="mx-auto grid min-w-0 max-w-xl gap-4 px-4 pt-4 pb-12 text-[var(--ink-primary)]">
+      {route.name === "list" && (
         <ListStep
           items={items}
           onRemoveItem={handleRemoveItem}
@@ -775,7 +917,23 @@ export default function App() {
         />
       )}
 
-      {step === "basket" && displayedRecommendation && (
+      {route.name === "basket" && !displayedRecommendation && (
+        <section className="grid gap-3 py-8">
+          <p className="text-[0.9375rem] text-[var(--ink-primary)]">
+            Aún no has calculado un plan de compra. Ve a tu lista para calcularlo.
+          </p>
+          <div>
+            <a
+              href={LIST_HASH}
+              className="inline-flex min-h-11 items-center rounded-xl bg-[var(--accent-primary)] px-4 text-[0.9375rem] font-bold text-[var(--accent-on-primary)] transition-colors hover:bg-[var(--accent-primary-hover)]"
+            >
+              Ir a tu lista
+            </a>
+          </div>
+        </section>
+      )}
+
+      {route.name === "basket" && displayedRecommendation && (
         <BasketStep
           recommendation={displayedRecommendation}
           origin={origin}
@@ -795,7 +953,7 @@ export default function App() {
               onRequestChange={handleRequestAgentChange}
             />
           }
-          onBack={() => setStep("list")}
+          onBack={() => goTo(LIST_HASH)}
           onNewList={handleNewList}
           onApplyAnyBrand={handleApplyAnyBrand}
           onChangeProduct={handleChangeProduct}
@@ -810,65 +968,74 @@ export default function App() {
     <>
       <SiteHeader
         cartCount={cartItemCount(cart)}
-        query={catalogQuery}
+        query={headerQuery}
         onSearch={handleSearch}
-        onOpenCart={() => setCartOpen(true)}
+        onOpenCart={() => openOverlay("cart")}
+        onOpenPreferences={() => openOverlay("preferences")}
       />
 
-      {route.name === "home" && (
-        <div className="min-h-screen bg-stone-50 text-slate-900">
-          <HomePage
-            sections={catalogSections}
-            sectionsError={catalogSectionsError}
-            onSearch={handleSearch}
-            onWriteList={() => setStep("list")}
-          />
-        </div>
-      )}
+      <div className="min-h-screen bg-[var(--surface-canvas)] text-[var(--ink-primary)]">
+        <ErrorBoundary key={route.name}>
+          {route.name === "home" && (
+            <HomePage
+              sections={catalogSections}
+              sectionsError={catalogSectionsError}
+              sectionsLoading={sectionsLoading}
+              chains={activeChains}
+              chainsLoading={chainsLoading}
+              onSearch={handleSearch}
+              onWriteList={() => undefined}
+            />
+          )}
 
-      {route.name === "catalog" && (
-        <div className="min-h-screen bg-stone-50 text-slate-900">
-          <CatalogPage
-            section={route.section}
-            view={route.view}
-            sections={catalogSections}
-            sectionsError={catalogSectionsError}
-            query={catalogQuery}
-            onQueryChange={setCatalogQuery}
-            onAdd={handleAddSpecific}
-            onAddCanonical={handleAddCanonical}
-          />
-        </div>
-      )}
+          {route.name === "catalog" && (
+            <CatalogPage
+              section={route.section}
+              view={route.view}
+              sections={catalogSections}
+              sectionsError={catalogSectionsError}
+              query={headerQuery}
+              onQueryChange={handleCatalogQueryChange}
+              onAdd={handleAddSpecific}
+              onAddCanonical={handleAddCanonical}
+            />
+          )}
 
-      {route.name === "canonical" && (
-        <div className="min-h-screen bg-stone-50 text-slate-900">
-          <CanonicalPage
-            id={route.id}
-            onAddGeneric={handleAddCanonical}
-            onAddSpecific={handleAddSpecific}
-          />
-        </div>
-      )}
+          {route.name === "canonical" && (
+            <CanonicalPage
+              id={route.id}
+              onAddGeneric={handleAddCanonical}
+              onAddSpecific={handleAddSpecific}
+            />
+          )}
 
-      {route.name === "product" && (
-        <div className="min-h-screen bg-stone-50 text-slate-900">
-          <ProductPage
-            id={route.id}
-            onAddSpecific={handleAddSpecific}
-            onAddGeneric={handleAddGeneric}
-          />
-        </div>
-      )}
+          {route.name === "product" && (
+            <ProductPage
+              id={route.id}
+              onAddSpecific={handleAddSpecific}
+              onAddGeneric={handleAddGeneric}
+            />
+          )}
 
-      {route.name === "list" && flow}
+          {(route.name === "list" || route.name === "basket") && flow}
+        </ErrorBoundary>
+      </div>
+
+      <PreferencesDialog
+        open={overlay === "preferences"}
+        onClose={closeOverlay}
+        dietaryRules={dietaryRules}
+        onToggleDietaryRule={handleToggleDietaryRule}
+        onExportProfile={handleExportProfile}
+        onImportProfile={handleImportProfile}
+      />
 
       <CartDrawer
         open={cartOpen}
         lines={cart}
         anyBrand={anyBrand}
         chainFilter={chainFilter}
-        onClose={() => setCartOpen(false)}
+        onClose={closeOverlay}
         onQuantityChange={(id, quantity) => dispatch({ type: "setQuantity", id, quantity })}
         onAcceptChange={handleAcceptChange}
         onToggleLock={handleToggleLock}
@@ -878,7 +1045,9 @@ export default function App() {
         onSaveList={handleSaveCartList}
         onCalculate={handleCalculateFromCart}
         onExportProfile={handleExportProfile}
-        onImportProfile={handleImportProfile}
+        onImportProfile={(json) => {
+          void handleImportProfile(json).catch(() => undefined);
+        }}
       />
     </>
   );
