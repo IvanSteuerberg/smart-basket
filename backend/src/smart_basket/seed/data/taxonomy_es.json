@@ -2668,10 +2668,11 @@
       },
       {
        "key": "leche",
-       "name": "Leche",
+       "name": "Leche de vaca",
        "base_unit": "l",
        "default_quantity": 1,
        "forms": [
+        "leche de vaca",
         "brick de leche",
         "leche entera",
         "leche semidesnatada",

@@ -113,6 +113,8 @@ def normalize_image_url(url: str | None) -> str | None:
         return None
     if _PLACEHOLDER_IMAGE.search(cleaned):
         return None
+    if "cdn.ipaper.io/" in cleaned.lower():
+        return None
     return cleaned
 
 

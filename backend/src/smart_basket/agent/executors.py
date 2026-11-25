@@ -54,6 +54,7 @@ from smart_basket.recommender.catalog import Item
 from smart_basket.recommender.service import (
     BasketCalculationError,
     ChoiceRequired,
+    MissingResponse,
     NoCandidateStores,
     RecommendationQuery,
     RecommendationResponse,
@@ -610,7 +611,16 @@ class _DejarSinComprar(_ExecutorBase):
         return {"line_index": index}, None
 
     def _apply(self, state: AgentState, proposal: Proposal) -> AgentState:
-        return self.engine.skip_line(state, int(proposal.payload["line_index"]))
+        index = int(proposal.payload["line_index"])
+        line = _line_at(state, index)
+        updated = self.engine.skip_line(state, index)
+        if line is None:
+            return updated
+        notice = (
+            f"No he encontrado «{line.raw_text}» en las tiendas cercanas, "
+            "así que queda fuera del plan."
+        )
+        return _confirmed(updated, notice)
 
 
 class _Explicar(_ExecutorBase):
@@ -1387,6 +1397,21 @@ class _RecommenderEngine:
                 **({"candidate_options": options} if options else {}),
             )
             return self._reoptimize(vague, mode=mode, items=items, excluded=excluded)
+        skipped_missing = [
+            MissingResponse(
+                line_id=line.index,
+                text=line.raw_text,
+                reason="not_available",
+                stop=None,
+            )
+            for line in state.lines
+            if line.status == "skipped"
+        ]
+        if skipped_missing:
+            existing_ids = {item.line_id for item in response.missing}
+            extra = [item for item in skipped_missing if item.line_id not in existing_ids]
+            if extra:
+                response = response.model_copy(update={"missing": [*response.missing, *extra]})
         self.last_recommendation = response
         return self._state_from_result(state, query, response, basket, positions)
 

@@ -286,7 +286,6 @@ export default function App() {
   // Resolves once the saved profile is in `profileRef`; every change waits for it, so a tap
   // made while IndexedDB is still loading neither overwrites nor is overwritten by the load.
   const profileLoaded = useRef<Promise<void>>(Promise.resolve());
-  const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSections, setCatalogSections] = useState<CatalogSection[]>([]);
   const [catalogSectionsError, setCatalogSectionsError] = useState<string | null>(null);
   const [sectionsLoading, setSectionsLoading] = useState(true);
@@ -823,14 +822,12 @@ export default function App() {
   }
 
   function handleSearch(query: string) {
-    setCatalogQuery(query);
     dismissOverlayForNavigation();
     navigate(catalogHash(null, "product", { q: query }));
   }
 
   /** CatalogPage clears the query through here; the URL stays the source of truth. */
   function handleCatalogQueryChange(query: string) {
-    setCatalogQuery(query);
     if (route.name === "catalog") {
       replaceHash(catalogHash(route.section, route.view, { ...route.filters, q: query }));
     }
@@ -1014,8 +1011,8 @@ export default function App() {
 
   const displayedRecommendation = agentRun?.recommendation ?? recommendation;
 
-  // On the catalog the URL owns the query; elsewhere the last submitted search is kept.
-  const headerQuery = route.name === "catalog" ? route.filters.q : catalogQuery;
+  // On the catalog the URL owns the query; on Home and other routes the search bar resets cleanly.
+  const headerQuery = route.name === "catalog" ? route.filters.q : "";
 
   const flow = (
     <main className="mx-auto grid min-w-0 max-w-xl gap-4 px-4 pt-4 pb-12 text-[var(--ink-primary)]">
