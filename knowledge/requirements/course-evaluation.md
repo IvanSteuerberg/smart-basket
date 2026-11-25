@@ -1,18 +1,23 @@
 ---
 type: Requirements
 title: Course evaluation
-description: Deliverables and assessment criteria of the course project, as explained in class on 2026-11-04.
+description: Deliverables, deadline and assessment criteria of the course project, as explained in class on 2026-11-04 and 2026-11-23.
 tags: [requirements, course, deliverables]
 status: draft
 generated:
-  by: claude-code/claude-opus-5-5
-  at: 2026-11-09T18:30:00+01:00
+  by: antigravity/gemini-4-neon
+  at: 2026-11-25T17:45:00+01:00
 sources:
   - id: class-2026-11-04
     resource: https://osf.io/ysmkz/files/osfstorage/6af1f7ac4894522259b8c51d
     title: Class notes on evaluation, 2026-11-04 (OSF 05-notas-de-clase/04-11-2026.txt)
+  - id: class-2026-11-23
+    resource: https://osf.io/ysmkz/files/osfstorage/6b071012932b66fa2de66ee8
+    title: Class notes on project deadline, 2026-11-23 (OSF 05-notas-de-clase/23-11-2026.txt)
 ---
 The course uses project-based learning, assessed from two sides: outward, the lessons learned; inward, the content, which lives in the GitHub repository and its README.
+
+**Submission deadline:** Monday 11 January 2027 at 23:59 CET (`class-2026-11-23`).
 
 # Deliverables
 
