@@ -112,7 +112,16 @@ def has_next_page(html: str, category_path: str, current_page: int) -> bool:
     return target in html
 
 
-def _normalize_size(raw_size: Any, raw_unit: Any, name: str) -> tuple[str | None, Decimal | None]:
+def _normalize_size(
+    raw_size: Any, raw_unit: Any, name: str
+) -> tuple[str | None, Decimal | None, int]:
+    """Return `(base_unit, per-unit size, pack count)` for one RadarSuper item.
+
+    A multipack expression in the name (`"12 x 100 g"`) wins for the per-unit size and the pack
+    count, because the raw `size` of a multipack may already be the total; a name that declares
+    only the count (`"Actimel pack 6"`) keeps the raw per-unit size and the parsed pack.
+    """
+    name_qty, name_unit, name_pack = parse_dia_size(name)
     unit_text = str(raw_unit or "").strip().lower()
     size_dec: Decimal | None = None
     if raw_size is not None and str(raw_size).strip():
@@ -122,20 +131,30 @@ def _normalize_size(raw_size: Any, raw_unit: Any, name: str) -> tuple[str | None
                 size_dec = val
     if size_dec is not None and unit_text:
         if unit_text in ("kg", "kilo", "kilos", "kilogramo", "kilogramos"):
-            return "kg", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-        if unit_text in ("g", "gr", "gramo", "gramos"):
+            unit, qty = "kg", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
+        elif unit_text in ("g", "gr", "gramo", "gramos"):
             kg_qty = (size_dec / Decimal("1000")).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-            return "kg", kg_qty
-        if unit_text in ("l", "lt", "litro", "litros"):
-            return "l", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-        if unit_text in ("cl",):
-            return "l", (size_dec / Decimal("100")).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-        if unit_text in ("ml",):
-            return "l", (size_dec / Decimal("1000")).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-        if unit_text in ("ud", "uds", "u", "unidad", "unidades", "lavado", "lavados"):
-            return "ud", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
-    parsed_qty, parsed_unit, _pack = parse_dia_size(name)
-    return parsed_unit, parsed_qty
+            unit, qty = "kg", kg_qty
+        elif unit_text in ("l", "lt", "litro", "litros"):
+            unit, qty = "l", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
+        elif unit_text == "cl":
+            unit, qty = (
+                "l",
+                (size_dec / Decimal("100")).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP),
+            )
+        elif unit_text == "ml":
+            unit, qty = (
+                "l",
+                (size_dec / Decimal("1000")).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP),
+            )
+        elif unit_text in ("ud", "uds", "u", "unidad", "unidades", "lavado", "lavados"):
+            unit, qty = "ud", size_dec.quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
+        else:
+            unit, qty = name_unit, name_qty
+        if name_pack > 1 and name_qty is not None and name_unit in ("kg", "l"):
+            return name_unit, name_qty, name_pack
+        return unit, qty, max(name_pack, 1)
+    return name_unit, name_qty, max(name_pack, 1)
 
 
 def parse_radarsuper_product(
@@ -161,10 +180,12 @@ def parse_radarsuper_product(
     if price <= 0:
         return None
 
-    base_unit, unit_qty = _normalize_size(raw.get("size"), raw.get("unit"), name)
+    base_unit, unit_qty, pack_count = _normalize_size(raw.get("size"), raw.get("unit"), name)
     unit_price: Decimal | None = None
-    if unit_qty is not None and unit_qty > 0:
-        unit_price = (price / unit_qty).quantize(PER_UNIT_STEP, rounding=ROUND_HALF_UP)
+    if unit_qty is not None and unit_qty * pack_count > 0:
+        unit_price = (price / (unit_qty * pack_count)).quantize(
+            PER_UNIT_STEP, rounding=ROUND_HALF_UP
+        )
 
     img = str(raw.get("image") or "").strip()
     image_url = f"{BASE_URL}{img}" if img.startswith("/") else (img or None)
@@ -179,7 +200,7 @@ def parse_radarsuper_product(
         category_code=category_code,
         base_quantity=unit_qty,
         base_unit=base_unit if unit_qty is not None else None,
-        pack_count=1,
+        pack_count=pack_count,
         price=price,
         price_per_unit=unit_price,
         image_url=image_url,

@@ -10,7 +10,7 @@ from smart_basket.config import Settings, get_settings
 from smart_basket.ingestion.alcampo import AlcampoAdapter
 from smart_basket.ingestion.aldi import AldiAdapter
 from smart_basket.ingestion.alimerka import AlimerkaAdapter
-from smart_basket.ingestion.backfill import backfill_images
+from smart_basket.ingestion.backfill import backfill_catalog_quality, backfill_images
 from smart_basket.ingestion.base import ChainAdapter, collect
 from smart_basket.ingestion.carrefour import CarrefourAdapter
 from smart_basket.ingestion.dia import DiaAdapter
@@ -97,7 +97,12 @@ def _non_negative_int(value: str) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="smart-basket-ingest")
-    parser.add_argument("chain", choices=sorted(ADAPTERS))
+    parser.add_argument(
+        "chain",
+        nargs="?",
+        choices=sorted(ADAPTERS),
+        help="chain to crawl; not needed with --backfill-quality",
+    )
     parser.add_argument(
         "--zone",
         "--warehouse",
@@ -121,6 +126,11 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="fill product photos from the saved raw responses, without crawling",
     )
+    mode.add_argument(
+        "--backfill-quality",
+        action="store_true",
+        help="reparse multipacks, sanitize unit prices and fill dietary tags, without crawling",
+    )
     args = parser.parse_args(argv)
 
     settings = get_settings()
@@ -128,6 +138,11 @@ def main(argv: list[str] | None = None) -> int:
         level=settings.log_level,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    if args.backfill_quality:
+        print(backfill_catalog_quality(settings.database_url).message())
+        return 0
+    if args.chain is None:
+        parser.error("a chain is required unless --backfill-quality is used")
     if args.backfill_images:
         summary = backfill_images(args.chain, data_dir=settings.data_dir)
         print(summary.message())

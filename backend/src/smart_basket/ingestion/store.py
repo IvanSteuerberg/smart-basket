@@ -12,7 +12,7 @@ import gzip
 import hashlib
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -31,6 +31,7 @@ from smart_basket.ingestion.base import (
     RunStatus,
     collect,
 )
+from smart_basket.ingestion.quality import extract_dietary_tags, sanitize_unit_pricing
 
 log = logging.getLogger("smart_basket.ingestion")
 
@@ -214,6 +215,32 @@ def log_ingest_summary(summary: IngestSummary) -> None:
     )
 
 
+def _quality_checked(product: ProductObservation) -> ProductObservation:
+    """Apply the unit-price outlier guard before the observation is stored (A1).
+
+    A corrupted size or unit price is re-derived from the multipack expression in the name
+    when that expression is sane, and cleared otherwise, so no impossible `price_per_unit`
+    ever reaches `price_current`.
+    """
+    pricing = sanitize_unit_pricing(
+        product.name,
+        product.price,
+        product.base_quantity,
+        product.base_unit,
+        product.pack_count,
+        price_per_unit=product.price_per_unit,
+    )
+    if not pricing.repaired:
+        return product
+    return replace(
+        product,
+        base_quantity=pricing.base_quantity,
+        base_unit=pricing.base_unit,
+        pack_count=pricing.pack_count,
+        price_per_unit=pricing.price_per_unit,
+    )
+
+
 def _lookup_chain(session: Session, chain_code: str) -> int:
     chain_id = session.execute(
         text("select id from chain where code = :code"), {"code": chain_code}
@@ -321,7 +348,8 @@ def _persist(
         ).all()
     )
     prices_changed = 0
-    for product in result.products:
+    for observed in result.products:
+        product = _quality_checked(observed)
         product_id = _upsert_product(
             session,
             chain_id=chain_id,
@@ -453,14 +481,15 @@ def _upsert_product(
     product_id = session.execute(
         text(
             "insert into chain_product (chain_id, chain_sku, name, packaging, url, image_url, "
-            "base_quantity, base_unit, pack_count, chain_category_id, first_seen, last_seen, "
-            "is_active) values (:chain, :sku, :name, :packaging, :url, :image_url, :quantity, "
-            ":unit, :pack_count, :category, :now, :now, true) "
+            "base_quantity, base_unit, pack_count, dietary_tags, chain_category_id, first_seen, "
+            "last_seen, is_active) values (:chain, :sku, :name, :packaging, :url, :image_url, "
+            ":quantity, :unit, :pack_count, :tags, :category, :now, :now, true) "
             "on conflict (chain_id, chain_sku) do update set name = excluded.name, "
             "packaging = excluded.packaging, url = excluded.url, "
             "image_url = excluded.image_url, "
             "base_quantity = excluded.base_quantity, base_unit = excluded.base_unit, "
-            "pack_count = excluded.pack_count, chain_category_id = excluded.chain_category_id, "
+            "pack_count = excluded.pack_count, dietary_tags = excluded.dietary_tags, "
+            "chain_category_id = excluded.chain_category_id, "
             "last_seen = excluded.last_seen, is_active = true "
             "returning id"
         ),
@@ -474,6 +503,9 @@ def _upsert_product(
             "quantity": product.base_quantity,
             "unit": product.base_unit,
             "pack_count": product.pack_count,
+            "tags": list(
+                product.dietary_tags or extract_dietary_tags(product.name, product.packaging)
+            ),
             "category": category_id,
             "now": observation_time,
         },
@@ -782,18 +814,20 @@ def _apply_controlled_staple_retention(
                 session,
                 product_id=product_id,
                 zone_id=zone_id,
-                product=ProductObservation(
-                    sku=sku,
-                    name=name,
-                    packaging=packaging,
-                    url=url,
-                    category_code="",
-                    base_quantity=base_quantity,
-                    base_unit=base_unit,
-                    pack_count=pack_count,
-                    price=reference_price,
-                    price_per_unit=reg_ppu,
-                    image_url=image_url,
+                product=_quality_checked(
+                    ProductObservation(
+                        sku=sku,
+                        name=name,
+                        packaging=packaging,
+                        url=url,
+                        category_code="",
+                        base_quantity=base_quantity,
+                        base_unit=base_unit,
+                        pack_count=pack_count,
+                        price=reference_price,
+                        price_per_unit=reg_ppu,
+                        image_url=image_url,
+                    )
                 ),
                 run_id=run_id,
                 observation_time=observation_time,

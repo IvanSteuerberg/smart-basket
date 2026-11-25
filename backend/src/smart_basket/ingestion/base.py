@@ -47,6 +47,7 @@ class ProductObservation:
     is_temporary: bool = False
     valid_from: str | None = None
     valid_until: str | None = None
+    dietary_tags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

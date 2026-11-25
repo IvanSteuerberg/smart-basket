@@ -64,6 +64,8 @@ _SINGLE_SIZE = re.compile(
     rf"(?P<qty>\d+(?:[.,]\d+)?)\s*(?P<unit>{_UNIT_PATTERN})\b",
     re.IGNORECASE,
 )
+# A pack declared only by its count (`"Actimel pack 6"`), with no weight or volume.
+_COUNT_ONLY_PACK = re.compile(r"\bpack\s+(?:de\s+)?(?P<pack>\d+)\b", re.IGNORECASE)
 
 _MENU_KEYS = ("menu", "categories", "items", "children", "results", "menu_items")
 _CHILD_KEYS = ("children", "child_categories", "subcategories", "submenu", "categories", "items")
@@ -209,9 +211,10 @@ def parse_dia_menu(payload: Mapping[str, Any]) -> list[CategoryObservation]:
 def parse_dia_size(name: str) -> tuple[Decimal | None, str | None, int]:
     """Parse a Spanish size expression into (`base_quantity`, `base_unit`, `pack_count`).
 
-    `"6 x 33 cl"` and `"pack 4 x 125 g"` keep the per-unit size and the pack count; `"1,5 l"`,
-    `"750 ml"`, `"200 g"` and `"1 kg"` are single units. Sizes are normalized to kg, l or ud;
-    a name without a recognizable size leaves the quantity and the unit empty.
+    `"6 x 33 cl"`, `"4x100g"` and `"pack 4 x 125 g"` keep the per-unit size and the pack count;
+    `"1,5 l"`, `"750 ml"`, `"200 g"` and `"1 kg"` are single units. A pack declared only by its
+    count (`"Actimel pack 6"`) becomes one unit per pack. Sizes are normalized to kg, l or ud; a
+    name without a recognizable size leaves the quantity and the unit empty.
     """
     if not isinstance(name, str) or not name.strip():
         return (None, None, 1)
@@ -224,10 +227,16 @@ def parse_dia_size(name: str) -> tuple[Decimal | None, str | None, int]:
         quantity, unit = _normalized_size(match.group("qty"), match.group("unit"))
         return (quantity, unit, pack_count) if quantity is not None else (None, None, 1)
     match = _SINGLE_SIZE.search(text)
-    if match is None:
-        return (None, None, 1)
-    quantity, unit = _normalized_size(match.group("qty"), match.group("unit"))
-    return (quantity, unit, 1) if quantity is not None else (None, None, 1)
+    if match is not None:
+        quantity, unit = _normalized_size(match.group("qty"), match.group("unit"))
+        if quantity is not None:
+            return (quantity, unit, 1)
+    match = _COUNT_ONLY_PACK.search(text)
+    if match is not None:
+        pack_count = int(match.group("pack"))
+        if pack_count > 1:
+            return (Decimal(1), "ud", pack_count)
+    return (None, None, 1)
 
 
 def parse_dia_products(
