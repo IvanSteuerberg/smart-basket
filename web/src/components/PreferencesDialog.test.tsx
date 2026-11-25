@@ -34,11 +34,11 @@ describe("PreferencesDialog", () => {
     expect(html).not.toMatch(/<dialog[^>]*class="[^"]*\b(flex|block|grid)\b/);
   });
 
-  it("offers the three theme states as a radio group", () => {
+  it("offers the three theme states as a segmented toggle group", () => {
     const html = render();
-    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('role="group"');
     for (const label of ["Sistema", "Claro", "Oscuro"]) {
-      expect(html).toMatch(new RegExp(`role="radio"[^>]*>${label}<`));
+      expect(html).toMatch(new RegExp(`aria-pressed="(true|false)"[^>]*>${label}<`));
     }
   });
 

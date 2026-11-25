@@ -358,7 +358,12 @@ export default function App() {
     previousRouteNameRef.current = route.name;
     committedKeyRef.current = currentKey;
     if (route.name === "catalog") lastCatalogHashRef.current = currentKey;
-    if (previousName === null || previousName === route.name) return;
+    if (previousName === null) return;
+    if (previousName === route.name) {
+      // A new search or filter inside the catalog starts at the top of the new results.
+      if (route.name === "catalog") window.scrollTo(0, 0);
+      return;
+    }
     const savedY = route.name === "catalog" ? scrollPositionsRef.current.get(currentKey) : undefined;
     if (savedY !== undefined) {
       requestAnimationFrame(() => window.scrollTo(0, savedY));
@@ -648,6 +653,7 @@ export default function App() {
       lastRecommendationRequestRef.current = requestPayload;
       baseRecommendationRef.current = result;
       setRecommendation(result);
+      dismissOverlayForNavigation();
       goTo(BASKET_HASH);
       void runAgentForPlan(requestPayload, result, withoutAgent);
     } catch (error) {
@@ -657,6 +663,7 @@ export default function App() {
           current.map((item, index) => (index === lineId ? markChoiceRequired(item, code) : item)),
         );
         setCalcError(message);
+        dismissOverlayForNavigation();
         goTo(LIST_HASH);
       } else {
         setCalcError(describeError(error));

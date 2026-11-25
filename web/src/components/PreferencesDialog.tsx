@@ -131,7 +131,7 @@ export function PreferencesDialog({
         <section className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-5">
           <h3 className="text-[0.9375rem] font-bold">Apariencia</h3>
           <div
-            role="radiogroup"
+            role="group"
             aria-label="Tema de color"
             className="inline-flex self-start rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5"
           >
@@ -141,8 +141,7 @@ export function PreferencesDialog({
                 <button
                   key={choice.value}
                   type="button"
-                  role="radio"
-                  aria-checked={selected}
+                  aria-pressed={selected}
                   onClick={() => setPreference(choice.value)}
                   className={`min-h-11 rounded-[0.625rem] px-4 text-[0.9375rem] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)] ${
                     selected
