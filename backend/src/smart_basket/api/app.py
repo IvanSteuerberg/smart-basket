@@ -6,6 +6,7 @@ from smart_basket import __version__
 from smart_basket.api.agent import router as agent_router
 from smart_basket.api.canonicals import router as canonicals_router
 from smart_basket.api.catalog import router as catalog_router
+from smart_basket.api.chains import router as chains_router
 from smart_basket.api.health import router as health_router
 from smart_basket.api.products import router as products_router
 from smart_basket.api.recommendations import router as recommendations_router
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
     app.include_router(catalog_router, prefix="/api")
     app.include_router(products_router, prefix="/api")
     app.include_router(canonicals_router, prefix="/api")
+    app.include_router(chains_router, prefix="/api")
     app.include_router(recommendations_router, prefix="/api")
     app.include_router(agent_router, prefix="/api")
     return app

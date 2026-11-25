@@ -82,11 +82,19 @@ class AgentRunRequest(BaseModel):
 
     request: RecommendationRequest
     recommendation_id: UUID | None = None
+    #: Wave 0 contract: a run resumed from the trace of another one, accepted but unused for now.
+    previous_run_id: UUID | None = None
     shopper_message: str | None = None
     habits: dict[str, HabitInput] = Field(default_factory=dict)
     dietary_rules: list[str] = Field(default_factory=list)
     #: Optional policy override; `"default"` forces the deterministic ablation mode.
     policy: Literal["default", "gemini_chat", "gemini_decision", "ollama_chat"] | None = None
+
+
+class AgentMessageRequest(BaseModel):
+    """A free-text shopper message bounded to a length a policy can carry."""
+
+    message: str = Field(min_length=1, max_length=1000)
 
 
 class AgentAnswerRequest(BaseModel):

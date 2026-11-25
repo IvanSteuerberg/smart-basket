@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from smart_basket.api.app import create_app
 from smart_basket.api.lexicon_cache import default_cache
+from smart_basket.api.products import default_sections_cache
 from smart_basket.brands import default_cache as default_brand_cache
 from smart_basket.db.engine import get_session
 from smart_basket.db.migrate import alembic_config
@@ -57,6 +58,7 @@ def client(session: Session) -> Iterator[TestClient]:
     app.dependency_overrides[get_session] = lambda: session
     default_cache.reset()
     default_brand_cache.reset()
+    default_sections_cache.reset()
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
