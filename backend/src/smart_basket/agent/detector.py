@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from collections.abc import Mapping, Sequence
-from dataclasses import replace
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -170,27 +170,103 @@ _EXCLUDE_CUES = (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class KnownChains:
+    """The chains of the catalog as the parser sees them.
+
+    `aliases` maps every accent-folded way of naming a chain (code, name, frequent aliases such
+    as `corte ingles` or `leclerc`) to its chain code; `names` maps a code to its display name.
+    """
+
+    aliases: Mapping[str, str]
+    names: Mapping[str, str] = field(default_factory=dict)
+
+
+#: Frequent ways of naming the same chain; they only apply to chains that really exist.
+_CHAIN_ALIAS_GROUPS: tuple[tuple[str, ...], ...] = (
+    ("el corte ingles", "corte ingles", "elcorteingles", "eci", "hipercor"),
+    ("e.leclerc", "e leclerc", "eleclerc", "leclerc"),
+)
+
+#: Words that make `dia` an ordinary noun ("el día", "cada día") instead of the chain.
+_NOT_CHAIN_DIA = frozenset({"el", "un", "ese", "este", "cada", "otro", "buen", "todo", "mismo"})
+
+
+def _squash(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", _fold(value))
+
+
+def build_known_chains(rows: Iterable[tuple[str, str | None]]) -> KnownChains:
+    """Build the parser's chain vocabulary from `(code, name)` rows of the `chain` table."""
+    aliases: dict[str, str] = {}
+    names: dict[str, str] = {}
+    for code, name in rows:
+        code = str(code).strip()
+        if not code:
+            continue
+        label = (name or "").strip()
+        names[code] = label or code.replace("_", " ").title()
+        forms = {_fold(code).strip(), _fold(label).strip()} - {""}
+        squashed = {_squash(form) for form in forms}
+        for group in _CHAIN_ALIAS_GROUPS:
+            if squashed & {_squash(alias) for alias in group}:
+                forms.update(_fold(alias) for alias in group)
+        for form in forms:
+            aliases.setdefault(form, code)
+    return KnownChains(aliases=aliases, names=names)
+
+
+def load_known_chains(session: Session) -> KnownChains:
+    """The real chains of the `chain` table, with their frequent aliases."""
+    rows = session.execute(text("select code, name from chain order by code")).all()
+    return build_known_chains((row[0], row[1]) for row in rows)
+
+
+def _as_known_chains(value: Sequence[str] | Mapping[str, str] | KnownChains | None) -> KnownChains:
+    if isinstance(value, KnownChains):
+        return value
+    if isinstance(value, Mapping):
+        folded = {_fold(str(key)).strip(): str(code) for key, code in value.items()}
+        return KnownChains(aliases=folded)
+    forms = [_fold(str(chain)).strip() for chain in value or ()]
+    return KnownChains(aliases={form: form for form in forms if form})
+
+
 def parse_shopper_request_hints(
     message: str,
     lines: Sequence[LineState],
     *,
     current_mode: str,
-    known_chains: Sequence[str] = (),
+    known_chains: Sequence[str] | Mapping[str, str] | KnownChains | None = (),
 ) -> dict[str, Any]:
     """Extract the hints a free-text request carries, without deciding anything.
 
     Only hints that are actually present travel in the result. Values are JSON-safe already:
     `quantity` is a positive `Decimal` rendered as `str`, and line references are indexes of
     `lines`. Arbitrary or hostile text must never raise; it simply yields fewer hints.
+
+    With real `known_chains` (see `load_known_chains`) a chain is only reported when the message
+    names one of them right after an exclusion or an inclusion cue: `chain` / `excluded_chains`
+    for "sin Alimerka" and `allowed_chains` for "solo en Dia" (always chain codes, plus their
+    display names in `chain_names`). Without them the legacy guess of the word after the cue is
+    kept.
     """
     folded = _fold(message or "")
     if not folded.strip():
         return {}
+    # Spans found on the folded text also cut the original one when folding kept the length.
+    original = message if len(message) == len(folded) else folded
     tokens = _WORD.findall(folded)
     token_set = set(tokens)
     hints: dict[str, Any] = {}
 
     line_indices = _match_lines(tokens, lines)
+    if any(trigger in token_set for trigger in _REMOVE_TRIGGERS):
+        line_indices = _match_each_clause(folded, lines) or line_indices
+    replacement = _replacement(folded, original, lines)
+    if replacement is not None:
+        line_indices = [replacement[0]]
+        hints["replace_text"] = replacement[1]
     if line_indices:
         hints["line_indices"] = line_indices
         if len(line_indices) == 1:
@@ -200,11 +276,33 @@ def parse_shopper_request_hints(
     if mode is not None:
         hints["mode"] = mode
 
-    chain = _excluded_chain(folded, token_set, known_chains=known_chains)
-    if chain is not None:
-        hints["chain"] = chain
+    known = _as_known_chains(known_chains)
+    if known.aliases:
+        excluded = _chains_after_cues(folded, known, _EXCLUDE_CUE_RE)
+        allowed = _chains_after_cues(folded, known, _ONLY_CUE_RE)
+        if excluded:
+            hints["chain"] = excluded[0]
+            if len(excluded) > 1:
+                hints["excluded_chains"] = excluded
+        if allowed:
+            hints["allowed_chains"] = allowed
+        mentioned = {c: known.names[c] for c in (*excluded, *allowed) if c in known.names}
+        if mentioned:
+            hints["chain_names"] = mentioned
+    else:
+        chain = _excluded_chain(folded, token_set, known_chains=())
+        if chain is not None:
+            hints["chain"] = chain
 
-    quantity = _quantity(folded, tokens)
+    stores, folded_without_stores = _max_stores(folded)
+    if stores is not None:
+        hints["max_stores"] = stores
+    priority = _priority(folded)
+    if priority is not None:
+        hints["priority"] = priority
+
+    quantity_text = folded_without_stores
+    quantity = _quantity(quantity_text, _WORD.findall(quantity_text))
     if quantity is not None:
         hints["quantity"] = str(quantity)
 
@@ -224,14 +322,20 @@ def parse_shopper_request_hints(
 
 
 def detect_observations(
-    state: AgentState, *, near_tie_threshold: Decimal = DEFAULT_NEAR_TIE_THRESHOLD
+    state: AgentState,
+    *,
+    near_tie_threshold: Decimal = DEFAULT_NEAR_TIE_THRESHOLD,
+    known_chains: KnownChains | None = None,
 ) -> tuple[Observation, ...]:
-    """Every phenomenon present in `state`, in a fixed order, one observation per finding."""
+    """Every phenomenon present in `state`, in a fixed order, one observation per finding.
+
+    `known_chains` (from `load_known_chains`) lets the shopper's request name real chains.
+    """
     observations: list[Observation] = []
     # What the shopper just asked for always goes first: pausing on a near tie must never
     # swallow an explicit request.
     if state.shopper_message and state.shopper_message.strip():
-        observations.append(_shopper_request(state))
+        observations.append(_shopper_request(state, known_chains))
     for line in state.lines:
         if line.status == "vague":
             observations.append(_vague(line))
@@ -253,8 +357,12 @@ def state_from_recommendation(
     habits: Mapping[str, LineHabit] | None = None,
     dietary_rules: Sequence[str] = (),
     shopper_message: str | None = None,
+    known_chains: KnownChains | None = None,
 ) -> AgentState:
     """Build the agent state from the recommendation pipeline output and optional habits.
+
+    A shopper message is parsed against the real chains of the database unless `known_chains`
+    is given.
 
     Lines follow `query.items`, so their `index` is the line id the HTTP response uses. Vague
     lines are reported by the preprocessor (`vague_lines`), missing lines by the optimizer; the
@@ -310,8 +418,12 @@ def state_from_recommendation(
         plan=plan,
         shopper_message=shopper_message,
         buyer_summary=response.explanation if response is not None else None,
+        max_stores=query.max_stores,
+        allowed_chains=tuple(query.chains),
     )
-    return _with_observations(state)
+    if known_chains is None and session is not None and shopper_message:
+        known_chains = load_known_chains(session)
+    return replace(state, observations=detect_observations(state, known_chains=known_chains))
 
 
 # -- observations ---------------------------------------------------------
@@ -409,12 +521,13 @@ def _near_tie_observation(state: AgentState, threshold: Decimal) -> Observation 
     )
 
 
-def _shopper_request(state: AgentState) -> Observation:
+def _shopper_request(state: AgentState, known_chains: KnownChains | None = None) -> Observation:
     message = (state.shopper_message or "").strip()
     hints = parse_shopper_request_hints(
         message,
         state.lines,
         current_mode=state.mode,
+        known_chains=known_chains,
     )
     details: dict[str, Any] = dict(hints)
     if "add_text" in hints:
@@ -523,7 +636,9 @@ def _stores_and_chains(
         {"ids": list(store_ids)},
     ).mappings()
     by_id = {row["id"]: row for row in rows}
-    names = tuple(by_id[sid]["name"] if sid in by_id else f"tienda {sid}" for sid in store_ids)
+    names = tuple(
+        (by_id[sid]["name"] if sid in by_id else None) or f"tienda {sid}" for sid in store_ids
+    )
     codes = tuple(
         sorted(
             {str(by_id[sid]["code"]) for sid in store_ids if sid in by_id and by_id[sid]["code"]}
@@ -646,6 +761,119 @@ def _excluded_chain(folded: str, tokens: set[str], *, known_chains: Sequence[str
         return None
     candidate = match.group(1)
     return None if candidate in _STOPWORDS else candidate
+
+
+_EXCLUDE_CUE_RE = re.compile(
+    r"\b(?:no quiero|no voy|no ir|no vayas|no al|sin|evita\w*|excluy\w*|exclui\w*|"
+    r"descarta\w*|nada de|ni)\b"
+)
+_ONLY_CUE_RE = re.compile(r"\b(?:solo|solamente|unicamente|exclusivamente|todo en)\b")
+#: Where the text a cue governs ends: sentence marks, another cue or a new clause.
+_SEGMENT_END = re.compile(
+    r"[;!?]|\.(?:\s|$)|\b(?:pero|aunque|sin|solo|solamente|unicamente|exclusivamente|no|evita\w*|"
+    r"excluy\w*|descarta\w*)\b|\by (?:ve|vete|compra|quiero|prefiero|pon|mejor)\b"
+)
+
+
+def _mentions(segment: str, known: KnownChains) -> list[str]:
+    """Chain codes named in `segment`, in order of appearance (longest alias wins)."""
+    spans: list[tuple[int, int, str]] = []
+    for alias in sorted(known.aliases, key=len, reverse=True):
+        words = [re.escape(word) for word in alias.split()]
+        if not words:
+            continue
+        pattern = r"(?<![a-z0-9])" + r"\s+".join(words) + r"(?![a-z0-9])"
+        for match in re.finditer(pattern, segment):
+            if any(match.start() < end and start < match.end() for start, end, _ in spans):
+                continue
+            before = segment[: match.start()].split()
+            if alias == "dia" and before and before[-1] in _NOT_CHAIN_DIA:
+                continue
+            spans.append((match.start(), match.end(), known.aliases[alias]))
+    return list(dict.fromkeys(code for _, _, code in sorted(spans)))
+
+
+def _chains_after_cues(folded: str, known: KnownChains, cue: re.Pattern[str]) -> list[str]:
+    """Chains named right after a cue ("sin Alimerka", "solo en Dia"), never anywhere else."""
+    found: list[str] = []
+    for match in cue.finditer(folded):
+        segment = _SEGMENT_END.split(folded[match.end() :], maxsplit=1)[0][:80]
+        found.extend(code for code in _mentions(segment, known) if code not in found)
+    return found
+
+
+_STORES_RE = re.compile(
+    r"(?:(?P<prefix>maximo|max|hasta|como mucho|no mas de|a lo sumo|mas de)\s+)?"
+    r"(?:en\s+)?(?P<n>\d+|un|una|uno|dos|tres)\s+(?:sola\s+|unica\s+|solo\s+)?tiendas?\b"
+)
+_STORE_NUMBERS = {"un": 1, "una": 1, "uno": 1, "dos": 2, "tres": 3}
+
+
+def _max_stores(folded: str) -> tuple[int | None, str]:
+    """The store limit the message asks for (1..3) and the text without that phrase."""
+    for match in _STORES_RE.finditer(folded):
+        if match.group("prefix") == "mas de":
+            continue
+        raw = match.group("n")
+        value = int(raw) if raw.isdigit() else _STORE_NUMBERS[raw]
+        if 1 <= value <= 3:
+            return value, f"{folded[: match.start()]} {folded[match.end() :]}"
+    return None, folded
+
+
+def _priority(folded: str) -> str | None:
+    """`time`, `savings` or `balanced` when the message asks to prioritize one of them."""
+    if re.search(
+        r"rapid|menos tiempo|ahorrar tiempo|ahorra tiempo|priori\w* (?:el )?tiempo|cuanto antes",
+        folded,
+    ):
+        return "time"
+    if re.search(r"barat|ahorr|econom|gastar menos|menos dinero|menos gasto", folded):
+        return "savings"
+    if re.search(r"equilibr|balance|termino medio", folded):
+        return "balanced"
+    return None
+
+
+_REPLACE_PATTERNS = (
+    re.compile(
+        r"\b(?:cambia\w*|sustituy\w+|sustitui\w*|reemplaz\w+)\s+(?P<old>.+?)\s+por\s+(?P<new>.+)$"
+    ),
+    re.compile(
+        r"\ben vez de\s+(?P<old>.+?),?\s+(?:pon|ponme|ponle|quiero|prefiero|mejor)\s+(?P<new>.+)$"
+    ),
+    re.compile(
+        r"\b(?:(?:pon|ponme|ponle|mejor|quiero|prefiero)\s+)?"
+        r"(?P<new>.+?)\s+en vez de\s+(?P<old>.+)$"
+    ),
+)
+_ARTICLE = re.compile(r"^(?:el|la|los|las|un|una|unos|unas|mi|mis)\s+", re.IGNORECASE)
+
+
+def _replacement(folded: str, original: str, lines: Sequence[LineState]) -> tuple[int, str] | None:
+    """`(line index, new text)` for "cambia la leche por leche desnatada" and its variants."""
+    for pattern in _REPLACE_PATTERNS:
+        match = pattern.search(folded)
+        if match is None:
+            continue
+        old = _ARTICLE.sub("", folded[match.start("old") : match.end("old")].strip())
+        new = original[match.start("new") : match.end("new")].strip(" .,;:!?¿¡")
+        new = _ARTICLE.sub("", new)
+        new = re.sub(r"\s+(?:por favor|gracias)$", "", new, flags=re.I)
+        if len(new) < 2 or any(char.isdigit() for char in new) or _fold(new).strip() == old:
+            continue
+        indices = _match_lines(_WORD.findall(old), lines)
+        if len(indices) == 1:
+            return indices[0], new
+    return None
+
+
+def _match_each_clause(folded: str, lines: Sequence[LineState]) -> list[int]:
+    """Lines named in each clause of "quita la leche y el pan", so none is lost to a tie."""
+    found: list[int] = []
+    for clause in re.split(r"\s+(?:y|e|ni)\s+|[,;]", folded):
+        found.extend(i for i in _match_lines(_WORD.findall(clause), lines) if i not in found)
+    return sorted(found)
 
 
 def _quantity(folded: str, tokens: Sequence[str]) -> Decimal | None:

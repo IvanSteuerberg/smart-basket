@@ -228,12 +228,18 @@ class AgentState:
     alternatives_shown: tuple[dict[str, Any], ...] = ()
     steps_taken: int = 0
     status: RunStatus = RunStatus.RUNNING
+    #: Most stores the plan may visit (1..3); mutated by `cambiar_max_tiendas`.
+    max_stores: int = 2
+    #: When not empty, the only chains the plan may use; mutated by `filtrar_cadena`.
+    allowed_chains: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "lines": [line.to_dict() for line in self.lines],
             "mode": self.mode,
             "priority": self.priority,
+            "max_stores": self.max_stores,
+            "allowed_chains": list(self.allowed_chains),
             "excluded_chains": list(self.excluded_chains),
             "dietary_rules": list(self.dietary_rules),
             "plan": self.plan.to_dict(),
@@ -255,6 +261,8 @@ class AgentState:
             lines=tuple(LineState.from_dict(line) for line in data.get("lines") or ()),
             mode=str(data.get("mode", "walk")),
             priority=str(data.get("priority", "balanced")),
+            max_stores=int(data.get("max_stores", 2)),
+            allowed_chains=tuple(str(chain) for chain in data.get("allowed_chains") or ()),
             excluded_chains=tuple(str(chain) for chain in data.get("excluded_chains") or ()),
             dietary_rules=tuple(str(rule) for rule in data.get("dietary_rules") or ()),
             plan=PlanSnapshot.from_dict(data.get("plan") or {}),
