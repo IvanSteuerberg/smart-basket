@@ -162,6 +162,8 @@ class RecommendationQuery:
     payload: dict[str, Any]
     #: Chain codes to consider; empty means every chain.
     chains: tuple[str, ...] = ()
+    #: Chain codes that must all appear in the chosen plan (e.g. an explicitly picked alternative).
+    required_chains: tuple[str, ...] = ()
     #: Other valid plans the optimizer may return next to the winner (ADR 0022, `near_tie`).
     #: Zero keeps the result byte-identical to the pre-alternatives pipeline.
     max_alternatives: int = 0
@@ -215,7 +217,10 @@ def recommend_with_basket(
             [StoreLocation(c.store_id, _point(c)) for c in candidates],
             query.mode,
         )
-        basket = _optimize(query, entries, candidates, travel, today)
+        required_chain_ids = _required_chain_ids(session, query.required_chains)
+        basket = _optimize(
+            query, entries, candidates, travel, today, required_chain_ids=required_chain_ids
+        )
     else:
         basket = _nothing_to_buy(query)
     flex_savings = (
@@ -334,6 +339,20 @@ def _line_costs(basket: BasketResult) -> dict[int, Decimal]:
     return costs
 
 
+def _required_chain_ids(session: Session, codes: tuple[str, ...]) -> frozenset[int]:
+    """Chain ids for explicitly required chain codes; empty means no requirement."""
+    wanted = sorted({code.lower() for code in codes if code})
+    if not wanted:
+        return frozenset()
+    rows = session.execute(
+        text("select id from chain where lower(code) in :codes").bindparams(
+            bindparam("codes", expanding=True)
+        ),
+        {"codes": wanted},
+    ).scalars()
+    return frozenset(int(cid) for cid in rows)
+
+
 def _optimize(
     query: RecommendationQuery,
     entries: tuple[CatalogEntry, ...],
@@ -342,6 +361,7 @@ def _optimize(
     today: date,
     *,
     max_alternatives: int | None = None,
+    required_chain_ids: frozenset[int] = frozenset(),
 ) -> BasketResult:
     """Build the optimizer input and run it; a rejected input is a client-side error.
 
@@ -358,6 +378,7 @@ def _optimize(
             max_stores=query.max_stores,
             priority_mode=query.priority_mode,
             return_to_origin=query.return_to_origin,
+            required_chain_ids=required_chain_ids,
         )
         return optimize(request, max_alternatives=alternatives)
     except ValueError as exc:

@@ -36,6 +36,11 @@ CHAIN_ALIASES: dict[str, str] = {
     "carrefour": "carrefour",
     "carrefourexpress": "carrefour",
     "carrefourmarket": "carrefour",
+    "hipermercadocarrefour": "carrefour",
+    "carrefourhipermercado": "carrefour",
+    "carrefourleon": "carrefour",
+    "carrefourexpressleon": "carrefour",
+    "carrefourmarketleon": "carrefour",
     "gadis": "gadis",
     "claudio": "gadis",
     "froiz": "froiz",
@@ -53,6 +58,8 @@ CHAIN_ALIASES: dict[str, str] = {
 STORE_FORMATS: dict[str, str] = {
     "carrefourexpress": "Express",
     "carrefourmarket": "Market",
+    "carrefourexpressleon": "Express",
+    "carrefourmarketleon": "Market",
     "diago": "Dia&Go",
     "laplazadedia": "La Plaza",
     "hiperfroiz": "Hiper Froiz",
@@ -63,6 +70,16 @@ STORE_FORMATS: dict[str, str] = {
 
 #: OSM `shop` values that already describe a whole supermarket.
 STORE_SHOPS = frozenset({"supermarket", "hypermarket"})
+
+#: Other `shop` values: a store of the seed only when the tags name one of its chains (Carrefour
+#: Express, Dia&Go and Supercor are mapped as convenience stores; hypermarkets sit in malls).
+CHAIN_ONLY_SHOPS = frozenset(
+    {"convenience", "department_store", "general", "variety_store", "mall"}
+)
+
+#: Generic words that may precede a chain in a name ("Hipermercado Carrefour").
+_GENERIC_PREFIXES = frozenset({"hipermercado", "supermercado", "supermercados", "hiper", "super"})
+_MAX_ALIAS_WORDS = 3
 
 # Brand or name spellings a chain is known by, for the Overpass regex that finds a chain-named
 # building without a `shop` tag. It may over-match: `chain_for_tags` filters the aliases exactly.
@@ -128,11 +145,14 @@ class BoundingBox:
     def query(self) -> str:
         """The Overpass QL query: supermarkets, hypermarkets and chain-named buildings."""
         corners = f"{self.south},{self.west},{self.north},{self.east}"
+        chain_shops = "convenience|mall|department_store|general|variety_store"
         return (
             f"[out:json][timeout:{OVERPASS_QUERY_TIMEOUT_SECONDS}];\n"
             # A union: without it, `out` would print only the last statement's result.
             "(\n"
             f'  nwr["shop"~"^(supermarket|hypermarket)$"]({corners});\n'
+            f'  nwr["shop"~"^({chain_shops})$"]["brand"~"{CHAIN_SEARCH}",i]({corners});\n'
+            f'  nwr["shop"~"^({chain_shops})$"]["name"~"{CHAIN_SEARCH}",i]({corners});\n'
             f'  nwr["building"]["brand"~"{CHAIN_SEARCH}",i]({corners});\n'
             f'  nwr["building"]["name"~"{CHAIN_SEARCH}",i]({corners});\n'
             ");\n"
@@ -148,12 +168,37 @@ def normalize(value: str | None) -> str:
     return "".join(character for character in decomposed.casefold() if character.isalnum())
 
 
+def _words(value: str) -> list[str]:
+    """Accent and case insensitive words of a tag value."""
+    decomposed = unicodedata.normalize("NFKD", value.casefold())
+    plain = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return "".join(char if char.isalnum() else " " for char in plain).split()
+
+
+def _alias_for_value(value: str) -> str | None:
+    """The `CHAIN_ALIASES` key of a tag value: the whole value, else its leading words.
+
+    "Carrefour León" and "Hipermercado Carrefour" lead with a known chain; "Restaurante Carrefour"
+    and "Edificio Mercadona Viejo" do not, so a chain name in the middle never counts.
+    """
+    if normalize(value) in CHAIN_ALIASES:
+        return normalize(value)
+    words = _words(value)
+    while words and words[0] in _GENERIC_PREFIXES:
+        words = words[1:]
+    for size in range(min(_MAX_ALIAS_WORDS, len(words)), 0, -1):
+        candidate = "".join(words[:size])
+        if candidate in CHAIN_ALIASES:
+            return candidate
+    return None
+
+
 def chain_for_tags(tags: dict[str, str]) -> str | None:
-    """The chain code of `tags` by brand, then name, or None when it is not one of the seed."""
-    for key in ("brand", "name"):
+    """The chain code of `tags` by brand, then name, then operator; None when not in the seed."""
+    for key in ("brand", "name", "operator"):
         value = tags.get(key)
-        if value and (code := CHAIN_ALIASES.get(normalize(value))) is not None:
-            return code
+        if value and (alias := _alias_for_value(value)) is not None:
+            return CHAIN_ALIASES[alias]
     return None
 
 
@@ -161,7 +206,8 @@ def store_format(tags: dict[str, str]) -> str | None:
     """The brand variant when it names a format ("Express"), else the OSM `shop` value."""
     for key in ("brand", "name"):
         value = tags.get(key)
-        if value and (variant := STORE_FORMATS.get(normalize(value))) is not None:
+        alias = _alias_for_value(value) if value else None
+        if alias is not None and (variant := STORE_FORMATS.get(alias)) is not None:
             return variant
     return tags.get("shop") or None
 
@@ -176,15 +222,19 @@ def build_address(tags: dict[str, str]) -> str | None:
 
 
 def is_store(tags: dict[str, str]) -> bool:
-    """True for an OSM supermarket, a chain-named building, or an El Corte Inglés department store.
+    """True for an OSM supermarket, a chain-named building, or a chain-named convenience store.
 
-    El Corte Inglés maps its stores as `shop="department_store"` (way/26956135 in León), which
-    is a store of the seed only when the tags name the chain; other department stores stay out.
+    Convenience stores, department stores and malls (Carrefour Express, Dia&Go, Supercor,
+    El Corte Inglés in way/26956135 of León) are stores of the seed only when the tags name one
+    of its chains; any other bazaar or corner shop stays out, and so does a petrol station.
     """
+    if tags.get("amenity") == "fuel" or tags.get("shop") == "fuel":
+        return False
     if "shop" in tags:
-        return tags["shop"] in STORE_SHOPS or (
-            tags["shop"] == "department_store" and chain_for_tags(tags) == "elcorteingles"
-        )
+        shop = tags["shop"]
+        if shop in STORE_SHOPS:
+            return True
+        return shop in CHAIN_ONLY_SHOPS and chain_for_tags(tags) is not None
     return "building" in tags
 
 

@@ -310,9 +310,9 @@ def test_the_query_asks_for_supermarkets_and_chain_named_buildings_inside_the_bb
     assert "corte ingl[eé]s" in query
     assert "supercor" in query
     assert "hipercor" in query
-    # The three statements are one union, so `out` prints all of them, not only the last.
+    # The five statements are one union, so `out` prints all of them, not only the last.
     union = query[query.index("(\n") : query.index(");\nout")]
-    assert union.count("nwr[") == 3
+    assert union.count("nwr[") == 5
     assert query.endswith(");\nout center tags;")
 
 

@@ -110,9 +110,47 @@ def test_agent_run_completes_and_persists_the_trace(world):
     assert stored["policy_name"] == "default"
     assert stored["steps_count"] == run["steps_count"]
 
+    # The route is only served live (NFR-06): the stored run has none, so a later read is empty.
+    assert run["recommendation"]["route"]
+    assert "route" not in json.dumps(_stored_state(world, run["run_id"]))
+
     fetched = world.client.get(f"/api/agent/runs/{run['run_id']}")
     assert fetched.status_code == 200
-    assert fetched.json() == run
+    reread = fetched.json()
+    assert reread["recommendation"]["route"] == []
+    assert _without_route(reread) == _without_route(run)
+
+
+def _without_route(run: dict) -> dict:
+    recommendation = {k: v for k, v in run["recommendation"].items() if k != "route"}
+    return {**run, "recommendation": recommendation}
+
+
+def _canonical_id(world, name: str) -> int:
+    return world.connection.execute(
+        text("select id from canonical_product where name = :name"), {"name": name}
+    ).scalar_one()
+
+
+def _bought(run: dict) -> list[str]:
+    stores = run["recommendation"]["stores"]
+    return [line["product_name"] for store in stores for line in store["lines"]]
+
+
+# One line the plan can buy plus one vague line: the plan exists (so it has zones and a route)
+# while the agent pauses to ask about the vague one.
+MILK_AND_VAGUE = [
+    item("leche semidesnatada", "leche", "2", "l"),
+    item("pollo preparado", "vague", "1", "kg"),
+]
+
+
+def _pause_on_the_vague_line(world, items: list[dict] = MILK_AND_VAGUE) -> dict:
+    paused = world.client.post("/api/agent/runs", json=run_body(items, policy="default")).json()
+    assert paused["status"] == "waiting_shopper"
+    assert paused["recommendation"] is None
+    assert paused["pending_question"]["line_index"] == len(items) - 1
+    return paused
 
 
 def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
@@ -129,6 +167,7 @@ def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
     assert paused["steps"][0]["chosen_action"] == "preguntar"
     assert paused["steps"][0]["observation"]["kind"] == "vague_line"
 
+    # A free text that names a category settles the line itself: no further step is needed.
     resumed = world.client.post(
         f"/api/agent/runs/{paused['run_id']}/answer",
         json={"message": "quiero pechuga de pollo"},
@@ -137,15 +176,35 @@ def test_vague_line_pauses_then_resumes_and_keeps_steps_in_order(world):
     final = resumed.json()
     assert final["status"] == "completed"
     assert final["pending_question"] is None
-    assert final["steps_count"] >= 2
-    assert [step["step_number"] for step in final["steps"]] == list(
-        range(1, final["steps_count"] + 1)
-    )
-    assert final["steps"][-1]["observation"]["kind"] == "shopper_request"
+    assert final["steps_count"] == 1
+    assert [step["step_number"] for step in final["steps"]] == [1]
+    assert final["steps"][0] == paused["steps"][0]
+    assert any("pollo" in name.lower() for name in _bought(final))
 
     fetched = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
     assert fetched["status"] == "completed"
     assert fetched["steps"] == final["steps"]
+
+
+def test_unresolved_text_keeps_asking_and_appends_the_steps_in_order(world):
+    paused = _pause_on_the_vague_line(world)
+
+    resumed = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer", json={"message": "lo que sea, algo rico"}
+    )
+    assert resumed.status_code == 200
+    again = resumed.json()
+
+    # The text matches no category, so it is handled as a request and the vague line is asked
+    # again: the new steps follow the old one with no gap or repeated number.
+    assert again["status"] == "waiting_shopper"
+    assert again["pending_question"]["line_index"] == 1
+    assert again["steps_count"] == len(again["steps"]) >= 2
+    assert [step["step_number"] for step in again["steps"]] == list(
+        range(1, again["steps_count"] + 1)
+    )
+    assert again["steps"][0] == paused["steps"][0]
+    assert again["steps"][1]["observation"]["kind"] == "shopper_request"
 
 
 def test_shopper_message_can_change_the_mode_with_the_injected_policy(world):
@@ -235,25 +294,99 @@ def test_resumed_run_strips_the_query_once_it_completes(world):
 
 
 @pytest.mark.parametrize(
-    ("answer", "expected_message"),
+    ("kind", "bought_after"),
     [
-        ({"option_index": 1}, "Opción 2"),
-        ({"canonical_id": 4242}, "Producto 4242"),
+        ("option_index", []),  # the only option is "Dejar sin comprar": the line is skipped
+        ("canonical_id", ["Pollo entero"]),
+        ("choice_label", ["Pollo entero + Pechugas enteras de pollo"]),
     ],
 )
-def test_answering_a_paused_run_with_a_structured_choice(world, answer, expected_message):
-    paused = world.client.post(
-        "/api/agent/runs",
-        json=run_body([item("pollo preparado", "vague", "1", "kg")], policy="default"),
-    ).json()
-    assert paused["status"] == "waiting_shopper"
+def test_answering_a_paused_run_with_a_structured_choice(world, kind, bought_after):
+    paused = _pause_on_the_vague_line(world)
+    skip = {"label": "Dejar sin comprar", "action": "skip"}
+    assert paused["pending_question"]["options"] == [skip]
+    answer = {
+        "option_index": {"option_index": 0},
+        "canonical_id": {"canonical_id": _canonical_id(world, "Pollo entero")},
+        "choice_label": {"choice_label": "Pollo"},
+    }[kind]
 
     resumed = world.client.post(f"/api/agent/runs/{paused['run_id']}/answer", json=answer)
     assert resumed.status_code == 200
     final = resumed.json()
+
     assert final["status"] == "completed"
-    assert final["steps"][-1]["observation"]["kind"] == "shopper_request"
-    assert final["steps"][-1]["observation"]["details"]["message"] == expected_message
+    assert final["pending_question"] is None
+    assert final["steps_count"] == 1
+    # The plan was re-optimized with the answer and still carries the live route.
+    recommendation = final["recommendation"]
+    assert recommendation is not None
+    assert recommendation["route"]
+    assert _bought(final) == ["Leche semidesnatada Hacendado", *bought_after]
+    assert recommendation["total_cost"] != "0"
+
+    stored = _stored_state(world, paused["run_id"])
+    assert "route" not in json.dumps(stored)
+    _assert_origin_not_persisted(stored)
+    reread = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
+    assert reread["recommendation"]["route"] == []
+    assert _without_route(reread) == _without_route(final)
+
+
+def test_option_index_out_of_range_is_rejected_and_the_run_keeps_waiting(world):
+    paused = _pause_on_the_vague_line(world)
+    options = paused["pending_question"]["options"]
+
+    for index in (len(options), 5):
+        rejected = world.client.post(
+            f"/api/agent/runs/{paused['run_id']}/answer", json={"option_index": index}
+        )
+        assert rejected.status_code == 422
+
+    still = world.client.get(f"/api/agent/runs/{paused['run_id']}").json()
+    assert still["status"] == "waiting_shopper"
+    assert still["steps"] == paused["steps"]
+
+
+def test_unknown_canonical_is_asked_again_while_a_real_one_is_accepted(world):
+    paused = _pause_on_the_vague_line(world)
+    unknown = _canonical_id(world, "Pollo entero") + 10_000
+
+    asked_again = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer", json={"canonical_id": unknown}
+    )
+    assert asked_again.status_code == 200
+    again = asked_again.json()
+    assert again["status"] == "waiting_shopper"
+    assert again["pending_question"]["line_index"] == 1
+    assert again["recommendation"] is None
+    assert [step["step_number"] for step in again["steps"]] == list(
+        range(1, again["steps_count"] + 1)
+    )
+
+    accepted = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/answer",
+        json={"canonical_id": _canonical_id(world, "Pollo entero")},
+    )
+    assert accepted.status_code == 200
+    final = accepted.json()
+    assert final["status"] == "completed"
+    assert _bought(final) == ["Leche semidesnatada Hacendado", "Pollo entero"]
+
+
+def test_run_response_carries_the_route_but_the_stored_state_never_does(world):
+    response = world.client.post("/api/agent/runs", json=run_body(FIVE_ITEMS, policy="default"))
+    assert response.status_code == 200
+    run = response.json()
+
+    route = run["recommendation"]["route"]
+    assert route
+    stored = _stored_state(world, run["run_id"])
+    # The recommendation is kept for later reads, but without its route (NFR-06).
+    assert stored["_recommendation"]["total_cost"] == run["recommendation"]["total_cost"]
+    assert "route" not in stored["_recommendation"]
+    assert "route" not in json.dumps(stored)
+    _assert_origin_not_persisted(stored)
 
 
 def test_unknown_policy_is_rejected_with_422(world):
@@ -271,3 +404,227 @@ def test_answering_a_completed_run_returns_409(world):
         f"/api/agent/runs/{completed['run_id']}/answer", json={"message": "hola"}
     )
     assert response.status_code == 409
+
+
+# -- cumulative conversation (E5) -----------------------------------------
+
+ORIGIN = {"lat": 42.5987, "lon": -5.5671}
+# Milk is only sold by Mercadona and rice only by Carrefour: the first plan uses both chains.
+MILK_AND_RICE_ITEMS = [
+    item("leche semidesnatada", "leche", "2", "l"),
+    item("arroz redondo", "arroz", "1", "kg"),
+]
+
+
+def _say(world, run_id: str, message: str, key: str, *, origin: dict | None = ORIGIN):
+    """One more message on a run, with the policy choosing `key`."""
+    scripted = ScriptedPolicy([key])
+    world.client.app.dependency_overrides[get_agent_policy] = lambda: scripted
+    body: dict = {"message": message}
+    if origin is not None:
+        body["origin"] = origin
+    return world.client.post(f"/api/agent/runs/{run_id}/message", json=body)
+
+
+def _first_turn(world) -> dict:
+    response = world.client.post(
+        "/api/agent/runs", json=run_body(MILK_AND_RICE_ITEMS, policy="default")
+    )
+    assert response.status_code == 200
+    run = response.json()
+    assert run["status"] == "completed"
+    assert set(_bought(run)) == {"Leche semidesnatada Hacendado", "Arroz redondo Carrefour"}
+    return run
+
+
+def _keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value) | {key for inner in value.values() for key in _keys(inner)}
+    if isinstance(value, list):
+        return {key for inner in value for key in _keys(inner)}
+    return set()
+
+
+def _assert_no_origin_or_route(state: dict) -> None:
+    assert not _keys(state) & {"origin", "route", "latitude", "longitude", "_query"}
+    dumped = json.dumps(state, ensure_ascii=False)
+    assert "42.5987" not in dumped
+    assert "-5.5671" not in dumped
+
+
+def test_messages_accumulate_changes_and_never_store_the_origin(world):
+    first = _first_turn(world)
+    run_id = first["run_id"]
+
+    second = _say(world, run_id, "sin Mercadona", "excluir_cadena:0")
+    assert second.status_code == 200
+    turn2 = second.json()
+    assert turn2["run_id"] == run_id
+    assert turn2["status"] == "completed"
+    assert turn2["excluded_chains"] == ["mercadona"]
+    assert turn2["buyer_summary"].startswith("He excluido Mercadona del plan.")
+    assert turn2["recommendation"]["route"]
+    assert _bought(turn2) == ["Arroz redondo Carrefour"]
+
+    third = _say(world, run_id, "en 1 tienda", "cambiar_max_tiendas:1")
+    assert third.status_code == 200
+    turn3 = third.json()
+    # Mercadona stays excluded and the store limit is added on top of it.
+    assert turn3["excluded_chains"] == ["mercadona"]
+    assert turn3["max_stores"] == 1
+    assert turn3["buyer_summary"].startswith("He limitado la compra a 1 tienda.")
+    assert turn3["recommendation"]["route"]
+    assert _bought(turn3) == ["Arroz redondo Carrefour"]
+    assert [step["step_number"] for step in turn3["steps"]] == [1, 2]
+    assert turn3["steps_count"] == 2
+
+    _assert_no_origin_or_route(_stored_state(world, run_id))
+    assert _stored_state(world, run_id)["_plan_spec"]["max_stores"] == 1
+
+    # A later read serves the stored plan, without a route.
+    reread = world.client.get(f"/api/agent/runs/{run_id}").json()
+    assert reread["recommendation"]["route"] == []
+    assert reread["excluded_chains"] == ["mercadona"]
+
+
+def test_a_message_can_change_the_mode_and_the_list_after_other_changes(world):
+    run_id = _first_turn(world)["run_id"]
+
+    _say(world, run_id, "sin Mercadona", "excluir_cadena:0")
+    car = _say(world, run_id, "mejor voy en coche", "cambiar_modo")
+    assert car.status_code == 200
+    assert car.json()["mode"] == "car"
+    assert car.json()["excluded_chains"] == ["mercadona"]
+    assert car.json()["buyer_summary"].startswith("He cambiado el desplazamiento a coche.")
+
+    # The line removed earlier left a gap in the indexes: later turns must still find the rest.
+    removed = _say(world, run_id, "quita el arroz", "quitar_linea:1")
+    assert removed.status_code == 200
+    assert removed.json()["mode"] == "car"
+    _assert_no_origin_or_route(_stored_state(world, run_id))
+
+
+def test_explaining_in_a_message_serves_the_current_plan_with_its_route(world):
+    run_id = _first_turn(world)["run_id"]
+
+    explained = _say(world, run_id, "¿por qué este plan?", "explicar")
+
+    assert explained.status_code == 200
+    run = explained.json()
+    assert "El plan actual compra en" in run["buyer_summary"]
+    assert run["recommendation"]["route"]
+
+
+def test_previous_run_id_inherits_the_accumulated_state(world):
+    first = _first_turn(world)
+    scripted = ScriptedPolicy(["excluir_cadena:0", "cambiar_max_tiendas:1"])
+    world.client.app.dependency_overrides[get_agent_policy] = lambda: scripted
+
+    second = world.client.post(
+        "/api/agent/runs",
+        json=run_body(
+            MILK_AND_RICE_ITEMS, previous_run_id=first["run_id"], shopper_message="sin Mercadona"
+        ),
+    )
+    assert second.status_code == 200
+    turn2 = second.json()
+    assert turn2["run_id"] != first["run_id"]
+    assert turn2["excluded_chains"] == ["mercadona"]
+    assert turn2["recommendation"]["route"]
+    assert turn2["buyer_summary"].startswith("He excluido Mercadona del plan.")
+
+    third = world.client.post(
+        "/api/agent/runs",
+        json=run_body(
+            MILK_AND_RICE_ITEMS, previous_run_id=turn2["run_id"], shopper_message="en 1 tienda"
+        ),
+    )
+    assert third.status_code == 200
+    turn3 = third.json()
+    assert turn3["excluded_chains"] == ["mercadona"]
+    assert turn3["max_stores"] == 1
+    assert turn3["recommendation"]["route"]
+    assert turn3["steps_count"] == 1
+    _assert_no_origin_or_route(_stored_state(world, turn3["run_id"]))
+
+
+def test_previous_run_id_without_a_message_serves_the_same_plan_live(world):
+    first = _first_turn(world)
+
+    again = world.client.post(
+        "/api/agent/runs", json=run_body(MILK_AND_RICE_ITEMS, previous_run_id=first["run_id"])
+    )
+
+    assert again.status_code == 200
+    run = again.json()
+    assert run["steps_count"] == 0
+    assert run["recommendation"]["route"]
+    assert _bought(run) == _bought(first)
+
+
+def test_previous_run_id_that_does_not_exist_returns_404(world):
+    response = world.client.post(
+        "/api/agent/runs", json=run_body(MILK_AND_RICE_ITEMS, previous_run_id=str(uuid4()))
+    )
+    assert response.status_code == 404
+
+
+def test_a_message_without_origin_on_a_completed_run_returns_a_spanish_422(world):
+    run_id = _first_turn(world)["run_id"]
+
+    response = _say(world, run_id, "sin Mercadona", "excluir_cadena:0", origin=None)
+
+    assert response.status_code == 422
+    assert "origen" in response.json()["detail"]
+    # Nothing happened: the run is still completed and untouched.
+    assert world.client.get(f"/api/agent/runs/{run_id}").json()["status"] == "completed"
+
+
+def test_a_message_on_an_unknown_run_returns_404(world):
+    response = _say(world, str(uuid4()), "hola", "no_hacer_nada")
+
+    assert response.status_code == 404
+
+
+def test_a_message_is_bounded(world):
+    run_id = _first_turn(world)["run_id"]
+
+    too_long = world.client.post(
+        f"/api/agent/runs/{run_id}/message", json={"message": "x" * 1001, "origin": ORIGIN}
+    )
+    empty = world.client.post(
+        f"/api/agent/runs/{run_id}/message", json={"message": "", "origin": ORIGIN}
+    )
+
+    assert too_long.status_code == 422
+    assert empty.status_code == 422
+
+
+def test_a_message_on_a_paused_run_answers_its_question_with_the_stored_origin(world):
+    paused = _pause_on_the_vague_line(world)
+
+    # No origin travels with the message: the paused run still keeps its own.
+    resumed = world.client.post(
+        f"/api/agent/runs/{paused['run_id']}/message", json={"message": "quiero pechuga de pollo"}
+    )
+
+    assert resumed.status_code == 200
+    final = resumed.json()
+    assert final["status"] == "completed"
+    assert any("pollo" in name.lower() for name in _bought(final))
+    _assert_origin_not_persisted(_stored_state(world, paused["run_id"]))
+
+
+def test_a_message_that_cannot_be_applied_keeps_the_accumulated_plan(world):
+    run_id = _first_turn(world)["run_id"]
+    _say(world, run_id, "sin Mercadona", "excluir_cadena:0")
+
+    # Excluding the last chain left is refused by validation; the earlier exclusion stays.
+    refused = _say(world, run_id, "sin Carrefour", "excluir_cadena:0")
+
+    assert refused.status_code == 200
+    run = refused.json()
+    assert run["status"] == "completed"
+    assert run["excluded_chains"] == ["mercadona"]
+    assert run["steps"][-1]["error"]
+    assert run["recommendation"]["route"]

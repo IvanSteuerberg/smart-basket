@@ -119,6 +119,10 @@ class AlternativePlanSummary:
     total_cost: Decimal
     travel_minutes: Decimal
     objective_delta: Decimal
+    chain_codes: tuple[str, ...] = ()
+    cost_delta: Decimal | None = None
+    minutes_delta: Decimal | None = None
+    reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -126,15 +130,25 @@ class AlternativePlanSummary:
             "total_cost": str(self.total_cost),
             "travel_minutes": str(self.travel_minutes),
             "objective_delta": str(self.objective_delta),
+            "chain_codes": list(self.chain_codes),
+            "cost_delta": str(self.cost_delta) if self.cost_delta is not None else None,
+            "minutes_delta": str(self.minutes_delta) if self.minutes_delta is not None else None,
+            "reason": self.reason,
         }
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> AlternativePlanSummary:
+        cost_delta = data.get("cost_delta")
+        minutes_delta = data.get("minutes_delta")
         return cls(
             store_names=tuple(str(name) for name in data.get("store_names") or ()),
             total_cost=Decimal(str(data["total_cost"])),
             travel_minutes=Decimal(str(data["travel_minutes"])),
             objective_delta=Decimal(str(data["objective_delta"])),
+            chain_codes=tuple(str(code) for code in data.get("chain_codes") or ()),
+            cost_delta=Decimal(str(cost_delta)) if cost_delta is not None else None,
+            minutes_delta=Decimal(str(minutes_delta)) if minutes_delta is not None else None,
+            reason=data.get("reason"),
         )
 
 
@@ -147,6 +161,7 @@ class PlanSnapshot:
     travel_minutes: Decimal = Decimal(0)
     comparable_cost: Decimal = Decimal(0)
     alternatives: tuple[AlternativePlanSummary, ...] = ()
+    chain_codes: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -155,6 +170,7 @@ class PlanSnapshot:
             "travel_minutes": str(self.travel_minutes),
             "comparable_cost": str(self.comparable_cost),
             "alternatives": [item.to_dict() for item in self.alternatives],
+            "chain_codes": list(self.chain_codes),
         }
 
     @classmethod
@@ -167,6 +183,7 @@ class PlanSnapshot:
             alternatives=tuple(
                 AlternativePlanSummary.from_dict(item) for item in data.get("alternatives") or ()
             ),
+            chain_codes=tuple(str(code) for code in data.get("chain_codes") or ()),
         )
 
 
@@ -211,12 +228,18 @@ class AgentState:
     alternatives_shown: tuple[dict[str, Any], ...] = ()
     steps_taken: int = 0
     status: RunStatus = RunStatus.RUNNING
+    #: Most stores the plan may visit (1..3); mutated by `cambiar_max_tiendas`.
+    max_stores: int = 2
+    #: When not empty, the only chains the plan may use; mutated by `filtrar_cadena`.
+    allowed_chains: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "lines": [line.to_dict() for line in self.lines],
             "mode": self.mode,
             "priority": self.priority,
+            "max_stores": self.max_stores,
+            "allowed_chains": list(self.allowed_chains),
             "excluded_chains": list(self.excluded_chains),
             "dietary_rules": list(self.dietary_rules),
             "plan": self.plan.to_dict(),
@@ -238,6 +261,8 @@ class AgentState:
             lines=tuple(LineState.from_dict(line) for line in data.get("lines") or ()),
             mode=str(data.get("mode", "walk")),
             priority=str(data.get("priority", "balanced")),
+            max_stores=int(data.get("max_stores", 2)),
+            allowed_chains=tuple(str(chain) for chain in data.get("allowed_chains") or ()),
             excluded_chains=tuple(str(chain) for chain in data.get("excluded_chains") or ()),
             dietary_rules=tuple(str(rule) for rule in data.get("dietary_rules") or ()),
             plan=PlanSnapshot.from_dict(data.get("plan") or {}),

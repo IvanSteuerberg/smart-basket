@@ -117,6 +117,10 @@ def optimize(request: BasketRequest, *, max_alternatives: int = 0) -> BasketResu
     ranked: list[tuple[tuple, _Choice]] = []
     for size in range(1, min(request.max_stores, len(stores)) + 1):
         for subset in combinations(stores, size):
+            if request.required_chain_ids and not request.required_chain_ids.issubset(
+                {s.chain_id for s in subset}
+            ):
+                continue
             ids = tuple(s.store_id for s in subset)
             assignment: dict[str, int] = {}
             cost = penalty = Decimal(0)
@@ -157,9 +161,66 @@ def optimize(request: BasketRequest, *, max_alternatives: int = 0) -> BasketResu
             plan=_result(request, lam, by_id, options, choice),
             objective_delta=key[0] - best_key[0],
         )
-        for key, choice in ranked[1 : 1 + max_alternatives]
+        for key, choice in _select_alternatives(ranked, by_id, options, max_alternatives)
     )
     return replace(_result(request, lam, by_id, options, best_choice), alternatives=alternatives)
+
+
+def _select_alternatives(
+    ranked: list[tuple[tuple, _Choice]],
+    by_id: dict[int, Store],
+    options: dict[str, dict[int, LineOption]],
+    limit: int,
+) -> list[tuple[tuple, _Choice]]:
+    """Up to `limit` alternatives with pairwise distinct chain sets, all different from the winner.
+
+    Branches of the same chains are not real alternatives, so only the best subset of every chain
+    set is kept. The Pareto-relevant ones come first (FR-19): the best single-store plan when the
+    winner visits several stores, the strictly cheapest plan and the strictly fastest one. The
+    remaining slots go to the next best by rank. The result is sorted by rank.
+    """
+
+    def chains(choice: _Choice) -> frozenset[int]:
+        return frozenset(by_id[sid].chain_id for sid in choice[0])
+
+    def cost(choice: _Choice) -> Decimal:
+        return sum((options[lid][sid].cost for lid, sid in choice[2].items()), Decimal(0))
+
+    best_key, best_choice = ranked[0]
+    best_uncovered = best_key[1]
+    seen = {chains(best_choice)}
+    distinct: list[tuple[tuple, _Choice]] = []
+    for key, choice in ranked[1:]:
+        chain_set = chains(choice)
+        if chain_set not in seen:
+            seen.add(chain_set)
+            distinct.append((key, choice))
+
+    # Pareto slots only consider plans with at least the winner's coverage: a plan that drops
+    # extra lines has a lower checkout price only because items were omitted.
+    same_coverage = [item for item in distinct if item[0][1] <= best_uncovered]
+    picked: list[tuple[tuple, _Choice]] = []
+
+    def take(item: tuple[tuple, _Choice] | None) -> None:
+        if item is not None and all(item is not other for other in picked):
+            picked.append(item)
+
+    best_cost = cost(best_choice)
+    best_minutes = best_choice[1].minutes
+    if len(best_choice[0]) >= 2:
+        take(next((item for item in same_coverage if len(item[1][0]) == 1), None))
+    cheaper = [item for item in same_coverage if cost(item[1]) < best_cost]
+    take(min(cheaper, key=lambda item: (cost(item[1]), item[0])) if cheaper else None)
+    faster = [item for item in same_coverage if item[1][1].minutes < best_minutes]
+    take(min(faster, key=lambda item: (item[1][1].minutes, item[0])) if faster else None)
+    chosen = picked[:limit]
+    for pool in (same_coverage, distinct):
+        for item in pool:
+            if len(chosen) >= limit:
+                break
+            if all(item is not other for other in chosen):
+                chosen.append(item)
+    return sorted(chosen, key=lambda item: item[0])
 
 
 def _result(

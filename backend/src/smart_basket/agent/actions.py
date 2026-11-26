@@ -17,7 +17,12 @@ from smart_basket.agent.state import AgentState, LineState
 
 
 class ActionKind(StrEnum):
-    """The thirteen actions of the closed catalog (`experiments/decision-spike/scenarios.json`)."""
+    """The seventeen actions of the closed catalog.
+
+    The first thirteen come from `experiments/decision-spike/scenarios.json`; the last four
+    (`filtrar_cadena`, `cambiar_max_tiendas`, `cambiar_prioridad`, `cambiar_producto`) complete
+    the conversational requests of a shopper (E5).
+    """
 
     BUSCAR_SUSTITUTO = "buscar_sustituto"
     PREGUNTAR = "preguntar"
@@ -32,6 +37,10 @@ class ActionKind(StrEnum):
     EXCLUIR_CADENA = "excluir_cadena"
     EXPLICAR = "explicar"
     NO_HACER_NADA = "no_hacer_nada"
+    FILTRAR_CADENA = "filtrar_cadena"
+    CAMBIAR_MAX_TIENDAS = "cambiar_max_tiendas"
+    CAMBIAR_PRIORIDAD = "cambiar_prioridad"
+    CAMBIAR_PRODUCTO = "cambiar_producto"
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,7 +89,13 @@ _LABELS: dict[ActionKind, str] = {
     ActionKind.EXCLUIR_CADENA: "Excluir una cadena",
     ActionKind.EXPLICAR: "Explicar el plan",
     ActionKind.NO_HACER_NADA: "No hacer nada",
+    ActionKind.FILTRAR_CADENA: "Comprar solo en unas cadenas",
+    ActionKind.CAMBIAR_MAX_TIENDAS: "Cambiar el máximo de tiendas",
+    ActionKind.CAMBIAR_PRIORIDAD: "Cambiar la prioridad",
+    ActionKind.CAMBIAR_PRODUCTO: "Cambiar el producto de una línea",
 }
+
+_PRIORITY_LABELS = {"savings": "ahorro", "balanced": "equilibrio", "time": "tiempo"}
 
 
 def valid_actions(state: AgentState, observation: Observation) -> tuple[CandidateAction, ...]:
@@ -169,7 +184,15 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
 
     quantity = _positive_quantity(details.get("quantity"))
     for index in targets:
-        candidates.append(_candidate(ActionKind.QUITAR_LINEA, line_index=index, suffix=index))
+        target = _line_at(state, index)
+        candidates.append(
+            _candidate(
+                ActionKind.QUITAR_LINEA,
+                line_index=index,
+                suffix=index,
+                label=f"Quitar «{target.raw_text}»" if target is not None else None,
+            )
+        )
         if quantity is not None:
             candidates.append(
                 _candidate(
@@ -193,9 +216,21 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
     text = details.get("text")
     if text:
         candidates.append(_candidate(ActionKind.ANADIR_LINEA, text=str(text), suffix=0))
-    chain = details.get("chain")
-    if chain:
-        candidates.append(_candidate(ActionKind.EXCLUIR_CADENA, chain=str(chain), suffix=0))
+    names = details.get("chain_names")
+    names = names if isinstance(names, Mapping) else {}
+    excluded = [str(code) for code in details.get("excluded_chains") or ()]
+    if not excluded and details.get("chain"):
+        excluded = [str(details["chain"])]
+    for position, code in enumerate(excluded):
+        candidates.append(
+            _candidate(
+                ActionKind.EXCLUIR_CADENA,
+                chain=code,
+                suffix=position,
+                label=f"Excluir la cadena {_chain_name(names, code)}",
+            )
+        )
+    candidates.extend(_conversational_candidates(state, observation, names))
     candidates.extend(
         [
             _candidate(ActionKind.EXPLICAR),
@@ -206,11 +241,98 @@ def _shopper_request(state: AgentState, observation: Observation) -> list[Candid
     return candidates
 
 
+def _conversational_candidates(
+    state: AgentState, observation: Observation, names: Mapping[str, Any]
+) -> list[CandidateAction]:
+    """Candidates for the requests that restrict or reshape the plan, with their data in the label.
+
+    Keys stay opaque and stable (`filtrar_cadena:0`, `cambiar_max_tiendas:1`,
+    `cambiar_prioridad:savings`, `cambiar_producto:0`, `quitar_linea:multi`); the shopper's own
+    words only travel in `args` and in the human label.
+    """
+    details = observation.details
+    candidates: list[CandidateAction] = []
+
+    allowed = [str(code) for code in details.get("allowed_chains") or ()]
+    if allowed:
+        shown = " y ".join(_chain_name(names, code) for code in allowed)
+        extra_args: dict[str, Any] = {}
+        if details.get("require_all_chains"):
+            extra_args["require_all"] = True
+        candidates.append(
+            _candidate(
+                ActionKind.FILTRAR_CADENA,
+                chains=allowed,
+                suffix=0,
+                label=f"Comprar solo en {shown}",
+                **extra_args,
+            )
+        )
+
+    max_stores = details.get("max_stores")
+    if isinstance(max_stores, int) and not isinstance(max_stores, bool) and 1 <= max_stores <= 3:
+        shown_stores = "1 tienda" if max_stores == 1 else f"{max_stores} tiendas"
+        candidates.append(
+            _candidate(
+                ActionKind.CAMBIAR_MAX_TIENDAS,
+                max_stores=max_stores,
+                suffix=max_stores,
+                label=f"Cambiar a máximo {shown_stores}",
+            )
+        )
+
+    priority = details.get("priority")
+    if priority in _PRIORITY_LABELS:
+        candidates.append(
+            _candidate(
+                ActionKind.CAMBIAR_PRIORIDAD,
+                priority=priority,
+                suffix=priority,
+                label=f"Cambiar prioridad a {_PRIORITY_LABELS[priority]}",
+            )
+        )
+
+    replacement = str(details.get("replace_text") or "").strip()
+    target = _line_at(state, observation.line_index)
+    if replacement and target is not None:
+        candidates.append(
+            _candidate(
+                ActionKind.CAMBIAR_PRODUCTO,
+                line_index=target.index,
+                text=replacement,
+                suffix=target.index,
+                label=f"Cambiar «{target.raw_text}» por «{replacement}»",
+            )
+        )
+
+    many = [
+        line
+        for index in details.get("line_indices") or ()
+        if (line := _line_at(state, index)) is not None
+    ]
+    if len(many) > 1:
+        candidates.append(
+            _candidate(
+                ActionKind.QUITAR_LINEA,
+                line_indices=[line.index for line in many],
+                suffix="multi",
+                label="Quitar " + " y ".join(f"«{line.raw_text}»" for line in many),
+            )
+        )
+    return candidates
+
+
+def _chain_name(names: Mapping[str, Any], code: str) -> str:
+    name = names.get(code)
+    return str(name) if name else code.replace("_", " ").title()
+
+
 def _candidate(
     kind: ActionKind,
     *,
     key: str | None = None,
     suffix: str | int | None = None,
+    label: str | None = None,
     **args: Any,
 ) -> CandidateAction:
     """Build a candidate; `suffix` namespaces its key (e.g. `quitar_linea:0`)."""
@@ -218,7 +340,7 @@ def _candidate(
         key=key or (kind.value if suffix is None else f"{kind.value}:{suffix}"),
         kind=kind,
         args=args,
-        label=_LABELS[kind],
+        label=label or _LABELS[kind],
     )
 
 

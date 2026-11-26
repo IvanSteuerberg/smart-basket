@@ -2,16 +2,198 @@
  * Tailwind for the catalog pages. The four-step flow keeps its hand-written
  * styles.css, wrapped in the `legacy` layer so utilities can override it on the
  * new pages while both stylesheets keep applying.
+ *
+ * Design system "Pizarra y Cobalto": a neutral slate surface with a cobalt accent, in a light
+ * and a dark variant. The page declares `<meta name="color-scheme">` (see theme.ts) and the
+ * `:has()` rules below turn that meta into the CSS `color-scheme`, so a forced choice and the
+ * OS preference go through the same `light-dark()` tokens.
  */
 @layer theme, base, components, legacy, utilities;
 
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #2f6f4e;
-  --color-brand-dark: #24583d;
-  --color-brand-soft: #e8f1ec;
-  --color-price: #c2410c;
-  --color-price-soft: #fff2e7;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Backward-compatible aliases of the pre-I17 palette, now mapped to the semantic tokens. */
+  --color-brand: var(--accent-primary);
+  --color-brand-dark: var(--accent-primary-hover);
+  --color-brand-soft: var(--accent-soft);
+  --color-price: var(--danger-fg);
+  --color-price-soft: var(--danger-bg);
+
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Strict three-size scale: heading, body and small (never below 13px above the fold). */
+  --text-heading: 1.375rem;
+  --text-body: 0.9375rem;
+  --text-sm: 0.8125rem;
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+
+    &:has(> head > meta[name="color-scheme"][content="dark"]) {
+      color-scheme: dark;
+    }
+    &:has(> head > meta[name="color-scheme"][content="light"]) {
+      color-scheme: light;
+    }
+
+    /* Raw palette. */
+    --surface-canvas-light: #f7f8fa;
+    --surface-canvas-dark: #0d1117;
+    --surface-card-light: #ffffff;
+    --surface-card-dark: #161b22;
+    --surface-elevated-light: #eef1f6;
+    --surface-elevated-dark: #1f2630;
+    --border-subtle-light: #d8dee9;
+    --border-subtle-dark: #2d3644;
+    --ink-primary-light: #111827;
+    --ink-primary-dark: #f1f5f9;
+    --ink-secondary-light: #475569;
+    --ink-secondary-dark: #94a3b8;
+    --accent-primary-light: #1d4ed8;
+    --accent-primary-dark: #60a5fa;
+    --accent-primary-hover-light: #1e40af;
+    --accent-primary-hover-dark: #93c5fd;
+    --accent-soft-light: #dbeafe;
+    --accent-soft-dark: #172554;
+    --accent-on-primary-light: #ffffff;
+    --accent-on-primary-dark: #0b1220;
+    --savings-fg-light: #0f766e;
+    --savings-fg-dark: #2dd4bf;
+    --savings-bg-light: #ccfbf1;
+    --savings-bg-dark: #103230;
+    --alert-fg-light: #b45309;
+    --alert-fg-dark: #fbbf24;
+    --alert-bg-light: #fef3c7;
+    --alert-bg-dark: #33250b;
+    --danger-fg-light: #b91c1c;
+    --danger-fg-dark: #f87171;
+    --danger-bg-light: #fee2e2;
+    --danger-bg-dark: #381619;
+
+    /* Semantic tokens: light by default. */
+    --surface-canvas: var(--surface-canvas-light);
+    --surface-card: var(--surface-card-light);
+    --surface-elevated: var(--surface-elevated-light);
+    --border-subtle: var(--border-subtle-light);
+    --ink-primary: var(--ink-primary-light);
+    --ink-secondary: var(--ink-secondary-light);
+    --accent-primary: var(--accent-primary-light);
+    --accent-primary-hover: var(--accent-primary-hover-light);
+    --accent-soft: var(--accent-soft-light);
+    --accent-on-primary: var(--accent-on-primary-light);
+    --savings-fg: var(--savings-fg-light);
+    --savings-bg: var(--savings-bg-light);
+    --alert-fg: var(--alert-fg-light);
+    --alert-bg: var(--alert-bg-light);
+    --danger-fg: var(--danger-fg-light);
+    --danger-bg: var(--danger-bg-light);
+  }
+
+  /* Fallback for browsers without light-dark(): follow the OS preference. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-canvas: var(--surface-canvas-dark);
+      --surface-card: var(--surface-card-dark);
+      --surface-elevated: var(--surface-elevated-dark);
+      --border-subtle: var(--border-subtle-dark);
+      --ink-primary: var(--ink-primary-dark);
+      --ink-secondary: var(--ink-secondary-dark);
+      --accent-primary: var(--accent-primary-dark);
+      --accent-primary-hover: var(--accent-primary-hover-dark);
+      --accent-soft: var(--accent-soft-dark);
+      --accent-on-primary: var(--accent-on-primary-dark);
+      --savings-fg: var(--savings-fg-dark);
+      --savings-bg: var(--savings-bg-dark);
+      --alert-fg: var(--alert-fg-dark);
+      --alert-bg: var(--alert-bg-dark);
+      --danger-fg: var(--danger-fg-dark);
+      --danger-bg: var(--danger-bg-dark);
+    }
+  }
+
+  /* Progressive enhancement: light-dark() also honors a forced color-scheme. */
+  @supports (color: light-dark(white, black)) {
+    :root {
+      --surface-canvas: light-dark(var(--surface-canvas-light), var(--surface-canvas-dark));
+      --surface-card: light-dark(var(--surface-card-light), var(--surface-card-dark));
+      --surface-elevated: light-dark(var(--surface-elevated-light), var(--surface-elevated-dark));
+      --border-subtle: light-dark(var(--border-subtle-light), var(--border-subtle-dark));
+      --ink-primary: light-dark(var(--ink-primary-light), var(--ink-primary-dark));
+      --ink-secondary: light-dark(var(--ink-secondary-light), var(--ink-secondary-dark));
+      --accent-primary: light-dark(var(--accent-primary-light), var(--accent-primary-dark));
+      --accent-primary-hover: light-dark(
+        var(--accent-primary-hover-light),
+        var(--accent-primary-hover-dark)
+      );
+      --accent-soft: light-dark(var(--accent-soft-light), var(--accent-soft-dark));
+      --accent-on-primary: light-dark(
+        var(--accent-on-primary-light),
+        var(--accent-on-primary-dark)
+      );
+      --savings-fg: light-dark(var(--savings-fg-light), var(--savings-fg-dark));
+      --savings-bg: light-dark(var(--savings-bg-light), var(--savings-bg-dark));
+      --alert-fg: light-dark(var(--alert-fg-light), var(--alert-fg-dark));
+      --alert-bg: light-dark(var(--alert-bg-light), var(--alert-bg-dark));
+      --danger-fg: light-dark(var(--danger-fg-light), var(--danger-fg-dark));
+      --danger-bg: light-dark(var(--danger-bg-light), var(--danger-bg-dark));
+    }
+  }
+
+  :root {
+    accent-color: var(--accent-primary);
+    /* Never animate scrollbar-color: it repaints the whole scroll container. */
+    scrollbar-color: var(--border-subtle) transparent;
+  }
+
+  html,
+  body {
+    background-color: var(--surface-canvas);
+    color: var(--ink-primary);
+  }
+
+  /* Native dialogs: never set `display` on `dialog`, it would show it while closed. */
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  @media (forced-colors: active) {
+    button,
+    [role="button"],
+    input,
+    select,
+    textarea {
+      border: 1px solid ButtonText;
+    }
+    :focus-visible {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
+    dialog {
+      border: 1px solid CanvasText;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }

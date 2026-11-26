@@ -1,13 +1,17 @@
 // Versioned browser storage for the user's saved lists (data model, browser storage).
 
-import type { PriorityMode, TravelMode } from "./api";
+import type { AgentRunResponse, PriorityMode, Recommendation, TravelMode } from "./api";
 import type { CartLine } from "./cart";
 import { isUnit, newId, withLineDefaults, type DraftItem } from "./draft";
 
 export const STORAGE_KEY = "smart-basket.lists";
-/** Version 3 added origin and route options; versions 1 and 2 are still read. */
-export const SCHEMA_VERSION = 3;
-const LEGACY_SCHEMA_VERSIONS = [1, 2];
+export const LAST_PLAN_KEY = "smart-basket.last-plan";
+/**
+ * Version 3 added origin and route options; version 4 the list draft (text and lines).
+ * Versions 1, 2 and 3 are still read.
+ */
+export const SCHEMA_VERSION = 4;
+const LEGACY_SCHEMA_VERSIONS = [1, 2, 3];
 
 export interface SavedList {
   id: string;
@@ -39,19 +43,23 @@ export const DEFAULT_ROUTE_OPTIONS: StoredRouteOptions = {
   returnToOrigin: true,
 };
 
-interface StoredPayload {
-  schema_version: number;
+/** The list the user is writing, so a reload does not lose it. */
+export interface StoredDraft {
+  draftText: string;
+  draftItems: DraftItem[];
+}
+
+export const EMPTY_DRAFT: StoredDraft = { draftText: "", draftItems: [] };
+
+interface StoredStore extends StoredDraft {
   lists: SavedList[];
   cart: CartLine[];
   origin: StoredOrigin | null;
   options: StoredRouteOptions;
 }
 
-interface StoredStore {
-  lists: SavedList[];
-  cart: CartLine[];
-  origin: StoredOrigin | null;
-  options: StoredRouteOptions;
+interface StoredPayload extends StoredStore {
+  schema_version: number;
 }
 
 function defaultStorage(): Storage | null {
@@ -187,6 +195,7 @@ function readStore(storage: Storage | null): StoredStore {
     cart: [],
     origin: null,
     options: DEFAULT_ROUTE_OPTIONS,
+    ...EMPTY_DRAFT,
   };
   if (!storage) return empty;
   try {
@@ -211,6 +220,10 @@ function readStore(storage: Storage | null): StoredStore {
         : [],
       origin: isStoredOrigin(payload.origin) ? payload.origin : null,
       options: isStoredRouteOptions(payload.options) ? payload.options : DEFAULT_ROUTE_OPTIONS,
+      draftText: typeof payload.draftText === "string" ? payload.draftText : "",
+      draftItems: Array.isArray(payload.draftItems)
+        ? payload.draftItems.filter(isDraftItem).map(withLineDefaults)
+        : [],
     };
   } catch {
     return empty;
@@ -267,6 +280,93 @@ export function saveOptions(
 ): void {
   const current = readStore(storage);
   writeStore({ ...current, options }, storage);
+}
+
+export function loadDraft(storage: Storage | null = defaultStorage()): StoredDraft {
+  const { draftText, draftItems } = readStore(storage);
+  return { draftText, draftItems };
+}
+
+export function saveDraft(draft: StoredDraft, storage: Storage | null = defaultStorage()): void {
+  const current = readStore(storage);
+  writeStore({ ...current, draftText: draft.draftText, draftItems: draft.draftItems }, storage);
+}
+
+/** The last computed plan; it lives in the tab session so a reload (F5) keeps the result. */
+export interface LastPlan {
+  recommendation: Recommendation;
+  /** The agent run that produced it, when the plan came from the agent. */
+  agentRun: AgentRunResponse | null;
+  savedAt: string;
+}
+
+function sessionStorageOrNull(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function loadLastPlan(storage: Storage | null = sessionStorageOrNull()): LastPlan | null {
+  if (!storage) return null;
+  try {
+    const raw = storage.getItem(LAST_PLAN_KEY);
+    if (!raw) return null;
+    const value: unknown = JSON.parse(raw);
+    if (!isRecord(value) || !isRecord(value.recommendation)) return null;
+    if (value.agentRun !== null && !isRecord(value.agentRun)) return null;
+    return {
+      recommendation: value.recommendation as unknown as Recommendation,
+      agentRun: (value.agentRun ?? null) as AgentRunResponse | null,
+      savedAt: typeof value.savedAt === "string" ? value.savedAt : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastPlan(
+  plan: Omit<LastPlan, "savedAt"> & { savedAt?: string },
+  storage: Storage | null = sessionStorageOrNull(),
+): void {
+  if (!storage) return;
+  const value: LastPlan = { ...plan, savedAt: plan.savedAt ?? new Date().toISOString() };
+  try {
+    storage.setItem(LAST_PLAN_KEY, JSON.stringify(value));
+  } catch {
+    // Storage full or unavailable: the plan stays in memory for this page.
+  }
+}
+
+export function clearLastPlan(storage: Storage | null = sessionStorageOrNull()): void {
+  try {
+    storage?.removeItem(LAST_PLAN_KEY);
+  } catch {
+    // Nothing to clear when storage is unavailable.
+  }
+}
+
+export function deleteSavedList(lists: SavedList[], id: string): SavedList[] {
+  return lists.filter((list) => list.id !== id);
+}
+
+/** Renames a list; a name already used by another list is refused (returns the lists as they were). */
+export function renameSavedList(
+  lists: SavedList[],
+  id: string,
+  name: string,
+  now: Date = new Date(),
+): SavedList[] {
+  const trimmed = name.trim();
+  if (trimmed === "") return lists;
+  const taken = lists.some(
+    (list) => list.id !== id && list.name.toLowerCase() === trimmed.toLowerCase(),
+  );
+  if (taken) return lists;
+  return lists.map((list) =>
+    list.id === id ? { ...list, name: trimmed, updated_at: now.toISOString() } : list,
+  );
 }
 
 export function createSavedList(

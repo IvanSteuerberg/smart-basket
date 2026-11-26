@@ -1,14 +1,23 @@
-import { type Page, type Request, expect, test } from "@playwright/test";
+import { type Page, type Request } from "@playwright/test";
 import type {
+  AgentRunResponse,
   CanonicalDetail,
   CategoriesResponse,
+  ChainsResponse,
   GeocodeResponse,
   Health,
   InterpretResponse,
   Recommendation,
   SearchResponse,
 } from "../src/api";
-import { blockUnmocked, mockJson, TRANSPARENT_1X1_PNG } from "./mock";
+import {
+  blockUnmocked,
+  countAgentRunResponses,
+  expect,
+  mockJson,
+  test,
+  TRANSPARENT_1X1_PNG,
+} from "./mock";
 
 const mockHealth: Health = {
   status: "ok",
@@ -232,6 +241,24 @@ const mockCanonicalDetail: CanonicalDetail = {
 
 const ROUTE_ERROR = "No se ha podido calcular la ruta. Inténtalo de nuevo en unos minutos.";
 
+/** A completed agent run without changes: the plan on screen stays the engine's one. */
+const mockAgentRunDone: AgentRunResponse = {
+  run_id: "run-1",
+  recommendation_id: "rec-1",
+  status: "completed",
+  policy_name: "Agente ahorrador",
+  model_name: null,
+  steps_count: 0,
+  total_latency_ms: 0,
+  buyer_summary: null,
+  pending_question: null,
+  alternatives_shown: [],
+  mode: "walk",
+  excluded_chains: [],
+  recommendation: null,
+  steps: [],
+};
+
 test.beforeEach(async ({ page }) => {
   await blockUnmocked(page);
   await page.route(/tile\.openstreetmap\.org/, (route) =>
@@ -239,10 +266,13 @@ test.beforeEach(async ({ page }) => {
   );
   await mockJson(page, "**/api/health", mockHealth);
   await mockJson(page, "**/api/categories", mockCategories);
+  await mockJson(page, "**/api/chains", { chains: [] } satisfies ChainsResponse);
   await mockJson(page, "**/api/sections", { sections: [] });
   await mockJson(page, "**/api/search*", mockSearch);
   await mockJson(page, "**/api/geocode*", mockGeocode);
   await mockJson(page, "**/api/canonicals/201", mockCanonicalDetail);
+  // The app always asks the agent to review a fresh plan; it may answer nothing new.
+  await mockJson(page, "**/api/agent/runs", mockAgentRunDone);
 });
 
 async function setPrestoredOrigin(page: Page) {
@@ -271,11 +301,11 @@ test("vague line presents choices inline and resolves before calculation", async
   });
 
   await page.goto("/#/lista");
-  const textarea = page.getByRole("textbox", { name: "Tu lista" });
+  const textarea = page.getByRole("textbox", { name: "Escribe tu lista" });
   await textarea.fill("2 l de leche\npollo");
 
   // Click Calcular
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
 
   // Vague line header appears inline
   await expect(page.getByRole("heading", { name: "¿Qué pollo?" })).toBeVisible();
@@ -294,7 +324,7 @@ test("vague line presents choices inline and resolves before calculation", async
 
   // Now resolved, pick Calcular again
   const recPromise = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
 
   const sent = await recPromise;
   const body = sent.postDataJSON();
@@ -304,8 +334,8 @@ test("vague line presents choices inline and resolves before calculation", async
   expect(body.items[1].text).toBe("pollo");
   expect(body.origin).toEqual({ lat: 42.5987, lon: -5.5671 });
 
-  // Basket is shown
-  await expect(page.getByRole("heading", { name: "Tu cesta" })).toBeVisible();
+  // The plan is shown
+  await expect(page.getByRole("heading", { name: "Tu plan de compra" })).toBeVisible();
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
   expect(recRequests).toHaveLength(1);
 });
@@ -343,8 +373,10 @@ test("a line with shades asks for a concrete product and sends no basket request
   });
 
   await page.goto("/#/lista");
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("tinte");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  // The catalog the «Elegir en el catálogo» button opens searches by generic product.
+  await mockJson(page, "**/api/canonicals?*", { items: [], total: 0, page: 1, size: 24 });
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("tinte");
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
 
   await expect(
     page.getByText("«tinte» depende del tono o del color: elige el producto concreto."),
@@ -352,7 +384,7 @@ test("a line with shades asks for a concrete product and sends no basket request
   expect(recRequests).toHaveLength(0);
 
   await page.getByRole("button", { name: "Elegir en el catálogo" }).click();
-  await expect(page).toHaveURL(/#\/catalogo$/);
+  await expect(page).toHaveURL(/#\/catalogo\?q=tinte$/);
   await expect(page.getByPlaceholder(/Busca un producto/).first()).toHaveValue("tinte");
   expect(recRequests).toHaveLength(0);
 });
@@ -392,6 +424,7 @@ test("basket with flex_savings offers applying any brand", async ({ page }) => {
       lines: [{ line_id: 0, savings: "0.85" }],
     },
   };
+  const agentRunsDone = countAgentRunResponses(page);
   await mockJson(page, "**/api/recommendations", flexRecommendation);
 
   const recRequests: Request[] = [];
@@ -400,10 +433,11 @@ test("basket with flex_savings offers applying any brand", async ({ page }) => {
   });
 
   await page.goto("/#/lista");
-  // Open cart drawer and calculate basket from concrete item
-  await page.getByRole("button", { name: "Cesta" }).click();
+  // Open the «Tu lista» drawer and calculate the plan from the concrete item
+  await page.getByRole("button", { name: "Tu lista" }).click();
+  const drawer = page.getByRole("dialog", { name: /Tu lista/ });
   const firstRecPromise = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular cesta" }).click();
+  await drawer.getByRole("button", { name: "Calcular plan" }).click();
 
   const firstReq = await firstRecPromise;
   const firstBody = firstReq.postDataJSON();
@@ -424,6 +458,8 @@ test("basket with flex_savings offers applying any brand", async ({ page }) => {
   expect(secondBody.items[0].accept).toBe("equivalent");
 
   await expect.poll(() => recRequests.length).toBe(2);
+  // The agent reviews of both plans have answered.
+  await expect.poll(agentRunsDone).toBe(2);
 });
 
 test("basket line with canonical_id can be swapped for an alternative product", async ({ page }) => {
@@ -432,21 +468,22 @@ test("basket line with canonical_id can be swapped for an alternative product", 
   await mockJson(page, "**/api/recommendations", mockRecommendation);
 
   const recRequests: Request[] = [];
+  const agentRunsDone = countAgentRunResponses(page);
   page.on("request", (req) => {
     if (req.url().includes("/api/recommendations")) recRequests.push(req);
   });
 
   await page.goto("/#/lista");
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("2 l de leche");
   const firstRecPromise = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
   await firstRecPromise;
 
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
   expect(recRequests).toHaveLength(1);
 
-  // Click "Cambiar" on the basket line
-  await page.getByRole("button", { name: "Cambiar" }).click();
+  // Click "Cambiar" on the plan line (the theme toggle also starts with «Cambiar»)
+  await page.getByRole("button", { name: "Cambiar", exact: true }).click();
 
   // Modal appears with alternatives
   const hacendadoOption = page.getByRole("button", { name: /Leche entera Hacendado 1L/ });
@@ -461,6 +498,8 @@ test("basket line with canonical_id can be swapped for an alternative product", 
   expect(body.items[0].accept).toBe("exact");
 
   await expect.poll(() => recRequests.length).toBe(2);
+  // The agent reviews of both plans have answered.
+  await expect.poll(agentRunsDone).toBe(2);
 });
 
 test("a basket line of a product with shades offers no Cambiar", async ({ page }) => {
@@ -476,11 +515,11 @@ test("a basket line of a product with shades offers no Cambiar", async ({ page }
   await mockJson(page, "**/api/recommendations", shades);
 
   await page.goto("/#/lista");
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("2 l de leche");
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
 
   await expect(page.getByText("Leche entera Pascual 1L")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Cambiar" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Cambiar", exact: true })).toHaveCount(0);
 });
 
 test("a search result with shades leaves the unknown line waiting for a product", async ({
@@ -514,8 +553,8 @@ test("a search result with shades leaves the unknown line waiting for a product"
   } satisfies SearchResponse);
 
   await page.goto("/#/lista");
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("cosa rara");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("cosa rara");
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
   const search = page.getByPlaceholder("Busca el producto");
   await search.fill("tinte");
   await search.press("Enter");
@@ -534,7 +573,9 @@ test("remembered origin appears folded on reload and is reused without prompting
 
   const address = page.getByRole("searchbox", { name: "Escribe una dirección de León" });
   await address.fill("Plaza Mayor");
-  await page.getByRole("button", { name: "Buscar" }).click();
+  // The header also has a «Buscar» button; this one belongs to the origin search.
+  const origin = page.getByRole("region", { name: "¿Desde dónde sales?" });
+  await origin.getByRole("button", { name: "Buscar" }).click();
   await page.getByRole("button", { name: /Plaza Mayor, 24003 León/ }).click();
 
   // Folded origin row shows label
@@ -556,12 +597,12 @@ test("remembered origin appears folded on reload and is reused without prompting
   });
 
   // Write list and calculate: goes directly to basket without asking for origin
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("2 l de leche");
   const recPromise = page.waitForRequest("**/api/recommendations");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
   await recPromise;
 
-  await expect(page.getByRole("heading", { name: "Tu cesta" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tu plan de compra" })).toBeVisible();
   expect(recRequests).toHaveLength(1);
   expect(recRequests[0].postDataJSON().origin).toEqual({ lat: 42.5987, lon: -5.5671 });
 });
@@ -587,7 +628,8 @@ test("address search waits for Enter and three characters", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "¿Desde dónde sales?" })).toBeVisible();
 
   const address = page.getByRole("searchbox", { name: "Escribe una dirección de León" });
-  const buscar = page.getByRole("button", { name: "Buscar" });
+  const origin = page.getByRole("region", { name: "¿Desde dónde sales?" });
+  const buscar = origin.getByRole("button", { name: "Buscar" });
   await expect(buscar).toBeDisabled();
 
   await address.fill("Ca");
@@ -605,7 +647,9 @@ test("address search waits for Enter and three characters", async ({ page }) => 
   expect(recRequests).toHaveLength(0);
 });
 
-test("recommendations 503 displays the error inline", async ({ page }) => {
+test("recommendations 503 displays the error inline", async ({ page, guard }) => {
+  // The 503 is the case under test; it must not count as an unexpected failure.
+  guard.allowHttpError(/\/api\/recommendations/);
   const recRequests: Request[] = [];
   page.on("request", (req) => {
     if (req.url().includes("/api/recommendations")) recRequests.push(req);
@@ -616,11 +660,11 @@ test("recommendations 503 displays the error inline", async ({ page }) => {
   await mockJson(page, "**/api/recommendations", { detail: ROUTE_ERROR }, 503);
 
   await page.goto("/#/lista");
-  await page.getByRole("textbox", { name: "Tu lista" }).fill("2 l de leche");
-  await page.getByRole("button", { name: "Calcular", exact: true }).click();
+  await page.getByRole("textbox", { name: "Escribe tu lista" }).fill("2 l de leche");
+  await page.getByRole("button", { name: "Calcular plan", exact: true }).click();
 
   await expect(page.getByRole("alert").filter({ hasText: ROUTE_ERROR })).toBeVisible();
   // Flow remains on the list screen
-  await expect(page.getByRole("button", { name: "Calcular", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Calcular plan", exact: true })).toBeVisible();
   await expect.poll(() => recRequests.length).toBe(1);
 });

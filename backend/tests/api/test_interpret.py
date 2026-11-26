@@ -36,7 +36,7 @@ def with_provider(client, provider):
 def test_rule_lines_are_interpreted_without_the_llm(client):
     provider = FakeProvider()
     with_provider(client, provider)
-    response = client.post("/api/interpret", json={"text": "2 l de leche"})
+    response = client.post("/api/interpret", json={"text": "2 l de leche entera"})
     assert response.status_code == 200
     body = response.json()
     assert body["llm_used"] is False
@@ -66,7 +66,7 @@ def test_rule_lines_are_interpreted_without_the_llm(client):
     assert item["quantity"] == "2"
     assert item["unit"] == "l"
     assert item["category_key"] == "leche"
-    assert item["category_name"] == "Leche"
+    assert item["category_name"] == "Leche de vaca"
     assert item["resolved"] is True
     assert item["needs_llm"] is False
     assert item["exact_only"] is False
@@ -100,7 +100,7 @@ def test_unresolved_lines_go_to_the_llm(client):
         }
     )
     with_provider(client, provider)
-    body = client.post("/api/interpret", json={"text": "leche, algo para la cena"}).json()
+    body = client.post("/api/interpret", json={"text": "leche entera, algo para la cena"}).json()
     assert provider.calls == ["algo para la cena"]
     assert body["llm_used"] is True
     assert body["degraded"] is False
@@ -130,14 +130,14 @@ def test_llm_items_keep_the_order_of_the_unresolved_lines(client):
     )
     with_provider(client, provider)
     body = client.post(
-        "/api/interpret", json={"text": "leche, algo para la cena, cosas del finde"}
+        "/api/interpret", json={"text": "leche entera, algo para la cena, cosas del finde"}
     ).json()
     assert provider.calls == ["algo para la cena\ncosas del finde"]
 
     items = body["items"]
     assert [item["line"] for item in items] == [0, 1, 2]
     assert [item["text"] for item in items] == [
-        "leche",
+        "leche entera",
         "servilletas",
         "algo para la cena",
     ]
@@ -145,7 +145,7 @@ def test_llm_items_keep_the_order_of_the_unresolved_lines(client):
 
 def test_no_provider_leaves_the_unresolved_line_and_degrades(client):
     with_provider(client, None)
-    body = client.post("/api/interpret", json={"text": "leche, algo para la cena"}).json()
+    body = client.post("/api/interpret", json={"text": "leche entera, algo para la cena"}).json()
     assert body["llm_used"] is False
     assert body["degraded"] is True
 
@@ -246,7 +246,7 @@ def test_an_interpreted_line_carries_the_photo_of_its_cheapest_product(client, s
     session.commit()
 
     with_provider(client, FakeProvider())
-    body = client.post("/api/interpret", json={"text": "leche"}).json()
+    body = client.post("/api/interpret", json={"text": "leche entera"}).json()
 
     (item,) = body["items"]
     assert item["category_key"] == "leche"
@@ -341,7 +341,7 @@ def test_a_vague_node_without_an_option_list_offers_its_priced_children(client, 
 
 def test_an_exact_only_category_is_never_resolved(client):
     with_provider(client, FakeProvider())
-    body = client.post("/api/interpret", json={"text": "tinte\nleche"}).json()
+    body = client.post("/api/interpret", json={"text": "tinte\nleche entera"}).json()
 
     tinte, leche = body["items"]
     assert tinte["category_key"] == "tinte"

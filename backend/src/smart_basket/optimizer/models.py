@@ -301,6 +301,9 @@ class BasketRequest:
     loyalty_chain_ids: frozenset[int] = frozenset()
     coupon_codes: frozenset[str] = frozenset()
     return_to_origin: bool = True
+    #: When non-empty, only store subsets visiting all of these chains are considered
+    #: (used when the shopper explicitly selects a multi-chain alternative plan).
+    required_chain_ids: frozenset[int] = frozenset()
     config: OptimizerConfig = field(default_factory=OptimizerConfig)
 
     def __post_init__(self) -> None:

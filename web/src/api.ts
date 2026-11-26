@@ -94,6 +94,7 @@ export interface InterpretResponse {
 /** Base unit the price per unit is expressed in, as the catalog returns it. */
 export type BaseUnit = "kg" | "l" | "ud";
 export type ProductSort = "unit_price" | "price" | "name";
+export type CanonicalSort = "relevance" | "popular" | "unit_price" | "price" | "name";
 
 /** The catalog product a product is an option of. */
 export interface CanonicalProduct {
@@ -114,10 +115,14 @@ export interface Product {
   image_url: string | null;
   chain: string;
   price: Decimal;
-  unit_price: Decimal;
-  base_unit: BaseUnit;
+  /** Null when the supermarket gives no size to compute it from. */
+  unit_price: Decimal | null;
+  base_unit: BaseUnit | null;
   base_quantity: Decimal | null;
   canonical: CanonicalProduct | null;
+  /** Dietary claims the supermarket makes in the product name (e.g. "sin_gluten"). */
+  dietary_tags?: string[];
+  on_promo?: boolean;
 }
 
 export interface ProductDetail extends Product {
@@ -144,11 +149,25 @@ export interface ProductsPage {
   size: number;
 }
 
-export interface ProductsQuery {
+/** Filters shared by the product and canonical listings. */
+export interface CatalogFilterQuery {
+  chains?: string[];
+  brand?: string | null;
+  private_label?: boolean | null;
+  dietary?: string[];
+  on_promo?: boolean | null;
+  min_price?: number | null;
+  max_price?: number | null;
+  near_lat?: number | null;
+  near_lon?: number | null;
+  mode?: TravelMode | null;
+}
+
+export interface ProductsQuery extends CatalogFilterQuery {
   section?: string | null;
   category?: string | null;
   q?: string | null;
-  sort?: ProductSort;
+  sort?: ProductSort | CanonicalSort;
   page?: number;
   size?: number;
 }
@@ -184,11 +203,12 @@ export interface CanonicalsPage {
   size: number;
 }
 
-export interface CanonicalsQuery {
+export interface CanonicalsQuery extends CatalogFilterQuery {
   section?: string | null;
   category?: string | null;
   q?: string | null;
   chain?: string | null;
+  sort?: ProductSort | CanonicalSort;
   page?: number;
   size?: number;
 }
@@ -390,6 +410,21 @@ export interface AgentRunRequest {
   habits?: Record<string, HabitInput>;
   dietary_rules?: string[];
   policy?: string | null;
+  /** The earlier run this one refines, so the agent keeps its context. */
+  previous_run_id?: string | null;
+}
+
+/** A supermarket chain with active prices, for the catalog chain filter. */
+export interface ActiveChain {
+  code: string;
+  name: string;
+  store_count: number;
+  product_count: number;
+  last_price_at: string | null;
+}
+
+export interface ChainsResponse {
+  chains: ActiveChain[];
 }
 
 export interface AgentAnswerRequest {
@@ -434,7 +469,36 @@ export function isChoiceRequired(
   return code === "VAGUE_LINE" || code === "EXACT_ONLY";
 }
 
+const NETWORK_ERROR_MESSAGE = "No hemos podido conectar con el servidor. Inténtalo en unos segundos.";
+
+/** Spanish text for an HTTP status the backend answered without a readable `detail`. */
+function describeStatus(status: number): string | null {
+  switch (status) {
+    case 404:
+      return "No hemos encontrado lo que buscas.";
+    case 429:
+      return "Demasiadas peticiones seguidas. Espera unos segundos e inténtalo de nuevo.";
+    case 500:
+      return "Algo ha fallado en el servidor. Inténtalo de nuevo en unos minutos.";
+    case 502:
+    case 503:
+    case 504:
+      return "El servicio no responde en este momento. Inténtalo de nuevo.";
+    default:
+      return null;
+  }
+}
+
+const GENERIC_HTTP_ERROR_MESSAGE = "No hemos podido completar la petición. Inténtalo de nuevo.";
+
+/** A message safe to show: never a raw «HTTP 502» or «Failed to fetch». */
 export function describeError(error: unknown): string {
+  if (error instanceof ApiError) {
+    const detailMessage = messageOf(error.detail);
+    if (detailMessage !== null) return detailMessage;
+    return describeStatus(error.status) ?? GENERIC_HTTP_ERROR_MESSAGE;
+  }
+  if (error instanceof TypeError) return NETWORK_ERROR_MESSAGE;
   if (error instanceof Error && error.message) return error.message;
   return String(error);
 }
@@ -515,6 +579,36 @@ export function getSections(signal?: AbortSignal): Promise<SectionsResponse> {
   return request<SectionsResponse>("/api/sections", { signal });
 }
 
+/** Serializes the filters shared by the product and canonical listings. */
+function setFilterParams(params: URLSearchParams, query: CatalogFilterQuery): void {
+  if (query.chains && query.chains.length > 0) params.set("chains", query.chains.join(","));
+  if (query.brand) params.set("brand", query.brand);
+  if (query.private_label !== undefined && query.private_label !== null) {
+    params.set("private_label", String(query.private_label));
+  }
+  if (query.dietary && query.dietary.length > 0) params.set("dietary", query.dietary.join(","));
+  if (query.on_promo !== undefined && query.on_promo !== null) {
+    params.set("on_promo", String(query.on_promo));
+  }
+  if (query.min_price !== undefined && query.min_price !== null) {
+    params.set("min_price", String(query.min_price));
+  }
+  if (query.max_price !== undefined && query.max_price !== null) {
+    params.set("max_price", String(query.max_price));
+  }
+  if (query.near_lat !== undefined && query.near_lat !== null) {
+    params.set("near_lat", String(query.near_lat));
+  }
+  if (query.near_lon !== undefined && query.near_lon !== null) {
+    params.set("near_lon", String(query.near_lon));
+  }
+  if (query.mode) params.set("mode", query.mode);
+}
+
+export function getChains(signal?: AbortSignal): Promise<ChainsResponse> {
+  return request<ChainsResponse>("/api/chains", { signal });
+}
+
 export function getProducts(
   query: ProductsQuery = {},
   signal?: AbortSignal,
@@ -524,6 +618,7 @@ export function getProducts(
   if (query.category) params.set("category", query.category);
   if (query.q) params.set("q", query.q);
   if (query.sort) params.set("sort", query.sort);
+  setFilterParams(params, query);
   if (query.page !== undefined) params.set("page", String(query.page));
   if (query.size !== undefined) params.set("size", String(query.size));
   const search = params.toString();
@@ -543,6 +638,8 @@ export function getCanonicals(
   if (query.category) params.set("category", query.category);
   if (query.q) params.set("q", query.q);
   if (query.chain) params.set("chain", query.chain);
+  if (query.sort) params.set("sort", query.sort);
+  setFilterParams(params, query);
   if (query.page !== undefined) params.set("page", String(query.page));
   if (query.size !== undefined) params.set("size", String(query.size));
   const search = params.toString();
@@ -588,6 +685,27 @@ export function answerAgentRun(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
+  });
+}
+
+/**
+ * Sends a follow-up shopper message to a live run, keeping its accumulated changes (C2). The
+ * origin travels with every message: a resumed run may need to re-optimize the route.
+ */
+export function sendAgentMessage(
+  runId: string,
+  message: string,
+  origin?: LatLon | null,
+  signal?: AbortSignal,
+): Promise<AgentRunResponse> {
+  return request<AgentRunResponse>(`/api/agent/runs/${encodeURIComponent(runId)}/message`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      ...(origin ? { origin: { lat: origin.lat, lon: origin.lon } } : {}),
+    }),
     signal,
   });
 }

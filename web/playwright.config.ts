@@ -3,6 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 // E2E_PORT lets two checkouts run their mocked suites at the same time.
 const port = Number(process.env.E2E_PORT ?? 5174);
 
+// Windows has no Playwright-packaged `chromium_headless_shell`; system Chrome is the clean
+// fallback. CI with the embedded Chromium passes PLAYWRIGHT_CHANNEL="" (empty means no channel).
+const channel = process.env.PLAYWRIGHT_CHANNEL ?? "chrome";
+
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/*.e2e.ts",
@@ -16,7 +20,10 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(channel === "" ? {} : { channel }),
+      },
     },
   ],
   webServer: {

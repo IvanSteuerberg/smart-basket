@@ -67,6 +67,24 @@ describe("minutes formatting", () => {
   });
 });
 
+describe("null-safe formatting", () => {
+  it("never throws on null or undefined", () => {
+    expect(Number.isNaN(parseDecimal(null))).toBe(true);
+    expect(Number.isNaN(parseDecimal(undefined))).toBe(true);
+    expect(formatEuro(null)).toBe("");
+    expect(formatAmount(undefined)).toBe("");
+    expect(formatMinutes(null)).toBe("");
+    expect(formatQuantity(null)).toBe("0");
+  });
+
+  it("returns an empty unit price when either part is missing", () => {
+    expect(formatUnitPrice(null, "kg")).toBe("");
+    expect(formatUnitPrice("1.50", null)).toBe("");
+    expect(formatUnitPrice(undefined, undefined)).toBe("");
+    expect(formatUnitPrice("1.15", "kg")).toBe("1,15 €/kg");
+  });
+});
+
 describe("formatDateTime", () => {
   it("formats a timestamp as dd/mm/yyyy HH:mm", () => {
     expect(formatDateTime("2026-11-13T08:05:00")).toBe("13/11/2026 08:05");

@@ -12,6 +12,8 @@ export const CHAIN_COLORS: Record<string, string> = {
   alimerka: "#f39200",
   gadis: "#e30613",
   aldi: "#00005f",
+  froiz: "#007a33",
+  elcorteingles: "#007a33",
 };
 
 export const CHAINS: { code: string; name: string }[] = [
@@ -25,6 +27,8 @@ export const CHAINS: { code: string; name: string }[] = [
   { code: "alimerka", name: "Alimerka" },
   { code: "gadis", name: "Gadis" },
   { code: "aldi", name: "Aldi" },
+  { code: "froiz", name: "Froiz" },
+  { code: "elcorteingles", name: "El Corte Inglés" },
 ];
 
 /** «E.Leclerc» or «DIA» become the file name used under `public/logos`. */
@@ -57,12 +61,40 @@ export function ChainLogo({ chain, className = "" }: ChainLogoProps) {
     );
   }
 
+  return <ChainFallbackBadge chain={chain} className={className} />;
+}
+
+/** Coloured name badge shown when the logo file fails to load. */
+export function ChainFallbackBadge({ chain, className = "" }: ChainLogoProps) {
+  const brandColor = CHAIN_COLORS[chainCode(chain)];
   return (
     <span
-      className={`flex items-center justify-center rounded-xl px-2 text-center text-xs font-bold text-white ${className}`}
-      style={{ backgroundColor: CHAIN_COLORS[code] ?? "#2f6f4e" }}
+      className={`flex items-center justify-center rounded-xl px-2 text-center text-[0.8125rem] font-bold ${className}`}
+      style={{
+        backgroundColor: brandColor ?? "var(--accent-primary)",
+        color: brandColor ? "#ffffff" : "var(--accent-on-primary)",
+      }}
     >
       {chain}
+    </span>
+  );
+}
+
+export interface ChainLogoPlateProps {
+  chain: string;
+  className?: string;
+}
+
+/**
+ * Logo on a light plate: several marks use dark ink, so the plate keeps them legible in dark
+ * mode. `--logo-plate` is not a palette token yet; the fallback is plain white.
+ */
+export function ChainLogoPlate({ chain, className = "" }: ChainLogoPlateProps) {
+  return (
+    <span
+      className={`flex h-10 w-20 shrink-0 items-center justify-center rounded-lg bg-[var(--logo-plate,#ffffff)] p-1.5 ${className}`}
+    >
+      <ChainLogo chain={chain} className="max-h-full max-w-full" />
     </span>
   );
 }

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { geocode, type GeocodeResult, type LatLon, type PriorityMode, type TravelMode } from "../api";
 import {
   DEFAULT_ROUTE_OPTIONS,
   type StoredOrigin,
   type StoredRouteOptions,
 } from "../storage";
+import { maxStoresLabel } from "../texts";
 import { MapView } from "./MapView";
 import { SearchBox } from "./SearchBox";
 
@@ -24,6 +25,62 @@ const PRIORITIES: { value: PriorityMode; label: string }[] = [
   { value: "time", label: "Tiempo" },
 ];
 
+const FOCUS =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)]";
+const BUTTON = `inline-flex min-h-11 items-center justify-center rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 text-[0.9375rem] font-semibold text-[var(--ink-primary)] transition-colors hover:border-[var(--accent-primary)] ${FOCUS}`;
+
+/** One-line summary of the origin and the route options, shown while the step is folded. */
+export function originSummary(origin: StoredOrigin, options: RouteOptions): string {
+  const mode = MODES.find((candidate) => candidate.value === options.mode)?.label ?? "";
+  return `Desde: ${origin.label} · ${mode} · ${maxStoresLabel(options.maxStores)}`;
+}
+
+/** Connected segmented control: a labelled group of toggle buttons, one pressed. */
+function Segmented<T extends string | number>({
+  label,
+  choices,
+  value,
+  onChange,
+}: {
+  label: string;
+  choices: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const labelId = useId();
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span id={labelId} className="text-[0.9375rem] font-semibold">
+        {label}
+      </span>
+      <div
+        role="group"
+        aria-labelledby={labelId}
+        className="flex rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5"
+      >
+        {choices.map((choice) => {
+          const selected = choice.value === value;
+          return (
+            <button
+              key={choice.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(choice.value)}
+              className={`min-h-11 flex-1 rounded-[0.625rem] px-3 text-[0.9375rem] font-semibold tabular-nums transition-colors ${FOCUS} ${
+                selected
+                  ? "bg-[var(--accent-primary)] text-[var(--accent-on-primary)]"
+                  : "text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]"
+              }`}
+            >
+              {choice.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export interface OriginStepProps {
   origin: StoredOrigin | null;
   onOriginChange: (origin: StoredOrigin) => void;
@@ -33,6 +90,7 @@ export interface OriginStepProps {
   onToggleOpen: () => void;
 }
 
+/** Origin bar of the list screen: folded in one row once there is an origin, open otherwise. */
 export function OriginStep({
   origin,
   onOriginChange,
@@ -61,25 +119,18 @@ export function OriginStep({
   }
 
   function handlePickMap(point: LatLon) {
-    onOriginChange({
-      ...point,
-      label: "Punto del mapa",
-    });
+    onOriginChange({ ...point, label: "Punto del mapa" });
   }
 
-  // Folded view: only when there is already an origin and not explicitly open.
+  // Folded view: only when there is already an origin and it is not explicitly open.
   if (!open && origin !== null) {
-    const modeLabel = options.mode === "walk" ? "A pie" : "En coche";
     return (
-      <section className="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-        <p className="min-w-0 text-sm font-medium text-slate-800">
-          Desde: <span className="font-semibold text-slate-900">{origin.label}</span> · {modeLabel} · Hasta {options.maxStores} tiendas
-        </p>
-        <button
-          type="button"
-          onClick={onToggleOpen}
-          className="shrink-0 rounded-xl border border-brand px-3.5 py-1.5 text-xs font-semibold text-brand hover:bg-brand-soft"
-        >
+      <section
+        aria-label="Punto de salida"
+        className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-3"
+      >
+        <p className="min-w-0 text-[0.9375rem] font-medium">{originSummary(origin, options)}</p>
+        <button type="button" onClick={onToggleOpen} className={`${BUTTON} shrink-0`}>
           Cambiar
         </button>
       </section>
@@ -87,15 +138,16 @@ export function OriginStep({
   }
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-base font-bold text-slate-900">¿Desde dónde sales?</h2>
+    <section
+      aria-labelledby="origin-title"
+      className="flex flex-col gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h2 id="origin-title" className="text-[0.9375rem] font-bold">
+          ¿Desde dónde sales?
+        </h2>
         {origin && (
-          <button
-            type="button"
-            onClick={onToggleOpen}
-            className="rounded-lg px-2 py-1 text-xs font-semibold text-stone-500 hover:text-slate-800"
-          >
+          <button type="button" onClick={onToggleOpen} className={BUTTON}>
             Cerrar
           </button>
         )}
@@ -103,16 +155,12 @@ export function OriginStep({
 
       <MapView origin={origin} onPickOrigin={handlePickMap} />
 
-      <div className="mt-3 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={useMyLocation}
-          className="w-full rounded-xl border border-brand py-2 text-sm font-semibold text-brand hover:bg-brand-soft"
-        >
+      <div className="flex flex-col gap-2">
+        <button type="button" onClick={useMyLocation} className={BUTTON}>
           Usar mi ubicación
         </button>
         {locationError && (
-          <p className="text-xs font-semibold text-price" role="alert">
+          <p className="text-[0.8125rem] font-semibold text-[var(--danger-fg)]" role="alert">
             {locationError}
           </p>
         )}
@@ -127,79 +175,39 @@ export function OriginStep({
           }
           minLength={3}
           onDemand
+          value={origin?.label}
+          keepSelection
         />
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 border-t border-stone-100 pt-3 text-sm">
-        <div className="grid grid-cols-2 gap-2" role="group" aria-label="A pie o en coche">
-          {MODES.map((mode) => (
-            <label
-              key={mode.value}
-              className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border p-2 font-medium transition-colors ${
-                options.mode === mode.value
-                  ? "border-brand bg-brand-soft text-brand-dark"
-                  : "border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
-              }`}
-            >
-              <input
-                type="radio"
-                name="mode"
-                value={mode.value}
-                checked={options.mode === mode.value}
-                onChange={() => onOptionsChange({ mode: mode.value })}
-                className="accent-brand"
-              />
-              {mode.label}
-            </label>
-          ))}
-        </div>
+      <div className="flex flex-col gap-4 border-t border-[var(--border-subtle)] pt-4">
+        <Segmented
+          label="Cómo te desplazas"
+          choices={MODES}
+          value={options.mode}
+          onChange={(mode) => onOptionsChange({ mode })}
+        />
+        <Segmented
+          label="Número máximo de tiendas"
+          choices={MAX_STORES.map((count) => ({ value: count, label: String(count) }))}
+          value={options.maxStores}
+          onChange={(maxStores) => onOptionsChange({ maxStores })}
+        />
+        <Segmented
+          label="Prioridad"
+          choices={PRIORITIES}
+          value={options.priority}
+          onChange={(priority) => onOptionsChange({ priority })}
+        />
 
-        <label className="flex items-center justify-between gap-2 text-stone-600">
-          <span>Número máximo de tiendas</span>
-          <select
-            value={options.maxStores}
-            onChange={(event) => onOptionsChange({ maxStores: Number(event.target.value) })}
-            className="rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-slate-900 outline-none focus:border-brand"
-          >
-            {MAX_STORES.map((count) => (
-              <option key={count} value={count}>
-                {count}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="grid grid-cols-3 gap-2" role="group" aria-label="Prioridad">
-          {PRIORITIES.map((priority) => (
-            <label
-              key={priority.value}
-              className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl border p-2 text-xs font-medium transition-colors ${
-                options.priority === priority.value
-                  ? "border-brand bg-brand-soft text-brand-dark"
-                  : "border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
-              }`}
-            >
-              <input
-                type="radio"
-                name="priority"
-                value={priority.value}
-                checked={options.priority === priority.value}
-                onChange={() => onOptionsChange({ priority: priority.value })}
-                className="accent-brand"
-              />
-              {priority.label}
-            </label>
-          ))}
-        </div>
-
-        <label className="flex cursor-pointer items-center gap-2 text-stone-700">
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[0.9375rem]">
           <input
             type="checkbox"
             checked={options.returnToOrigin}
             onChange={(event) => onOptionsChange({ returnToOrigin: event.target.checked })}
-            className="accent-brand h-4 w-4 rounded"
+            className="h-5 w-5 shrink-0"
           />
-          Vuelvo al punto de salida
+          Volver al punto de salida
         </label>
       </div>
     </section>

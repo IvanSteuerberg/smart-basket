@@ -4,8 +4,17 @@ import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
 import { useEffect } from "react";
-import { MapContainer, Marker, Polyline, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Polyline,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import type { BasketStore, LatLon } from "../api";
+import { useTheme } from "../theme";
 
 // Leaflet's default icons point at image paths that Vite does not serve (decision 0008).
 Icon.Default.mergeOptions({
@@ -23,7 +32,19 @@ export interface MapViewProps {
   stores?: BasketStore[];
   route?: [number, number][];
   fitContent?: boolean;
+  /** Candidate stores drawn as plain dots (no number) before a plan exists. */
+  previewStores?: PreviewStore[];
 }
+
+export interface PreviewStore {
+  store_id: number;
+  lat: number;
+  lon: number;
+}
+
+// The cobalt accent of the "Pizarra y Cobalto" palette, one value per theme.
+const ROUTE_COLOR_LIGHT = "#1D4ED8";
+const ROUTE_COLOR_DARK = "#60A5FA";
 
 function toPosition(point: LatLon): LatLngExpression {
   return [point.lat, point.lon];
@@ -100,7 +121,10 @@ export function MapView({
   stores = [],
   route = [],
   fitContent = false,
+  previewStores = [],
 }: MapViewProps) {
+  const { resolved } = useTheme();
+  const routeColor = resolved === "dark" ? ROUTE_COLOR_DARK : ROUTE_COLOR_LIGHT;
   return (
     <MapContainer
       center={toPosition(LEON)}
@@ -123,8 +147,16 @@ export function MapView({
           icon={storeIcon(store.position)}
         />
       ))}
+      {previewStores.map((store) => (
+        <CircleMarker
+          key={`preview-${store.store_id}`}
+          center={[store.lat, store.lon]}
+          radius={7}
+          pathOptions={{ color: routeColor, fillColor: routeColor, fillOpacity: 0.55, weight: 2 }}
+        />
+      ))}
       {route.length > 1 && (
-        <Polyline positions={route} pathOptions={{ color: "#2f6f4e", weight: 4 }} />
+        <Polyline positions={route} pathOptions={{ color: routeColor, weight: 4 }} />
       )}
       {fitContent && <FitContent origin={origin} stores={stores} route={route} />}
     </MapContainer>
