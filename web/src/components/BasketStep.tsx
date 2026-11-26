@@ -163,10 +163,9 @@ export function BasketStep({
   }
 
   const minutesText = formatMinutes(recommendation.minutes);
+  const storesLabel = stores.length === 1 ? "1 tienda" : `${stores.length} tiendas`;
   const travelText =
-    minutesText === ""
-      ? `${stores.length} tiendas`
-      : `${stores.length} tiendas · ${minutesText} min de trayecto`;
+    minutesText === "" ? storesLabel : `${storesLabel} · ${minutesText} min de trayecto`;
 
   return (
     <section aria-label="Tu plan de compra" className="flex min-w-0 flex-col gap-4">

@@ -195,6 +195,12 @@ describe("alternativeRequestMessage", () => {
     ).toBe("cambia a coche, haz la compra solo en Mercadona");
   });
 
+  it("asks for a multi-chain alternative so both chains are applied", () => {
+    expect(
+      alternativeRequestMessage({ chain_codes: ["alcampo", "dia"] }, "walk"),
+    ).toBe("usa esta opción: haz la compra solo en Alcampo y Dia");
+  });
+
   it("falls back to the store names when there is nothing to switch", () => {
     expect(
       alternativeRequestMessage({ store_names: ["Alimerka", "Mercadona"] }, "walk"),

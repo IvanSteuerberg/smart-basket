@@ -125,6 +125,9 @@ export function alternativeRequestMessage(
     : [];
   if (chainCodes.length === 1) {
     parts.push(`haz la compra solo en ${chainDisplayName(chainCodes[0])}`);
+  } else if (chainCodes.length >= 2) {
+    const names = chainCodes.map(chainDisplayName).join(" y ");
+    parts.push(`usa esta opción: haz la compra solo en ${names}`);
   }
   if (parts.length === 0) {
     const rawStores = Array.isArray(alt.store_names) ? alt.store_names : [];

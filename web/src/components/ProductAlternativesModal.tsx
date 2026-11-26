@@ -40,7 +40,11 @@ export function ProductOptionRow({
   onSelect,
 }: ProductOptionRowProps) {
   const outsidePlan = !plannedChains.includes(chainCode(product.chain));
-  const chainLabel = product.brand ? `${product.brand} · ${product.chain}` : product.chain;
+  const sameBrandAndChain =
+    product.brand !== null &&
+    product.brand.trim().toLowerCase() === product.chain.trim().toLowerCase();
+  const chainLabel =
+    product.brand && !sameBrandAndChain ? `${product.brand} · ${product.chain}` : product.chain;
 
   return (
     <li>

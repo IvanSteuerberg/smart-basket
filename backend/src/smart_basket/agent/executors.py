@@ -134,7 +134,9 @@ class _Engine(Protocol):
 
     def canonical_for_text(self, value: str) -> dict[str, Any] | None: ...
 
-    def filter_chains(self, state: AgentState, chains: Sequence[str]) -> AgentState: ...
+    def filter_chains(
+        self, state: AgentState, chains: Sequence[str], *, require_all: bool = False
+    ) -> AgentState: ...
 
     def set_max_stores(self, state: AgentState, max_stores: int) -> AgentState: ...
 
@@ -394,13 +396,17 @@ class _FiltrarCadena(_ExecutorBase):
         if unknown:
             return {"chains": wanted}, f"unknown chain {unknown[0]!r}"
         chains = list(dict.fromkeys(wanted))
-        if tuple(chains) == tuple(code.lower() for code in state.allowed_chains):
+        require_all = bool(action.args.get("require_all"))
+        if not require_all and tuple(chains) == tuple(
+            code.lower() for code in state.allowed_chains
+        ):
             return {"chains": chains}, "el plan ya está limitado a esas cadenas"
-        return {"chains": chains}, None
+        return {"chains": chains, "require_all": require_all}, None
 
     def _apply(self, state: AgentState, proposal: Proposal) -> AgentState:
         chains = [str(code) for code in proposal.payload["chains"]]
-        updated = self.engine.filter_chains(state, chains)
+        require_all = bool(proposal.payload.get("require_all"))
+        updated = self.engine.filter_chains(state, chains, require_all=require_all)
         shown = " y ".join(self.engine.chain_label(code) for code in chains)
         return _confirmed(updated, f"He limitado el plan a solo en {shown}.")
 
@@ -909,7 +915,9 @@ class _SimulatedEngine:
     def canonical_for_text(self, value: str) -> dict[str, Any] | None:
         return None
 
-    def filter_chains(self, state: AgentState, chains: Sequence[str]) -> AgentState:
+    def filter_chains(
+        self, state: AgentState, chains: Sequence[str], *, require_all: bool = False
+    ) -> AgentState:
         allowed = tuple(dict.fromkeys(code.lower() for code in chains))
         excluded = tuple(code for code in state.excluded_chains if code.lower() not in allowed)
         return self.reoptimize(replace(state, allowed_chains=allowed, excluded_chains=excluded))
@@ -1137,13 +1145,18 @@ class _RecommenderEngine:
         return self._product_for_canonical(canonical_id, state)
 
     def restrict_chains(self, state: AgentState, keep: Sequence[str]) -> AgentState:
-        wanted = {code.lower() for code in keep}
-        active = self.active_chains()
-        if not wanted & {code.lower() for code in active}:
+        active = {code.lower() for code in self.active_chains()}
+        allowed = tuple(dict.fromkeys(c.lower() for c in keep if c.lower() in active))
+        if not allowed:
             return state
-        excluded = [code.lower() for code in active if code.lower() not in wanted]
-        chains = tuple(dict.fromkeys((*state.excluded_chains, *excluded)))
-        return self._commit(replace(state, excluded_chains=chains), excluded=excluded)
+        excluded = [code for code in self._excluded if code.lower() not in allowed]
+        kept = tuple(code for code in state.excluded_chains if code.lower() not in allowed)
+        max_stores = max(state.max_stores, min(3, len(allowed)))
+        return self._commit(
+            replace(state, allowed_chains=allowed, excluded_chains=kept, max_stores=max_stores),
+            excluded=excluded,
+            required_chains=allowed if len(allowed) >= 2 else (),
+        )
 
     def set_category(self, state: AgentState, index: int, category_key: str) -> AgentState:
         items = dict(self._items)
@@ -1177,13 +1190,20 @@ class _RecommenderEngine:
             return None
         return {"label": row["name"], "canonical_id": row["id"], "canonical_name": row["name"]}
 
-    def filter_chains(self, state: AgentState, chains: Sequence[str]) -> AgentState:
+    def filter_chains(
+        self, state: AgentState, chains: Sequence[str], *, require_all: bool = False
+    ) -> AgentState:
         active = {code.lower() for code in self.active_chains()}
         allowed = tuple(dict.fromkeys(c.lower() for c in chains if c.lower() in active))
         excluded = [code for code in self._excluded if code.lower() not in allowed]
         kept = tuple(code for code in state.excluded_chains if code.lower() not in allowed)
+        max_stores = (
+            max(state.max_stores, min(3, len(allowed))) if require_all else state.max_stores
+        )
         return self._commit(
-            replace(state, allowed_chains=allowed, excluded_chains=kept), excluded=excluded
+            replace(state, allowed_chains=allowed, excluded_chains=kept, max_stores=max_stores),
+            excluded=excluded,
+            required_chains=allowed if (require_all and len(allowed) >= 2) else (),
         )
 
     def set_max_stores(self, state: AgentState, max_stores: int) -> AgentState:
@@ -1352,13 +1372,16 @@ class _RecommenderEngine:
         items: dict[int, Item] | None = None,
         excluded: list[str] | None = None,
         next_index: int | None = None,
+        required_chains: Sequence[str] = (),
     ) -> AgentState:
         """Re-optimize against the candidate catalog, then publish it only if that succeeded.
 
         The engine never keeps a half-applied mutation: if the pipeline raises, `self._items`,
         `self._excluded` and `self._next` stay exactly as they were.
         """
-        updated = self._reoptimize(state, items=items, excluded=excluded)
+        updated = self._reoptimize(
+            state, items=items, excluded=excluded, required_chains=required_chains
+        )
         if items is not None:
             self._items = items
         if excluded is not None:
@@ -1374,8 +1397,15 @@ class _RecommenderEngine:
         mode: str | None = None,
         items: dict[int, Item] | None = None,
         excluded: list[str] | None = None,
+        required_chains: Sequence[str] = (),
     ) -> AgentState:
-        query, positions = self._query_for(state, mode=mode, items=items, excluded=excluded)
+        query, positions = self._query_for(
+            state,
+            mode=mode,
+            items=items,
+            excluded=excluded,
+            required_chains=required_chains,
+        )
         try:
             response, basket = recommend_with_basket(
                 self.session, query, self.routing, self.today, self.settings, persist=False
@@ -1396,7 +1426,16 @@ class _RecommenderEngine:
                 status="vague",
                 **({"candidate_options": options} if options else {}),
             )
-            return self._reoptimize(vague, mode=mode, items=items, excluded=excluded)
+            return self._reoptimize(
+                vague,
+                mode=mode,
+                items=items,
+                excluded=excluded,
+                required_chains=required_chains,
+            )
+        if required_chains and not basket.stores:
+            # If the exact chain combination cannot cover anything, fall back to any subset.
+            return self._reoptimize(state, mode=mode, items=items, excluded=excluded)
         skipped_missing = [
             MissingResponse(
                 line_id=line.index,
@@ -1423,6 +1462,7 @@ class _RecommenderEngine:
         max_alternatives: int = 3,
         items: dict[int, Item] | None = None,
         excluded: list[str] | None = None,
+        required_chains: Sequence[str] = (),
     ) -> tuple[RecommendationQuery, dict[int, int]]:
         catalog = self._items if items is None else items
         excluded_codes = self._excluded if excluded is None else excluded
@@ -1460,6 +1500,7 @@ class _RecommenderEngine:
             degraded=self.base_query.degraded,
             payload=dict(self.base_query.payload),
             chains=chains,
+            required_chains=tuple(required_chains),
             max_alternatives=max_alternatives,
         )
         return query, positions

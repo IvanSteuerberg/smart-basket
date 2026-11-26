@@ -256,12 +256,16 @@ def _conversational_candidates(
     allowed = [str(code) for code in details.get("allowed_chains") or ()]
     if allowed:
         shown = " y ".join(_chain_name(names, code) for code in allowed)
+        extra_args: dict[str, Any] = {}
+        if details.get("require_all_chains"):
+            extra_args["require_all"] = True
         candidates.append(
             _candidate(
                 ActionKind.FILTRAR_CADENA,
                 chains=allowed,
                 suffix=0,
                 label=f"Comprar solo en {shown}",
+                **extra_args,
             )
         )
 

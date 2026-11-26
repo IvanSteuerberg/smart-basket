@@ -286,6 +286,8 @@ def parse_shopper_request_hints(
                 hints["excluded_chains"] = excluded
         if allowed:
             hints["allowed_chains"] = allowed
+            if len(allowed) >= 2 and "usa esta opcion" in folded:
+                hints["require_all_chains"] = True
         mentioned = {c: known.names[c] for c in (*excluded, *allowed) if c in known.names}
         if mentioned:
             hints["chain_names"] = mentioned
