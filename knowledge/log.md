@@ -1,5 +1,12 @@
 # Log
 
+## 2026-11-26
+
+* **Update** Iteration 17 (`feat/i17-mejora-total-web` merged to `main`) — full web overhaul («Pizarra y Cobalto» light/dark design system with native `<dialog>` overlays), catalog data quality backfill, and cumulative conversational agent resolving all findings from `docs/qa/2026-11-25-qa-web.md`:
+  * **Backend & live data (`E0b`, `E1`–`E5`):** added `GET /api/chains`, SQL-cached `/api/sections`, advanced `/api/products` and `/api/canonicals` filters (chain, brand, private label, FR-42 dietary tags, promo, price range, PostGIS proximity, multi-tier relevance), live `route` polyline preserved in HTTP while stripped from persisted `state_json` (NFR-06), cumulative `POST /api/agent/runs/{id}/message` with 4 new closed actions (`filtrar_cadena`, `cambiar_max_tiendas`, `cambiar_prioridad`, `cambiar_producto`; 17 total), concrete `_Preguntar` options and real `apply_answer`, equal-coverage Pareto alternative filtering (`_select_alternatives`), and exact multi-chain selection (`required_chain_ids`). Ran live backfills over **96,197 products** (2,796 multipacks fixed, 536 unit-price outliers sanitized, 10,279 dietary tag sets filled, 191 broken/`cdn.ipaper.io` 403 image URLs cleared), re-imported OSM León stores to **53 active stores across all 12 chains** (Carrefour 0 → 4, El Corte Inglés 1 → 3), renamed `leche` to «Leche de vaca» so bare `"leche"` prompts cleanly, and merged stale `filete_de_pollo` into `pollo_pechuga`.
+  * **Frontend (`E0a`, `E6`–`E10`):** single-line desktop / 2-row mobile header, direct utility `HomePage` with 12 SVG chain logos, URL-synced `CatalogFilters`, inline `− N +` stepper, 24-per-page «Ver más» on `CanonicalPage`, unified `listStore.ts` with F5 draft/plan persistence, native `<dialog>` `PreferencesDialog` / `CartDrawer` / `SavedListsDialog` / `ProductAlternativesModal`, zero-overflow 375 px mobile layout, and cobalt Leaflet route polyline.
+  * **Verification:** 2,048 backend tests (1,293 re-run after final optimizer/agent fixes; `ruff` clean), 338 Vitest tests, 31 Playwright E2E tests, 16/16 live visual triage (`gemini-decision-1`, 0 alerts, 0 px overflow), and two live QA passes (GLM 5.3 + Claude Opus CLI) with all discovered defects fixed and re-verified live.
+
 ## 2026-11-25
 
 * **Update** Requirements `course-evaluation.md`: recorded the official project submission deadline announced in class on 2026-11-23 (`2027-01-11 23:59 CET`, sourced to OSF `05-notas-de-clase/23-11-2026.txt`), closed Week 11 and opened Week 12 in `docs/registro-actividad/registro-actividad.tex`.

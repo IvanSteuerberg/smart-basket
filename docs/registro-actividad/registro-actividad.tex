@@ -283,9 +283,20 @@
 		\actividad{Clase}{Se concreta la fecha límite de entrega del proyecto de la asignatura: lunes 11 de enero de 2027 a las 23:59~h.}{Notas de clase del 23 de noviembre en OSF (\texttt{23-11-2026.txt}) y \texttt{knowledge/requirements/course-evaluation.md} actualizado.}
 	\end{description}
 
+	\subsection*{Miércoles 25 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Análisis}{QA de usabilidad de la web con Claude Opus en el navegador integrado (escritorio y móvil) y con datos reales de las 12 cadenas: catálogo, cesta, lista escrita, resultado, conversación con el agente y navegación atrás/adelante, sin tocar código. Fallos principales: la web se queda en blanco con productos sin precio por unidad, el agente ignora la mayoría de las peticiones de cambio y sus preguntas no dicen qué preguntan, precios por kilo de packs erróneos, genéricos fragmentados y navegación que pierde la lista y la posición.}{\texttt{docs/qa/2026-11-25-qa-web.md}.}
+		\actividad{Tarea}{Iteración 17 (mejora total de la web y calidad de datos), planificada en 12 entregas (\texttt{E0a}--\texttt{E10}) con DeepSeek V4.1 Flash como implementador principal y GLM~5.3 como revisor: rediseño visual «Pizarra y Cobalto» (modo claro y oscuro con selector persistente y diálogos nativos \texttt{<dialog>}), filtros avanzados de catálogo con PostGIS, lista unificada persistente tras recarga, mapa Leaflet con polilínea viva sin almacenar el origen (NFR-06), agente conversacional acumulativo (17 acciones cerradas con 4 nuevas peticiones de usuario), saneamiento en vivo de los 96.197 productos (2.796 multipacks, 536 outliers de precio por unidad, 10.279 etiquetas dietéticas FR-42 y 191 imágenes rotas limpiadas) e importación OSM actualizada a 53 tiendas activas en las 12 cadenas de León (Carrefour pasa de 0 a 4 tiendas).}{12 entregas integradas; 2.048 pruebas del backend, 338 de Vitest y 31 E2E de Playwright superadas.}
+	\end{description}
+
+	\subsection*{Jueves 26 de noviembre}
+	\begin{description}[leftmargin=0pt, itemsep=6pt]
+		\actividad{Análisis}{Embudo de QA en vivo sobre \texttt{http://localhost:8080}: triage visual de 16 capturas (escritorio y móvil, claro y oscuro) con \texttt{gemini-decision-1} (0 alertas y 0~px de desbordamiento) y dos rondas de QA en vivo con GLM~5.3 y Claude Opus. Se corrigen y verifican en vivo los hallazgos reales restantes: exclusión de alternativas Pareto con menor cobertura de líneas, selección exacta de planes multicadena al pulsar una opción, conservación de líneas omitidas en \texttt{missing}, desambiguación de «leche» y fusión de la categoría residual \texttt{filete\_de\_pollo}.}{Iteración 17 fusionada en la rama principal y publicada en GitHub.}
+	\end{description}
+
 	\subsection*{Planificado para el resto de la semana}
 	\begin{itemize}
-		\item Limpieza de usabilidad e incoherencias de la web (simplificar el flujo de lista asistido por IA y los controles del agente) y agente vigilante de precios.
+		\item Agente vigilante de precios y re-evaluación del agente recomendador con el catálogo ampliado de 17 acciones.
 		\item Análisis de los libros asignados (encargo pendiente).
 	\end{itemize}
 	
